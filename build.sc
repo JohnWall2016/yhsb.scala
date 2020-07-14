@@ -1,4 +1,3 @@
-import $ivy.`com.lihaoyi::mill-contrib-bloop:$MILL_VERSION`
 import mill._, scalalib._
 import coursier.maven.MavenRepository
 
