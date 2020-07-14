@@ -15,6 +15,8 @@ object yhsb extends ScalaModule {
   def ivyDeps = Agg(
     ivy"org.apache.poi:poi:4.1.2",
     ivy"org.apache.poi:poi-ooxml:4.1.2",
+    ivy"mysql:mysql-connector-java:8.0.17",
+    ivy"io.getquill:quill-jdbc:3.5.2",
   )
 
   object cjb extends ScalaModule {

@@ -101,7 +101,9 @@ object Excel {
               newCell.setCellValue(
                 if (clearValue) "" else srcCell.getStringCellValue()
               )
-            case FORMULA => newCell.setCellFormula(srcCell.getCellFormula())
+            case FORMULA => newCell.setCellFormula(
+                if (clearValue) null else srcCell.getCellFormula()
+              )
             case BLANK   => newCell.setBlank()
             case BOOLEAN =>
               newCell.setCellValue(
