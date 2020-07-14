@@ -1,0 +1,179 @@
+package util
+
+import org.apache.poi
+import org.apache.poi.ss.usermodel.Sheet
+import org.apache.poi.ss.usermodel.Row
+import scala.runtime.RichInt
+import scala.collection.StringOps
+import org.apache.poi.ss.util.CellRangeAddressList
+import org.apache.poi.hssf.usermodel.HSSFWorkbook
+import java.nio.file.Files
+import java.nio.file.Paths
+import scala.annotation.meta.field
+import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.apache.poi.ss.usermodel.Workbook
+
+import AutoClose.use
+
+object Excel {
+
+  object ExcelType extends Enumeration {
+    type ExcelType = Value
+    val Xls, Xlsx, Auto = Value
+  }
+
+  import ExcelType._
+
+  def load(fileName: String, excelType: ExcelType = Auto): Workbook = {
+    val ty = excelType match {
+      case Auto => {
+        val fn = fileName.toLowerCase()
+        if (fn.endsWith(".xls")) {
+          Xls
+        } else if (fn.endsWith(".xlsx")) {
+          Xlsx
+        } else {
+          throw new Exception(s"unknown excel type: $fn")
+        }
+      }
+      case other => other
+    }
+    ty match {
+      case Xls =>
+        new HSSFWorkbook(
+          Files.newInputStream(Paths.get(fileName))
+        )
+      case Xlsx =>
+        new XSSFWorkbook(
+          Files.newInputStream(Paths.get(fileName))
+        )
+    }
+  }
+
+  implicit class RichWorkbook(book: Workbook) {
+    def save(fileName: String) {
+      use(Files.newOutputStream(Paths.get(fileName))) { out =>
+        book.write(out)
+      }
+    }
+  }
+
+  implicit class RichSheet(sheet: Sheet) {
+    def createRow(
+        targetRowIndex: Int,
+        sourceRowIndex: Int,
+        clearValue: Boolean
+    ): Row = {
+      if (targetRowIndex == sourceRowIndex) {
+        throw new IllegalArgumentException(
+          s"sourceIndex and targetIndex cannot be same: $sourceRowIndex == $targetRowIndex"
+        )
+      }
+
+      var newRow = sheet.getRow(targetRowIndex)
+      val srcRow = sheet.getRow(sourceRowIndex)
+
+      if (newRow != null) {
+        sheet.shiftRows(targetRowIndex, sheet.getLastRowNum(), 1, true, false)
+      }
+
+      newRow = sheet.createRow(targetRowIndex)
+      newRow.setHeight(srcRow.getHeight())
+
+      for (
+        index <-
+          srcRow.getFirstCellNum() until srcRow.getPhysicalNumberOfCells()
+      ) {
+        val srcCell = srcRow.getCell(index)
+        if (srcCell != null) {
+          val newCell = newRow.createCell(index)
+          newCell.setCellStyle(srcCell.getCellStyle())
+          newCell.setCellComment(srcCell.getCellComment())
+          newCell.setHyperlink(srcCell.getHyperlink())
+
+          import org.apache.poi.ss.usermodel.CellType._
+          srcCell.getCellType() match {
+            case NUMERIC =>
+              newCell.setCellValue(
+                if (clearValue) 0 else srcCell.getNumericCellValue()
+              )
+            case STRING =>
+              newCell.setCellValue(
+                if (clearValue) "" else srcCell.getStringCellValue()
+              )
+            case FORMULA => newCell.setCellFormula(srcCell.getCellFormula())
+            case BLANK   => newCell.setBlank()
+            case BOOLEAN =>
+              newCell.setCellValue(
+                if (clearValue) false else srcCell.getBooleanCellValue()
+              )
+            case ERROR => newCell.setCellErrorValue(srcCell.getErrorCellValue())
+            case _     => {}
+          }
+        }
+      }
+
+      val merged = new CellRangeAddressList()
+      for (index <- 0 until sheet.getNumMergedRegions()) {
+        val address = sheet.getMergedRegion(index)
+        if (
+          sourceRowIndex == address.getFirstRow
+          && sourceRowIndex == address.getLastRow
+        ) {
+          merged.addCellRangeAddress(
+            targetRowIndex,
+            address.getFirstColumn(),
+            targetRowIndex,
+            address.getLastColumn()
+          )
+        }
+      }
+      for (region <- merged.getCellRangeAddresses()) {
+        sheet.addMergedRegion(region)
+      }
+
+      newRow
+    }
+
+    def getOrCopyRow(
+        targetRowIndex: Int,
+        sourceRowIndex: Int,
+        clearValue: Boolean = false
+    ): Row = {
+      if (targetRowIndex == sourceRowIndex) {
+        sheet.getRow(sourceRowIndex)
+      } else {
+        if (sheet.getLastRowNum() >= targetRowIndex) {
+          sheet.shiftRows(targetRowIndex, sheet.getLastRowNum(), 1, true, false)
+        }
+        createRow(targetRowIndex, sourceRowIndex, clearValue)
+      }
+    }
+
+    def copyRows(
+        startRowIndex: Int,
+        count: Int,
+        sourceRowIndex: Int,
+        clearValue: Boolean = false
+    ) {
+      sheet.shiftRows(startRowIndex, sheet.getLastRowNum(), count, true, false)
+      for (i <- 0 until count) {
+        createRow(startRowIndex + i, sourceRowIndex, clearValue)
+      }
+    }
+
+    def rowIterator(start: Int, end: Int): Iterator[Row] = {
+      new Iterator[Row]() {
+        private var index = math.max(0, start)
+        private val last = math.min(end - 1, sheet.getLastRowNum())
+
+        def hasNext: Boolean = index <= last
+
+        def next(): Row = {
+          index += 1
+          sheet.getRow(index)
+        }
+      }
+    }
+  }
+}

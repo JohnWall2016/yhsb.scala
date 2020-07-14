@@ -20,7 +20,7 @@ class HttpRequest(
 
   def addBody(content: String) = body.writeBytes(content.getBytes(charset))
 
-  implicit def stringToBytes(s: String) = s.getBytes(charset)
+  private implicit def stringToBytes(s: String) = s.getBytes(charset)
 
   def getBytes(): Array[Byte] = {
     use(new ByteArrayOutputStream(512)) { buf =>

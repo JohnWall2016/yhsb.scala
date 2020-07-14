@@ -9,6 +9,7 @@ object NetTest extends TestSuite {
     test("HttpSocket") {
       use(new HttpSocket("115.238.190.240", 80)) { sock =>
         println(sock.getHttp("/"))
+        println("你好，Scala")
       }
     }
   }
