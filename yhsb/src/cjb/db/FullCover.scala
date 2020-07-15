@@ -1,10 +1,10 @@
-package db
+package cjb.db
 
 import io.getquill._
 
 object FullCover {
-  lazy val context = new MysqlJdbcContext(LowerCase, "fullcover2020")
-  import context._
+  lazy val fullcover = new MysqlJdbcContext(LowerCase, "fullcover2020")
+  import fullcover._
 
   /**
    * 全覆盖2省厅下发数据
