@@ -18,14 +18,19 @@ object yhsb extends ScalaModule {
     ivy"mysql:mysql-connector-java:8.0.17",
     ivy"io.getquill:quill-jdbc_2.13:3.5.2",
     ivy"org.apache.logging.log4j:log4j-slf4j-impl:2.13.3",
+    ivy"org.rogach:scallop_2.13:3.5.0"
   )
 
   object app extends ScalaModule {
-    def moduleDeps = Seq(yhsb)
     def scalaVersion = "2.13.3"
 
     object cjb extends ScalaModule {
       def scalaVersion = "2.13.3"
+
+      object fullcover extends ScalaModule {
+        def moduleDeps = Seq(yhsb)
+        def scalaVersion = "2.13.3"
+      }
     }
   }
 
