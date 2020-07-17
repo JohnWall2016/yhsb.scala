@@ -1,12 +1,12 @@
 package yhsb.net
 
 import java.net.Socket
-import util.AutoClose.use
+import yhsb.util.AutoClose.use
 import java.io.ByteArrayOutputStream
-import net.HttpHeader
+import yhsb.net.HttpHeader
 import java.io.InputStream
 import java.io.OutputStream
-import net.HttpRequest
+import yhsb.net.HttpRequest
 import java.io.Closeable
 
 class HttpSocket(

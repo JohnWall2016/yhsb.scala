@@ -1,7 +1,7 @@
-package net
+package yhsb.net
 
 import java.io.ByteArrayOutputStream
-import util.AutoClose.use
+import yhsb.util.AutoClose.use
 
 class HttpRequest(
     val path: String,

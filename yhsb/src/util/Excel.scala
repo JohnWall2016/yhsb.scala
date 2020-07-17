@@ -1,4 +1,4 @@
-package util
+package yhsb.util
 
 import org.apache.poi
 import org.apache.poi.ss.usermodel.Sheet
@@ -14,6 +14,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.apache.poi.ss.usermodel.Workbook
 
 import AutoClose.use
+import org.apache.poi.ss.usermodel.Cell
+import org.apache.poi.openxml4j.exceptions.InvalidOperationException
 
 object Excel {
 
@@ -176,6 +178,34 @@ object Excel {
           sheet.getRow(index)
         }
       }
+    }
+  }
+
+  implicit class RichRow(row: Row) {
+    def getCell(columnName: String) = row.getCell(CellRef.columnNameToNumber(columnName))
+  }
+
+  implicit class RichCell(cell: Cell) {
+    def value: String = {
+      import org.apache.poi.ss.usermodel.CellType._
+      cell.getCellType() match {
+        case STRING => cell.getStringCellValue()
+        case NUMERIC => cell.getNumericCellValue().toString()
+        case BLANK => ""
+        case BOOLEAN => cell.getBooleanCellValue().toString()
+        case ty => throw new Exception(s"unsupported type: $ty")
+      }
+    }
+  }
+
+  object CellRef {
+    def columnNameToNumber(name: String): Int = {
+      var sum = 0;
+      for (ch <- name.toUpperCase()) {
+        sum *= 26
+        sum += ch - 64
+      }
+      sum
     }
   }
 }
