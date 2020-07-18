@@ -16,6 +16,8 @@ import org.apache.poi.ss.usermodel.Workbook
 import AutoClose.use
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.openxml4j.exceptions.InvalidOperationException
+import java.io.InputStream
+import java.io.ByteArrayInputStream
 
 object Excel {
 
@@ -40,19 +42,20 @@ object Excel {
       }
       case other => other
     }
+
+    def loadFile = {
+      new ByteArrayInputStream(
+        Files.readAllBytes(Paths.get(fileName))
+      )
+    }
+
     ty match {
-      case Xls =>
-        new HSSFWorkbook(
-          Files.newInputStream(Paths.get(fileName))
-        )
-      case Xlsx =>
-        new XSSFWorkbook(
-          Files.newInputStream(Paths.get(fileName))
-        )
+      case Xls => new HSSFWorkbook(loadFile)
+      case Xlsx => new XSSFWorkbook(loadFile)
     }
   }
 
-  implicit class RichWorkbook(book: Workbook) {
+  implicit class WorkbookOps(val book: Workbook) {
     def save(fileName: String) {
       use(Files.newOutputStream(Paths.get(fileName))) { out =>
         book.write(out)
@@ -60,7 +63,7 @@ object Excel {
     }
   }
 
-  implicit class RichSheet(sheet: Sheet) {
+  implicit class SheetOps(val sheet: Sheet) {
     def createRow(
         targetRowIndex: Int,
         sourceRowIndex: Int,
@@ -181,11 +184,11 @@ object Excel {
     }
   }
 
-  implicit class RichRow(row: Row) {
+  implicit class RowOps(val row: Row) {
     def getCell(columnName: String) = row.getCell(CellRef.columnNameToNumber(columnName))
   }
 
-  implicit class RichCell(cell: Cell) {
+  implicit class CellOps(val cell: Cell) {
     def value: String = {
       import org.apache.poi.ss.usermodel.CellType._
       cell.getCellType() match {
