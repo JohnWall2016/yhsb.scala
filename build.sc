@@ -2,10 +2,10 @@ import mill._, scalalib._
 import coursier.maven.MavenRepository
 
 object CustomZincWorkerModule extends ZincWorkerModule {
-  def repositories() = super.repositories ++ Seq(
+  def repositories() = Seq(
     MavenRepository("https://maven.aliyun.com/repository/central"),
     MavenRepository("https://maven.aliyun.com/repository/public"),
-  )
+  ) ++ super.repositories
 }
 
 object yhsb extends ScalaModule {
@@ -18,7 +18,8 @@ object yhsb extends ScalaModule {
     ivy"mysql:mysql-connector-java:8.0.17",
     ivy"io.getquill:quill-jdbc_2.13:3.5.2",
     ivy"org.apache.logging.log4j:log4j-slf4j-impl:2.13.3",
-    ivy"org.rogach:scallop_2.13:3.5.0"
+    ivy"org.rogach:scallop_2.13:3.5.0",
+    ivy"com.google.code.gson:gson:2.8.6",
   )
 
   object app extends ScalaModule {
