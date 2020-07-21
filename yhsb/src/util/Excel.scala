@@ -55,7 +55,7 @@ object Excel {
     }
   }
 
-  implicit class WorkbookOps(val book: Workbook) {
+  implicit class WorkbookOps(val book: Workbook) extends AnyVal {
     def save(fileName: String) {
       use(Files.newOutputStream(Paths.get(fileName))) { out =>
         book.write(out)
@@ -63,7 +63,7 @@ object Excel {
     }
   }
 
-  implicit class SheetOps(val sheet: Sheet) {
+  implicit class SheetOps(val sheet: Sheet) extends AnyVal {
     def createRow(
         targetRowIndex: Int,
         sourceRowIndex: Int,
@@ -184,11 +184,11 @@ object Excel {
     }
   }
 
-  implicit class RowOps(val row: Row) {
+  implicit class RowOps(val row: Row) extends AnyVal {
     def getCell(columnName: String) = row.getCell(CellRef.columnNameToNumber(columnName))
   }
 
-  implicit class CellOps(val cell: Cell) {
+  implicit class CellOps(val cell: Cell) extends AnyVal {
     def value: String = {
       import org.apache.poi.ss.usermodel.CellType._
       cell.getCellType() match {
