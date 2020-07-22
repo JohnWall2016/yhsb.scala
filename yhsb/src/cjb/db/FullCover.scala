@@ -1,4 +1,4 @@
-package cjb.db
+package yhsb.cjb.db
 
 import io.getquill._
 

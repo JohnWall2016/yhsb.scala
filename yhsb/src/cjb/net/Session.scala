@@ -1,14 +1,15 @@
-package cjb.net
+package yhsb.cjb.net
 
 import yhsb.net.HttpSocket
 import yhsb.net.HttpRequest
 import yhsb.util.json.Jsonable
-import com.google.gson.annotations.SerializedName
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.reflect.classTag
 import com.google.gson.reflect.TypeToken
 import yhsb.util.json.Json
+import yhsb.util.json.Json.JsonName
+import java.{util => ju}
 
 class Session(
     host: String,
@@ -106,22 +107,22 @@ class JsonService[T <: Request](
     userID: String,
     password_ : String
 ) extends Jsonable {
-  @SerializedName("serviceid")
+  @JsonName("serviceid")
   val serviceID = param.id
 
   val target = ""
 
-  @SerializedName("sessionid")
+  @JsonName("sessionid")
   var sessionID: String = null
 
-  @SerializedName("loginname")
-  var loginName: String = userID
+  @JsonName("loginname")
+  val loginName: String = userID
 
-  var password: String = password_
+  val password: String = password_
 
   private val params: T = param
 
-  private var datas = List(params)
+  private val datas = ju.List.of(param)
 }
 
 class Result[T <: Jsonable] extends Jsonable() with Iterable[T] {
@@ -130,14 +131,14 @@ class Result[T <: Jsonable] extends Jsonable() with Iterable[T] {
   var pagesize = 0
   var serviceid: String = null
 
-  @SerializedName("type")
+  @JsonName("type")
   var typeOf: String = null
 
   var vcode: String = null
   var message: String = null
   var messagedetail: String = null
 
-  @SerializedName("datas")
+  @JsonName("datas")
   private var data = mutable.ListBuffer[T]()
 
   def add(d: T) = data.append(d)
@@ -162,6 +163,6 @@ object Result {
 }
 
 case class SysLogin(
-    @SerializedName("username") val userName: String,
-    @SerializedName("passwd") val password: String
+    @JsonName("username") val userName: String,
+    @JsonName("passwd") val password: String
 ) extends Request("syslogin")

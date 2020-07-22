@@ -46,6 +46,8 @@ object Json {
   def fromJson[T](json: String, typeOfT: Type): T = gson.fromJson(json, typeOfT)
 
   def toJson[T](obj: T): String = gson.toJson(obj)
+
+  type JsonName = SerializedName @scala.annotation.meta.field
 }
 
 class Jsonable {
