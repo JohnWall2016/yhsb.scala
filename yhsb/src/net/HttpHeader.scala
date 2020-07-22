@@ -12,6 +12,8 @@ class HttpHeader extends Iterable[(String, String)] {
 
   def contains(key: String): Boolean = header.contains(key.toLowerCase())
 
+  def apply(key: String): Iterable[String] = header(key)
+
   def add(key: String, value: String) {
     val k = key.toLowerCase()
     if (!header.contains(k)) {

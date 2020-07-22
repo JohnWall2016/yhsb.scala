@@ -16,7 +16,7 @@ class Session(
     private val userID: String,
     private val password: String
 ) extends HttpSocket(host, port) {
-  private val cookies = Map[String, String]()
+  private val cookies = mutable.Map[String, String]()
 
   def createRequest: HttpRequest = {
     val request = new HttpRequest("/hncjb/reports/crud", "POST")
@@ -56,11 +56,56 @@ class Session(
     write(request.getBytes())
   }
 
+  def toService(req: Request): String = {
+    val service = new JsonService(req, userID, password)
+    service.toString()
+  }
+
+  def toService(id: String): String = toService(new Request(id))
+
+  def sendService(req: Request) = request(toService(req))
+
+  def sendService(id: String) = request(toService(id))
+
+  def fromJson[T<: Jsonable: ClassTag](json: String): Result[T] = Result.fromJson(json)
+
+  def getResult[T<: Jsonable: ClassTag](): Result[T] = {
+    Result.fromJson(readBody())
+  }
+
+  def login(): String = {
+    sendService("loadCurrentUser")
+
+    val header = readHeader()
+    if (header.contains("set-cookie")) {
+      val pat = "([^=]+?)=(.+?);".r
+      header("set-cookie").foreach(cookie => {
+        val result = pat.findFirstMatchIn(cookie)
+        if (result.isDefined) {
+          val Some(m) = result
+          cookies(m.group(1)) = m.group(2)
+        }
+      })
+    }
+    readBody(header)
+
+    sendService(SysLogin(userID, password))
+    readBody()
+  }
+
+  def logout(): String = {
+    sendService("syslogout")
+    readBody()
+  }
 }
 
-case class Request(@transient id: String) extends Jsonable
+class Request(@transient val id: String) extends Jsonable
 
-class JsonService[T <: Request](param: T) extends Jsonable {
+class JsonService[T <: Request](
+    param: T, 
+    userID: String,
+    password_ : String
+) extends Jsonable {
   @SerializedName("serviceid")
   val serviceID = param.id
 
@@ -70,9 +115,9 @@ class JsonService[T <: Request](param: T) extends Jsonable {
   var sessionID: String = null
 
   @SerializedName("loginname")
-  var loginName: String = null
+  var loginName: String = userID
 
-  var password: String = null
+  var password: String = password_
 
   private val params: T = param
 
@@ -105,10 +150,18 @@ class Result[T <: Jsonable] extends Jsonable() with Iterable[T] {
 
   def iterator = data.iterator
 
-  def fromJson[T <: Jsonable: ClassTag](json: String): Result[T] = {
+}
+
+object Result {
+  def fromJson[T<: Jsonable: ClassTag](json: String): Result[T] = {
     val typeOf = TypeToken
       .getParameterized(classOf[Result[_]], classTag[T].runtimeClass)
       .getType()
     Json.fromJson(json, typeOf)
   }
 }
+
+case class SysLogin(
+    @SerializedName("username") val userName: String,
+    @SerializedName("passwd") val password: String
+) extends Request("syslogin")
