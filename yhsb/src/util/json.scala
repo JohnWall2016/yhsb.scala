@@ -14,6 +14,7 @@ import com.google.gson.annotations.SerializedName
 
 class JsonField(val value: String) {
   def name = s"未知值: $value"
+  
   override def toString(): String = name
 }
 
@@ -49,5 +50,6 @@ object Json {
 
 class Jsonable {
   def toJson: String = Json.toJson(this)
+
   override def toString(): String = toJson
 }

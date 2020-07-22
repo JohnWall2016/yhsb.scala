@@ -2,10 +2,10 @@ import mill._, scalalib._
 import coursier.maven.MavenRepository
 
 object CustomZincWorkerModule extends ZincWorkerModule {
-  def repositories() = Seq(
+  def repositories() = super.repositories ++ Seq(
     MavenRepository("https://maven.aliyun.com/repository/central"),
     MavenRepository("https://maven.aliyun.com/repository/public"),
-  ) ++ super.repositories
+  )
 }
 
 object yhsb extends ScalaModule {
