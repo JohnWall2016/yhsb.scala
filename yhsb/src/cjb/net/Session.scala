@@ -79,13 +79,11 @@ class Session(
 
     val header = readHeader()
     if (header.contains("set-cookie")) {
-      val pat = "([^=]+?)=(.+?);".r
+      val re = "([^=]+?)=(.+?);".r
       header("set-cookie").foreach(cookie => {
-        val result = pat.findFirstMatchIn(cookie)
-        if (result.isDefined) {
-          val Some(m) = result
-          cookies(m.group(1)) = m.group(2)
-        }
+        re.findFirstMatchIn(cookie).foreach(
+          m => cookies(m.group(1)) = m.group(2)
+        )
       })
     }
     readBody(header)
