@@ -62,7 +62,7 @@ class HttpSocket(
     var continue = true
     while (continue) {
       val line = readLine()
-      println(line)
+      // println(line)
       if (line == null || line.isEmpty()) {
         continue = false
       } else {

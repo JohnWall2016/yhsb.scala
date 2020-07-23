@@ -12,8 +12,20 @@ import scala.reflect.ClassTag
 import scala.reflect.classTag
 import com.google.gson.annotations.SerializedName
 
-class JsonField(val value: String) {
-  def name = s"未知值: $value"
+class JsonField {
+  private[json] var _value: String = null
+
+  def value = _value
+
+  def name = {
+    if (valueMap.isDefinedAt(value)) {
+      valueMap(value)
+    } else {
+      s"未知值: $value"
+    }
+  }
+
+  def valueMap: PartialFunction[String, String] = PartialFunction.empty
   
   override def toString(): String = name
 }
@@ -25,19 +37,24 @@ class JsonFieldAdapter extends JsonAdapter[JsonField] {
       src: JsonField,
       typeOfSrc: Type,
       context: JsonSerializationContext
-  ): JsonElement = new JsonPrimitive(src.value)
+  ): JsonElement = new JsonPrimitive(src._value)
 
   def deserialize(
       json: JsonElement,
       typeOfT: Type,
       context: JsonDeserializationContext
-  ): JsonField = new JsonField(json.getAsString())
+  ): JsonField = {
+    val clazz = typeOfT.asInstanceOf[Class[_]]
+    val field = clazz.getConstructor().newInstance().asInstanceOf[JsonField]
+    field._value = json.getAsString()
+    field
+  }
 }
 
 object Json {
   private[json] val gson = new GsonBuilder()
     .serializeNulls()
-    .registerTypeAdapter(classOf[JsonField], new JsonFieldAdapter)
+    .registerTypeHierarchyAdapter(classOf[JsonField], new JsonFieldAdapter)
     .create()
 
   def fromJson[T: ClassTag](json: String): T =
@@ -50,7 +67,7 @@ object Json {
   type JsonName = SerializedName @scala.annotation.meta.field
 }
 
-class Jsonable {
+trait Jsonable {
   def toJson: String = Json.toJson(this)
 
   override def toString(): String = toJson

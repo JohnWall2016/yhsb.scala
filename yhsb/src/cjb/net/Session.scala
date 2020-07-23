@@ -9,7 +9,9 @@ import scala.reflect.classTag
 import com.google.gson.reflect.TypeToken
 import yhsb.util.json.Json
 import yhsb.util.json.Json.JsonName
-import java.{util => ju}
+import yhsb.util.Config
+import yhsb.util.AutoClose
+import yhsb.cjb.net.protocol._
 
 class Session(
     host: String,
@@ -37,7 +39,7 @@ class Session(
       .addHeader("Referer", s"http://$url/hncjb/pages/html/index.html")
       .addHeader("Accept-Encoding", "gzip, deflate")
       .addHeader("Accept-Language", "zh-CN,zh;q=0.8")
-    if (cookies.isEmpty) {
+    if (!cookies.isEmpty) {
       request.addHeader(
         "Cookie",
         cookies.map(e => s"${e._1}=${e._2}").mkString("; ")
@@ -68,10 +70,13 @@ class Session(
 
   def sendService(id: String) = request(toService(id))
 
-  def fromJson[T<: Jsonable: ClassTag](json: String): Result[T] = Result.fromJson(json)
+  def fromJson[T <: Jsonable: ClassTag](json: String): Result[T] =
+    Result.fromJson(json)
 
-  def getResult[T<: Jsonable: ClassTag](): Result[T] = {
-    Result.fromJson(readBody())
+  def getResult[T <: Jsonable: ClassTag](): Result[T] = {
+    val result = readBody()
+    println(s"getResult: $result")
+    Result.fromJson(result)
   }
 
   def login(): String = {
@@ -81,9 +86,8 @@ class Session(
     if (header.contains("set-cookie")) {
       val re = "([^=]+?)=(.+?);".r
       header("set-cookie").foreach(cookie => {
-        re.findFirstMatchIn(cookie).foreach(
-          m => cookies(m.group(1)) = m.group(2)
-        )
+        re.findFirstMatchIn(cookie)
+          .foreach(m => cookies(m.group(1)) = m.group(2))
       })
     }
     readBody(header)
@@ -98,10 +102,34 @@ class Session(
   }
 }
 
+object Session {
+  def use[T](user: String = "002", autoLogin: Boolean = true)(
+      f: Session => T
+  ): T = {
+    val config = Config.load("cjb.session")
+    val usr = config.getConfig(s"users.$user")
+    AutoClose.use(
+      new Session(
+        config.getString("host"),
+        config.getInt("port"),
+        usr.getString("id"),
+        usr.getString("pwd")
+      )
+    ) { sess =>
+      if (autoLogin) sess.login()
+      try {
+        f(sess)
+      } finally {
+        if (autoLogin) sess.logout()
+      }
+    }
+  }
+}
+
 class Request(@transient val id: String) extends Jsonable
 
 class JsonService[T <: Request](
-    param: T, 
+    param: T,
     userID: String,
     password_ : String
 ) extends Jsonable {
@@ -120,10 +148,10 @@ class JsonService[T <: Request](
 
   private val params: T = param
 
-  private val datas = ju.List.of(param)
+  private val datas = java.util.List.of(param)
 }
 
-class Result[T <: Jsonable] extends Jsonable() with Iterable[T] {
+class Result[T <: Jsonable] extends Iterable[T] with Jsonable {
   var rowcount = 0
   var page = 0
   var pagesize = 0
@@ -137,22 +165,25 @@ class Result[T <: Jsonable] extends Jsonable() with Iterable[T] {
   var messagedetail: String = null
 
   @JsonName("datas")
-  private var data = mutable.ListBuffer[T]()
+  private var data = java.util.List.of[T]()
 
-  def add(d: T) = data.append(d)
+  def add(d: T) = data.add(d)
 
-  def apply(index: Int) = data(index)
+  def apply(index: Int) = data.get(index)
 
   override def size = data.size
 
   override def isEmpty = size == 0
 
-  def iterator = data.iterator
+  def iterator = {
+    import scala.collection.JavaConverters.asScalaIteratorConverter
+    data.iterator.asScala
+  }
 
 }
 
 object Result {
-  def fromJson[T<: Jsonable: ClassTag](json: String): Result[T] = {
+  def fromJson[T <: Jsonable: ClassTag](json: String): Result[T] = {
     val typeOf = TypeToken
       .getParameterized(classOf[Result[_]], classTag[T].runtimeClass)
       .getType()
@@ -160,7 +191,3 @@ object Result {
   }
 }
 
-case class SysLogin(
-    @JsonName("username") val userName: String,
-    @JsonName("passwd") val password: String
-) extends Request("syslogin")

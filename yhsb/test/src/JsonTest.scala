@@ -2,7 +2,8 @@ package yhsb
 
 import utest._
 import yhsb.util.Config
-import yhsb.cjb.net.{SysLogin, JsonService}
+import yhsb.cjb.net.JsonService
+import yhsb.cjb.net.protocol.SysLogin
 
 object JsonTest extends TestSuite {
   def tests = Tests {
