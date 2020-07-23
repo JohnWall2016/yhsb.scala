@@ -21,7 +21,7 @@ object SessionTest extends TestSuite {
         println(result)
         result.foreach { cbxx =>
           println(cbxx)
-          println(s"${cbxx.cbState} ${cbxx.jfState} ${cbxx.jbKind}")
+          println(s"${cbxx.cbState} ${cbxx.jfState} ${cbxx.jbKind} ${cbxx.jbState}")
         }
       }
     }
