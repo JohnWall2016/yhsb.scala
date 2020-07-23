@@ -25,6 +25,15 @@ object SessionTest extends TestSuite {
         }
       }
     }
+    test("cbsh") {
+      Session.use() { sess =>
+        sess.sendService(CbshQuery("2020-07-20"))
+        val result = sess.getResult[Cbsh]()
+        result.foreach { cbsh =>
+          println(cbsh)
+        }
+      }
+    }
   }
 }
 

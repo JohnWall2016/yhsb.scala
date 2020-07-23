@@ -12,6 +12,7 @@ import yhsb.util.json.Json.JsonName
 import yhsb.util.Config
 import yhsb.util.AutoClose
 import yhsb.cjb.net.protocol._
+import java.{util => ju}
 
 class Session(
     host: String,
@@ -75,7 +76,7 @@ class Session(
 
   def getResult[T <: Jsonable: ClassTag](): Result[T] = {
     val result = readBody()
-    println(s"getResult: $result")
+    // println(s"getResult: $result")
     Result.fromJson(result)
   }
 
@@ -128,6 +129,29 @@ object Session {
 
 class Request(@transient val id: String) extends Jsonable
 
+class PageRequest(
+    id: String,
+    val page: Int = 1,
+    @JsonName("pagesize") val pageSize: Int = 15,
+    sortOpts : ju.Map[String, String] = null,
+    totalOpts: ju.Map[String, String] = null,
+    filterOpts: ju.Map[String, String] = null,
+) extends Request(id) {
+  val filtering = ju.List.of[AnyRef]()
+  
+  val sorting = if (sortOpts == null) {
+    ju.List.of[AnyRef]()
+  } else {
+    ju.List.of(sortOpts)
+  }
+  
+  val totals = if (totalOpts == null) {
+    ju.List.of[AnyRef]()
+  } else {
+    ju.List.of(totalOpts)
+  }
+}
+
 class JsonService[T <: Request](
     param: T,
     userID: String,
@@ -148,7 +172,7 @@ class JsonService[T <: Request](
 
   private val params: T = param
 
-  private val datas = java.util.List.of(param)
+  private val datas = ju.List.of(param)
 }
 
 class Result[T <: Jsonable] extends Iterable[T] with Jsonable {
@@ -165,7 +189,7 @@ class Result[T <: Jsonable] extends Iterable[T] with Jsonable {
   var messagedetail: String = null
 
   @JsonName("datas")
-  private var data = java.util.List.of[T]()
+  private var data = ju.List.of[T]()
 
   def add(d: T) = data.add(d)
 
@@ -179,7 +203,6 @@ class Result[T <: Jsonable] extends Iterable[T] with Jsonable {
     import scala.collection.JavaConverters.asScalaIteratorConverter
     data.iterator.asScala
   }
-
 }
 
 object Result {
