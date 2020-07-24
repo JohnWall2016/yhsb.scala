@@ -21,5 +21,5 @@ trait InputFile { _: ScallopConf =>
 }
 
 trait SheetIndex { _: ScallopConf =>
-  val sheetIndex = trailArg[Int](descr = "数据表序号", default = Some(0), required = false)
+  val sheetIndex = trailArg[Int](descr = "数据表序号, 默认为0", default = Some(0), required = false)
 }

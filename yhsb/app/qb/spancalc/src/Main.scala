@@ -17,6 +17,7 @@ class Conf(args: Seq[String])
     with InputFile
     with RowRange
     with SheetIndex {
+  banner("缴费单年限计算程序")
   verify()
 }
 

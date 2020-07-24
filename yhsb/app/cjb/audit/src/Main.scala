@@ -12,6 +12,7 @@ class Conf(args: Seq[String])
     extends ScallopConf(args)
     with DateRange
     with Export {
+  banner("参保审核与参保身份变更程序")
   verify()
 }
 
