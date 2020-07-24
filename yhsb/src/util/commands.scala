@@ -3,8 +3,8 @@ package yhsb.util.commands
 import org.rogach.scallop._
 
 trait RowRange { _: ScallopConf =>
-  val startRow = trailArg[Int](descr = "开始行")
-  val endRow = trailArg[Int](descr = "结束行")
+  val startRow = trailArg[Int](descr = "开始行, 从1开始")
+  val endRow = trailArg[Int](descr = "结束行, 包含在内")
 }
 
 trait DateRange { _: ScallopConf =>
@@ -14,4 +14,12 @@ trait DateRange { _: ScallopConf =>
 
 trait Export { _: ScallopConf =>
   val export = opt[Boolean](required = false, descr = "是否导出数据")
+}
+
+trait InputFile { _: ScallopConf =>
+  val inputFile = trailArg[String](descr = "输入文件路径")
+}
+
+trait SheetIndex { _: ScallopConf =>
+  val sheetIndex = trailArg[Int](descr = "数据表序号", default = Some(0), required = false)
 }

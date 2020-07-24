@@ -50,7 +50,7 @@ object Excel {
     }
 
     ty match {
-      case Xls => new HSSFWorkbook(loadFile)
+      case Xls  => new HSSFWorkbook(loadFile)
       case Xlsx => new XSSFWorkbook(loadFile)
     }
   }
@@ -106,10 +106,11 @@ object Excel {
               newCell.setCellValue(
                 if (clearValue) "" else srcCell.getStringCellValue()
               )
-            case FORMULA => newCell.setCellFormula(
+            case FORMULA =>
+              newCell.setCellFormula(
                 if (clearValue) null else srcCell.getCellFormula()
               )
-            case BLANK   => newCell.setBlank()
+            case BLANK => newCell.setBlank()
             case BOOLEAN =>
               newCell.setCellValue(
                 if (clearValue) false else srcCell.getBooleanCellValue()
@@ -185,18 +186,22 @@ object Excel {
   }
 
   implicit class RowOps(val row: Row) extends AnyVal {
-    def getCell(columnName: String) = row.getCell(CellRef.columnNameToNumber(columnName))
+    def getCell(columnName: String) =
+      row.getCell(CellRef.columnNameToNumber(columnName) - 1)
+
+    def createCell(columnName: String) =
+      row.createCell(CellRef.columnNameToNumber(columnName) - 1)
   }
 
   implicit class CellOps(val cell: Cell) extends AnyVal {
     def value: String = {
       import org.apache.poi.ss.usermodel.CellType._
       cell.getCellType() match {
-        case STRING => cell.getStringCellValue()
+        case STRING  => cell.getStringCellValue()
         case NUMERIC => cell.getNumericCellValue().toString()
-        case BLANK => ""
+        case BLANK   => ""
         case BOOLEAN => cell.getBooleanCellValue().toString()
-        case ty => throw new Exception(s"unsupported type: $ty")
+        case ty      => throw new Exception(s"unsupported type: $ty")
       }
     }
   }
