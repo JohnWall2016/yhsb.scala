@@ -39,17 +39,24 @@ object Main {
         val bonusMonths = row.getCell("I").getNumericCellValue.toInt
 
         val bought = row.getCell("N").value.split("\\|")
-        val reSpan = "(\\d\\d\\d\\d)(\\d\\d)-(\\d\\d\\d\\d)(\\d\\d)".r
+        //println(s"|${bought.mkString(",")}|")
+        val reSpan = "^(\\d\\d\\d\\d\\d\\d)(-(\\d\\d\\d\\d\\d\\d))?$".r
         val boughtSpans = bought.flatMap { b =>
-          reSpan.findFirstMatchIn(b) match {
+          reSpan.findFirstMatchIn(b.trim()) match {
             case None => None
-            case Some(m) =>
-              Some(
+            case Some(m) => {
+              Some(if (m.group(3) == null) {
                 MonthRange(
-                  Month(m.group(1).toInt, m.group(2).toInt),
-                  Month(m.group(3).toInt, m.group(4).toInt)
+                  Month.from(m.group(1).toInt),
+                  Month.from(m.group(1).toInt)
                 )
-              )
+              } else {
+                MonthRange(
+                  Month.from(m.group(1).toInt),
+                  Month.from(m.group(3).toInt)
+                )
+              })
+            }
           }
         }
 
@@ -99,6 +106,6 @@ object Main {
         }
       }
     }
-    workbook.save(appendToFileName(conf.inputFile(), "out"))
+    workbook.save(appendToFileName(conf.inputFile(), ".out"))
   }
 }

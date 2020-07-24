@@ -197,8 +197,11 @@ object Excel {
     def value: String = {
       import org.apache.poi.ss.usermodel.CellType._
       cell.getCellType() match {
-        case STRING  => cell.getStringCellValue()
-        case NUMERIC => cell.getNumericCellValue().toString()
+        case STRING => cell.getStringCellValue()
+        case NUMERIC => {
+          val v = cell.getNumericCellValue()
+          if (v.isValidInt) v.toInt.toString else v.toString
+        }
         case BLANK   => ""
         case BOOLEAN => cell.getBooleanCellValue().toString()
         case ty      => throw new Exception(s"unsupported type: $ty")
