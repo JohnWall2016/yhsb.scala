@@ -6,7 +6,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import scala.collection.mutable
 
-object DateTime {
+object formater {
   def toDashedDate(
       date: String,
       format: Regex = "^(\\d\\d\\d\\d)(\\d\\d)(\\d\\d)$".r

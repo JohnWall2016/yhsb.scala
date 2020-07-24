@@ -7,6 +7,8 @@ import yhsb.util.datetime.MonthRange.MonthRangeSeq
 object DateTimeTest extends TestSuite {
   def tests = Tests {
     test("month") {
+      import yhsb.util.datetime.MonthOrdering.mkOrderingOps
+
       val birthDay = Month(1990, 12) //??
       val boughtSpans = Seq( //??
         MonthRange(Month(2008, 1), Month(2009, 9)),
@@ -15,7 +17,7 @@ object DateTimeTest extends TestSuite {
       val totalMonths = 180 //??
       val bonusMonths = 48 //??
 
-      val startMonth = birthDay.offset(16 * 12 + 1) //?
+      val startMonth = birthDay.offset(16 * 12 + 1).max(Month(2005, 8)) //?
       val endMonth = Month(2020, 7) //?
 
       val validBound = MonthRange(startMonth, endMonth)

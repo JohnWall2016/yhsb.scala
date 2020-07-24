@@ -3,7 +3,7 @@ package yhsb.app.cjb.audit
 import org.rogach.scallop._
 import yhsb.util.commands.DateRange
 import yhsb.util.commands.Export
-import yhsb.util.DateTime.toDashedDate
+import yhsb.util.datetime.formater.toDashedDate
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.CbshQuery
 import yhsb.cjb.net.protocol.Cbsh
