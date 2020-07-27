@@ -29,7 +29,7 @@ object Strings {
       width: Int,
       specialChars: Seq[SpecialChars]
   ): Int = {
-    s.foldLeft(0) { (count, char) =>
+    width - s.foldLeft(0) { (count, char) =>
       count + specialChars
         .find(sp => sp.range.contains(char))
         .map(_.width)
@@ -38,20 +38,34 @@ object Strings {
   }
 
   implicit class StringOps(val s: String) extends AnyVal {
-    def padRight(
+    def pad(
         width: Int,
         padChar: Char = ' ',
-        specialChars: Seq[SpecialChars] = Seq(chineseChars)
+        specialChars: Seq[SpecialChars] = Seq(chineseChars),
+        left: Boolean = false
     ): String = {
       val count = padCount(s, width, specialChars)
       if (count > 0) {
         val b = new StringBuilder
+        if (left) b.append(padChar * count)
         b.append(s)
-        b.append(padChar * count)
+        if (!left) b.append(padChar * count)
         b.toString()
       } else {
         s
       }
     }
+
+    def padLeft(
+        width: Int,
+        padChar: Char = ' ',
+        specialChars: Seq[SpecialChars] = Seq(chineseChars)
+    ) = s.pad(width, padChar, specialChars, true)
+
+    def padRight(
+        width: Int,
+        padChar: Char = ' ',
+        specialChars: Seq[SpecialChars] = Seq(chineseChars)
+    ) = s.pad(width, padChar, specialChars, false)
   }
 }
