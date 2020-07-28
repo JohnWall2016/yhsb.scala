@@ -47,9 +47,9 @@ object Strings {
       val count = padCount(s, width, specialChars)
       if (count > 0) {
         val b = new StringBuilder
-        if (left) b.append(padChar * count)
+        if (left) b.append(padChar.toString * count)
         b.append(s)
-        if (!left) b.append(padChar * count)
+        if (!left) b.append(padChar.toString * count)
         b.toString()
       } else {
         s

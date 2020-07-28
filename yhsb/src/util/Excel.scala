@@ -18,6 +18,7 @@ import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.openxml4j.exceptions.InvalidOperationException
 import java.io.InputStream
 import java.io.ByteArrayInputStream
+import java.nio.file.Path
 
 object Excel {
 
@@ -58,6 +59,11 @@ object Excel {
   implicit class WorkbookOps(val book: Workbook) extends AnyVal {
     def save(fileName: String) {
       use(Files.newOutputStream(Paths.get(fileName))) { out =>
+        book.write(out)
+      }
+    }
+    def save(file: Path) {
+      use(Files.newOutputStream(file)) { out =>
         book.write(out)
       }
     }
