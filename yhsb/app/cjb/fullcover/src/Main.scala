@@ -93,7 +93,19 @@ object Main {
           }
           println(f"${"合计".padRight(10)} $sum%6d")
         } else {
-          for (dw <- dwmc()) {
+          var dwmcs = dwmc()
+          if (dwmcs(0).toUpperCase() == "ALL") {
+            val result = run(
+              fc2Stxfsj.groupBy(_.dwmc).map(_._1)
+            )
+            dwmcs = result.map {
+              case None => null
+              case Some(value) => value
+            }
+          }
+          for (dw <- dwmcs) {
+            val file = Paths.get(outputDir(), s"${dw}全覆盖下发数据.xlsx")
+            println(s"导出 $dw => $file")
             val result = run(
               fc2Stxfsj
                 .filter(_.dwmc == lift(Option(dw)))
@@ -133,7 +145,7 @@ object Main {
 
                 index += 1
               }
-              workbook.save(Paths.get(outputDir(), s"${dw}全覆盖下发数据.xlsx"))
+              workbook.save(file)
             }
           }
         }
