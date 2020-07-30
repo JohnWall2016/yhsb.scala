@@ -56,6 +56,8 @@ object Excel {
     }
   }
 
+  def load(path: Path): Workbook = load(path.toString(), Auto)
+
   implicit class WorkbookOps(val book: Workbook) extends AnyVal {
     def save(fileName: String) {
       use(Files.newOutputStream(Paths.get(fileName))) { out =>

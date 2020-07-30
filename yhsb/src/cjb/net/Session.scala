@@ -197,7 +197,7 @@ class Result[T <: Jsonable] extends Iterable[T] with Jsonable {
 
   override def size = data.size
 
-  override def isEmpty = size == 0
+  override def isEmpty = data.isEmpty()
 
   def iterator = {
     import scala.collection.JavaConverters.asScalaIteratorConverter
