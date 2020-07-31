@@ -7,6 +7,7 @@ import yhsb.util.datetime.formater.toDashedDate
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.CbshQuery
 import yhsb.cjb.net.protocol.Cbsh
+import yhsb.cjb.net.protocol.JBKind
 import yhsb.util.Excel
 import java.nio.file.Paths
 import yhsb.cjb.db.FPData2020._
@@ -71,7 +72,7 @@ object Main {
           row.getCell("E").setCellValue(cbsh.name)
           row
             .getCell("J")
-            .setCellValue(jbClassMap.getOrElse(info.jbrdsf.getOrElse(""), ""))
+            .setCellValue(JBKind.getOrElse(info.jbrdsf.getOrElse(""), ""))
           canExport = true
         } else {
           println(s"${cbsh.idcard} ${cbsh.name.padRight(6)} ${cbsh.birthDay}")

@@ -5,6 +5,7 @@ import yhsb.util.json.Json.JsonName
 import yhsb.cjb.net.Request
 import yhsb.util.json.JsonField
 import yhsb.cjb.net.PageRequest
+import yhsb.util.BiMap
 
 case class SysLogin(
     @JsonName("username") userName: String,
@@ -32,16 +33,27 @@ class JFState extends JsonField {
   }
 }
 
+object JBKind
+    extends BiMap(
+      "011" -> "普通参保人员",
+      "021" -> "残一级",
+      "022" -> "残二级",
+      "023" -> "残三级",
+      "031" -> "特困一级",
+      "032" -> "特困二级",
+      "033" -> "特困三级",
+      "051" -> "贫困人口一级",
+      "052" -> "贫困人口二级",
+      "053" -> "贫困人口三级",
+      "061" -> "低保对象一级",
+      "062" -> "低保对象二级",
+      "063" -> "低保对象三级",
+      "071" -> "计生特扶人员",
+      "090" -> "其他"
+    )
+
 class JBKind extends JsonField {
-  override def valueMap = {
-    case "011" => "普通参保人员"
-    case "021" => "残一级"
-    case "022" => "残二级"
-    case "031" => "特困一级"
-    case "051" => "贫困人口一级"
-    case "061" => "低保对象一级"
-    case "062" => "低保对象二级"
-  }
+  override def valueMap = JBKind
 }
 
 trait JBState {

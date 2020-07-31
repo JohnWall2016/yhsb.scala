@@ -106,7 +106,7 @@ object Main {
           for (dw <- dwmcs) {
             val file = Paths.get(outputDir(), s"${dw}全覆盖下发数据.xlsx")
             println(s"导出 $dw => $file")
-            val result = run(
+            val result: List[FC2Stxfsj] = run(
               fc2Stxfsj
                 .filter(_.dwmc == lift(Option(dw)))
                 .sortBy(e => (e.address, e.name))
