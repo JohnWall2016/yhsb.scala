@@ -62,14 +62,16 @@ object Main {
         if (!data.isEmpty) {
           val info = data(0)
           println(
-            s"${cbsh.idcard} ${cbsh.name.padRight(6)} ${cbsh.birthDay} " +
-            s"${if(info.name != cbsh.name) info.name else ""}"
+            s"${cbsh.idcard} ${cbsh.name.padRight(6)} ${cbsh.birthDay} ${info.jbrdsf.getOrElse("")} " +
+            s"${if (info.name != cbsh.name) info.name else ""}"
           )
           val row = sheet.getOrCopyRow(index, copyIndex, false)
           index += 1
           row.getCell("B").setCellValue(cbsh.idcard)
           row.getCell("E").setCellValue(cbsh.name)
-          row.getCell("J").setCellValue(jbClassMap(info.jbrdsf.getOrElse("")))
+          row
+            .getCell("J")
+            .setCellValue(jbClassMap.getOrElse(info.jbrdsf.getOrElse(""), ""))
           canExport = true
         } else {
           println(s"${cbsh.idcard} ${cbsh.name.padRight(6)} ${cbsh.birthDay}")

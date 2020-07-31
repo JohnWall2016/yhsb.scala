@@ -3,7 +3,7 @@ package yhsb.cjb.db
 import io.getquill._
 
 object FPData2020 {
-  lazy val fpData2020 = new MysqlJdbcContext(LowerCase, "JZFP2020")
+  lazy val fpData2020 = new MysqlJdbcContext(LowerCase, "jzfp2020")
   import fpData2020._
 
   /** 扶贫数据表 */
