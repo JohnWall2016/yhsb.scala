@@ -55,14 +55,17 @@ object FullCover {
       hsqk.getOrElse("") match {
         case s@"16岁以上在校生" => return ("在校学生", zqls(s))
         case s@"参军" => return ("现役军人", zqls(s))
-        case s@"参职保（含退休）" => return ("参加省职保", zqls(s))
         case s@"服刑人员" => return ("服刑人员", zqls(s))
         case s@"死亡（失踪）" => return ("死亡未销户人员", zqls(s))
         case s@"空挂户" => return ("其他人员", zqls(s))
         case s@"户口不在本地" => return ("其他人员", zqls(s))
         case s@"数据错误" => return ("其他人员", zqls(s))
-        case s@"自愿放弃" => return ("无参保意愿", zqls(s))
+        
+        case s@"参职保（含退休）" => return ("参加省职保", zqls(s))
+
         case s@"已录入居保" => return ("我区参加居保", zqls(s))
+        
+        case s@"自愿放弃" => return ("无参保意愿", zqls(s))
       }
 
       // 无意愿参保: 2
@@ -71,6 +74,10 @@ object FullCover {
         case s@"迁出" => return ("其他人员", hjzt(s))
         case s@"注销" => return ("其他人员", hjzt(s))
         case s@"死亡" => return ("死亡未销户人员", hjzt(s))
+      }
+
+      inZxxssj.getOrElse("") match {
+        case "1" => return ("在校学生", "高校学生")
       }
 
       ("", "")
