@@ -43,12 +43,14 @@ object FullCover {
         case "机关事业" => return ("参加机关保", bdjg("省内机关养老保险"))
         case "企业职工" => return ("参加省职保", bdjg("省内职工养老保险"))
         case "城乡居民" => return ("其他人员", bdjg("省内居民养老保险"))
+        case _ => {}
       }
 
       swcb.getOrElse("") match {
         case "机关事业" => return ("参加机关保", bdjg("省外机关养老保险"))
         case "企业职工" => return ("参加省外职保", bdjg("省外职工养老保险"))
         case "城乡居民" => return ("其他人员", bdjg("省外居民养老保险"))
+        case _ => {}
       }
 
       val zqls = (s: String) => s"之前落实情况: $s"
@@ -66,6 +68,8 @@ object FullCover {
         case s@"已录入居保" => return ("我区参加居保", zqls(s))
         
         case s@"自愿放弃" => return ("无参保意愿", zqls(s))
+
+        case _ => {}
       }
 
       // 无意愿参保: 2
@@ -74,10 +78,12 @@ object FullCover {
         case s@"迁出" => return ("其他人员", hjzt(s))
         case s@"注销" => return ("其他人员", hjzt(s))
         case s@"死亡" => return ("死亡未销户人员", hjzt(s))
+        case _ => {}
       }
 
       inZxxssj.getOrElse("") match {
         case "1" => return ("在校学生", "高校学生")
+        case _ => {}
       }
 
       ("", "")
