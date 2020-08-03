@@ -12,6 +12,7 @@ import yhsb.cjb.db.FullCover._
 import yhsb.util.commands._
 import yhsb.util.Strings.StringOps
 import yhsb.db.Context.JdbcContextOps
+import yhsb.cjb.net.protocol.JBKind
 
 class Conf(args: Seq[String]) extends ScallopConf(args) {
   banner("全覆盖数据处理程序")
@@ -28,6 +29,13 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
 
     val clear =
       opt[Boolean](descr = "是否清除数据表", required = false, default = Some(false))
+  }
+
+  val updateZhqk = new Subcommand("upZhqk") {
+    descr("根据已记录数据更新综合情况")
+
+    val clear =
+      opt[Boolean](descr = "更新老数据", required = false, default = Some(false))
   }
 
   val downloadByDwmc = new Subcommand("downByDw") {
@@ -50,6 +58,7 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
 
   addSubcommand(updateDwmc)
   addSubcommand(importJB)
+  addSubcommand(updateZhqk)
   addSubcommand(downloadByDwmc)
 
   verify()
@@ -62,6 +71,7 @@ object Main {
     conf.subcommand match {
       case Some(conf.updateDwmc)     => updateDwmc(conf)
       case Some(conf.importJB)       => importJB(conf)
+      case Some(conf.updateZhqk)     => updateZhqk(conf)
       case Some(conf.downloadByDwmc) => downloadByDwmc(conf)
       case _                         => conf.printHelp()
     }
@@ -114,6 +124,124 @@ object Main {
       printSql = true
     )
     println("结束导入居保参保人员明细表")
+  }
+
+  def updateZhqk(conf: Conf) = {
+    import fullcover._
+
+    // 是否在校生
+    run(
+      fc2Stxfsj
+        .filter(_.inZxxssj == Some("1"))
+        .update(_.zhqk -> Some("在校学生"), _.memo -> Some("高校学生数据"))
+    )
+
+    // 户籍状态
+    run(
+      fc2Stxfsj
+        .filter(e => e.manageName == Some("迁出") || e.manageName == Some("注销"))
+        .update(
+          _.zhqk -> Some("其他人员"),
+          e => e.memo -> Some("户籍状态: " + e.manageName)
+        )
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.manageName == Some("死亡"))
+        .update(_.zhqk -> Some("死亡未销户人员"), e => e.memo -> Some("户籍状态: 死亡"))
+    )
+
+    // 之前全覆盖落实情况
+    run(
+      fc2Stxfsj
+        .filter(_.hsqk == Some("自愿放弃"))
+        .update(_.zhqk -> Some("无参保意愿"), _.memo -> Some("之前落实情况: 自愿放弃"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.hsqk == Some("已录入居保"))
+        .update(_.zhqk -> Some("我区参加居保"), _.memo -> Some("之前落实情况: 已录入居保"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.hsqk == Some("参职保（含退休）"))
+        .update(_.zhqk -> Some("参加省职保"), _.memo -> Some("之前落实情况: 参职保（含退休）"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(e =>
+          e.hsqk == Some("数据错误") || e.hsqk == Some("户口不在本地") || e.hsqk == Some(
+            "空挂户"
+          )
+        )
+        .update(
+          _.zhqk -> Some("其他人员"),
+          e => e.memo -> Some("之前落实情况: " + e.hsqk)
+        )
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.hsqk == Some("死亡（失踪）"))
+        .update(_.zhqk -> Some("死亡未销户人员"), _.memo -> Some("之前落实情况: 死亡（失踪）"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.hsqk == Some("服刑人员"))
+        .update(_.zhqk -> Some("服刑人员"), _.memo -> Some("之前落实情况: 服刑人员"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.hsqk == Some("参军"))
+        .update(_.zhqk -> Some("现役军人"), _.memo -> Some("之前落实情况: 参军"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.hsqk == Some("16岁以上在校生"))
+        .update(_.zhqk -> Some("在校学生"), _.memo -> Some("之前落实情况: 16岁以上在校生"))
+    )
+
+    // 数据比对结果
+    run(
+      fc2Stxfsj
+        .filter(_.swcb == Some("机关事业"))
+        .update(_.zhqk -> Some("参加机关保"), _.memo -> Some("省外机关养老保险"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.swcb == Some("企业职工"))
+        .update(_.zhqk -> Some("参加省外职保"), _.memo -> Some("省外职工养老保险"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.swcb == Some("城乡居民"))
+        .update(_.zhqk -> Some("其他人员"), _.memo -> Some("省外居民养老保险"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.slcb == Some("机关事业"))
+        .update(_.zhqk -> Some("参加机关保"), _.memo -> Some("省内机关养老保险"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.slcb == Some("企业职工"))
+        .update(_.zhqk -> Some("参加省外职保"), _.memo -> Some("省内职工养老保险"))
+    )
+    run(
+      fc2Stxfsj
+        .filter(_.slcb == Some("城乡居民"))
+        .update(_.zhqk -> Some("其他人员"), _.memo -> Some("省内居民养老保险"))
+    )
+
+    // 我区参加居保
+    run(
+      fc2Stxfsj
+        .filter(_.inSfwqjb == Some("1"))
+        .update(
+          _.zhqk -> Some("我区参加居保"),
+          e => e.memo -> Some("参保身份: " + e.wqjbsf)
+        )
+    )
+
   }
 
   def downloadByDwmc(conf: Conf) = {
@@ -183,7 +311,7 @@ object Main {
               )
             row.getCell("K").setCellValue(e.dwmc.getOrElse(""))
 
-            val (qk, memo) = e.suggestHsqk()
+            val (qk, memo) = e.suggestZhqk()
 
             row.getCell("O").setCellValue(qk)
             row.getCell("P").setCellValue(memo)

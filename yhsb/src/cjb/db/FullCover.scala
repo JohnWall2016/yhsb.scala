@@ -27,9 +27,11 @@ object FullCover {
       hsqk: Option[String], // 之前全覆盖落实总台账中 核实情况
       slcb: Option[String], // 省内参保类型: '机关事业', '企业职工', '城乡居民'
       swcb: Option[String], // 省外参保类型: '机关事业', '企业职工', '城乡居民'
-      wqjbsf: Option[String] // 我区参加居保身份
+      wqjbsf: Option[String], // 我区参加居保身份
+      zhqk: Option[String], // 综合情况
+      memo: Option[String], // 备注
   ) {
-    def suggestHsqk(): (String, String) = {
+    def suggestZhqk(): (String, String) = {
 
       // 已参加居保: 1
       val cbsf = (s: String) => s"参保身份: $s"
