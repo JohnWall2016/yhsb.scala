@@ -29,7 +29,7 @@ object FullCover {
       swcb: Option[String], // 省外参保类型: '机关事业', '企业职工', '城乡居民'
       wqjbsf: Option[String] // 我区参加居保身份
   ) {
-    def suggestHsqk: (String, String) = {
+    def suggestHsqk(): (String, String) = {
 
       // 已参加居保: 1
       val cbsf = (s: String) => s"参保身份: $s"
@@ -94,5 +94,25 @@ object FullCover {
       _.inZxxssj -> "in_zxxssj",
       _.inSfwqjb -> "in_sfwqjb"
     )
+  }
+
+  /**
+    * 居保参保人员明细表
+    */
+  case class Jbrymx(
+    idcard: String, // 身份证号码
+    xzqh: String, // 行政区划
+    hjxz: String, // 户籍性质
+    name: String, // 姓名
+    sex: String, // 性别
+    birthDay: String, // 出生日期
+    cbsf: String, // 参保身份
+    cbzt: String, // 参保状态
+    jfzt: String, // 缴费状态
+    cbsj: String, // 参保时间
+  )
+
+  val jbrymx = quote {
+    querySchema[Jbrymx]("jbrymx")
   }
 }

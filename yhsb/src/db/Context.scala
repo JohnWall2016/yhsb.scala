@@ -11,7 +11,6 @@ import scala.util.matching.Regex
 import scala.collection.mutable
 import java.nio.file.Paths
 import java.nio.file.Files
-import java.net.URI
 
 object Context {
   implicit class JdbcContextOps(val context: JdbcContext[_, _]) {
@@ -60,12 +59,12 @@ object Context {
       val cvsFile = Files.createTempFile("yhsb", ".cvs")
       Files.writeString(cvsFile, builder)
 
-      val cvsFilePath = new URI(cvsFile.toString()).getPath()
+      val cvsFilePath = cvsFile.toString.replace('\\', '/')
       val tableName = entity.name
 
       var sql = s"load data infile '$cvsFilePath' into table `$tableName` " +
         "CHARACTER SET utf8 FIELDS TERMINATED BY ',' OPTIONALLY " +
-        "ENCLOSED BY '\'' LINES TERMINATED BY '\n';"
+        "ENCLOSED BY '\\'' LINES TERMINATED BY '\\n';"
 
       if (printSql) println(s"$ident$sql")
 

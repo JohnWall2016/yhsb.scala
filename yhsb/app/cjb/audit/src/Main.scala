@@ -72,7 +72,7 @@ object Main {
           row.getCell("E").setCellValue(cbsh.name)
           row
             .getCell("J")
-            .setCellValue(JBKind.getOrElse(info.jbrdsf.getOrElse(""), ""))
+            .setCellValue(JBKind.invert.getOrElse(info.jbrdsf.getOrElse(""), ""))
           canExport = true
         } else {
           println(s"${cbsh.idcard} ${cbsh.name.padRight(6)} ${cbsh.birthDay}")
