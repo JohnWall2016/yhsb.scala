@@ -33,9 +33,6 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
 
   val updateZhqk = new Subcommand("upZhqk") {
     descr("根据已记录数据更新综合情况")
-
-    val clear =
-      opt[Boolean](descr = "更新老数据", required = false, default = Some(false))
   }
 
   val downloadByDwmc = new Subcommand("downByDw") {
@@ -130,6 +127,7 @@ object Main {
     import fullcover._
 
     // 是否在校生
+    println("更新 高校学生数据")
     run(
       fc2Stxfsj
         .filter(_.inZxxssj == Some("1"))
@@ -137,6 +135,7 @@ object Main {
     )
 
     // 户籍状态
+    println("更新 户籍状态数据")
     run(
       fc2Stxfsj
         .filter(e => e.manageName == Some("迁出") || e.manageName == Some("注销"))
@@ -152,6 +151,7 @@ object Main {
     )
 
     // 之前全覆盖落实情况
+    println("更新 之前全覆盖落实情况数据")
     run(
       fc2Stxfsj
         .filter(_.hsqk == Some("自愿放弃"))
@@ -201,38 +201,40 @@ object Main {
     )
 
     // 数据比对结果
+    println("更新 数据比对结果")
     run(
       fc2Stxfsj
         .filter(_.swcb == Some("机关事业"))
-        .update(_.zhqk -> Some("参加机关保"), _.memo -> Some("省外机关养老保险"))
+        .update(_.zhqk -> Some("参加机关保"), _.memo -> Some("比对结果: 省外机关养老保险"))
     )
     run(
       fc2Stxfsj
         .filter(_.swcb == Some("企业职工"))
-        .update(_.zhqk -> Some("参加省外职保"), _.memo -> Some("省外职工养老保险"))
+        .update(_.zhqk -> Some("参加省外职保"), _.memo -> Some("比对结果: 省外职工养老保险"))
     )
     run(
       fc2Stxfsj
         .filter(_.swcb == Some("城乡居民"))
-        .update(_.zhqk -> Some("其他人员"), _.memo -> Some("省外居民养老保险"))
+        .update(_.zhqk -> Some("其他人员"), _.memo -> Some("比对结果: 省外居民养老保险"))
     )
     run(
       fc2Stxfsj
         .filter(_.slcb == Some("机关事业"))
-        .update(_.zhqk -> Some("参加机关保"), _.memo -> Some("省内机关养老保险"))
+        .update(_.zhqk -> Some("参加机关保"), _.memo -> Some("比对结果: 省内机关养老保险"))
     )
     run(
       fc2Stxfsj
         .filter(_.slcb == Some("企业职工"))
-        .update(_.zhqk -> Some("参加省外职保"), _.memo -> Some("省内职工养老保险"))
+        .update(_.zhqk -> Some("参加省职保"), _.memo -> Some("比对结果: 省内职工养老保险"))
     )
     run(
       fc2Stxfsj
         .filter(_.slcb == Some("城乡居民"))
-        .update(_.zhqk -> Some("其他人员"), _.memo -> Some("省内居民养老保险"))
+        .update(_.zhqk -> Some("其他人员"), _.memo -> Some("比对结果: 省内居民养老保险"))
     )
 
     // 我区参加居保
+    println("更新 我区参加居保结果")
     run(
       fc2Stxfsj
         .filter(_.inSfwqjb == Some("1"))
@@ -255,11 +257,16 @@ object Main {
       )
 
       var sum: Long = 0
+      var yhsTotal: Long = 0
       for ((name, count) <- result) {
-        println(f"${name.getOrElse("").padRight(10)} $count%6d")
+        val yhs = run(
+          fc2Stxfsj.filter(e => e.dwmc == lift(name) && e.zhqk.isDefined).size
+        )
+        println(f"${name.getOrElse("").padRight(10)} $count%6d $yhs%6d ${count-yhs}%6d")
         sum += count
+        yhsTotal += yhs
       }
-      println(f"${"合计".padRight(10)} $sum%6d")
+      println(f"${"合计".padRight(10)} $sum%6d $yhsTotal%6d ${sum-yhsTotal}%6d")
     } else {
       var dwmcs = dwmc()
       if (dwmcs(0).toUpperCase() == "ALL") {
@@ -272,7 +279,7 @@ object Main {
         }
       }
       for (dw <- dwmcs) {
-        val file = Paths.get(outputDir(), s"${dw}全覆盖下发数据.xlsx")
+        val file = Paths.get(outputDir(), s"${dw}全覆盖底册数据.xlsx")
         println(s"导出 $dw => $file")
         val result: List[FC2Stxfsj] = run(
           fc2Stxfsj
@@ -311,10 +318,8 @@ object Main {
               )
             row.getCell("K").setCellValue(e.dwmc.getOrElse(""))
 
-            val (qk, memo) = e.suggestZhqk()
-
-            row.getCell("O").setCellValue(qk)
-            row.getCell("P").setCellValue(memo)
+            row.getCell("O").setCellValue(e.zhqk.getOrElse(""))
+            row.getCell("P").setCellValue(e.memo.getOrElse(""))
 
             index += 1
           }
