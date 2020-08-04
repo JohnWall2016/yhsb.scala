@@ -279,7 +279,7 @@ object Main {
         }
       }
       for (dw <- dwmcs) {
-        val file = Paths.get(outputDir(), s"${dw}全覆盖底册数据.xlsx")
+        val file = Paths.get(outputDir(), s"${dw}全覆盖数据底册.xlsx")
         println(s"导出 $dw => $file")
         val result: List[FC2Stxfsj] = run(
           fc2Stxfsj
