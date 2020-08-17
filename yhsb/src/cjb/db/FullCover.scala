@@ -123,4 +123,23 @@ object FullCover {
   val jbrymx = quote {
     querySchema[Jbrymx]("jbrymx")
   }
+
+  /**
+   * 全覆盖2省厅下发原始数据
+   */
+  case class FC2Stxfyssj(
+      idcard: String, // 身份证号码
+      name: String, // 姓名
+      address: Option[String], // 户籍地址
+      manageCode: Option[String], // 管理状态代码
+      manageName: Option[String], // 管理状态名称
+  )
+
+  val fc2Stxfyssj = quote {
+    querySchema[FC2Stxfyssj](
+      "fc2_stxfyssj",
+      _.manageCode -> "manage_code",
+      _.manageName -> "manage_name",
+    )
+  }
 }

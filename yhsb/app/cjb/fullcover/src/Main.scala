@@ -31,6 +31,13 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
       opt[Boolean](descr = "是否清除数据表", required = false, default = Some(false))
   }
 
+  val importFC = new Subcommand("importFC") with InputFile with RowRange with SheetIndex {
+    descr("导入全覆盖2省厅下发原始数据")
+
+    val clear =
+      opt[Boolean](descr = "是否清除数据表", required = false, default = Some(false))
+  }
+
   val updateZhqk = new Subcommand("upZhqk") {
     descr("根据已记录数据更新综合情况")
   }
@@ -55,6 +62,7 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
 
   addSubcommand(updateDwmc)
   addSubcommand(importJB)
+  addSubcommand(importFC)
   addSubcommand(updateZhqk)
   addSubcommand(downloadByDwmc)
 
@@ -68,6 +76,7 @@ object Main {
     conf.subcommand match {
       case Some(conf.updateDwmc)     => updateDwmc(conf)
       case Some(conf.importJB)       => importJB(conf)
+      case Some(conf.importFC)       => importFC(conf)
       case Some(conf.updateZhqk)     => updateZhqk(conf)
       case Some(conf.downloadByDwmc) => downloadByDwmc(conf)
       case _                         => conf.printHelp()
@@ -121,6 +130,28 @@ object Main {
       printSql = true
     )
     println("结束导入居保参保人员明细表")
+  }
+
+  def importFC(conf: Conf) = {
+    import fullcover._
+    import conf.importFC._
+
+    if (clear()) {
+      println("清除数据表: 全覆盖2省厅下发原始数据")
+      run(fc2Stxfyssj.delete)
+    }
+
+    println("开始导入全覆盖2省厅下发原始数据")
+    fullcover.loadExcel(
+      fc2Stxfyssj.quoted,
+      inputFile(),
+      startRow(),
+      endRow(),
+      Seq("D", "C", "E", "F", "G"),
+      tableIndex = sheetIndex(),
+      printSql = true
+    )
+    println("结束导入全覆盖2省厅下发原始数据")
   }
 
   def updateZhqk(conf: Conf) = {
@@ -253,14 +284,14 @@ object Main {
 
     if (dwmc.isEmpty) {
       val result = run(
-        fc2Stxfsj.groupBy(_.dwmc).map(e => (e._1, e._2.size))
+        fc2Stxfsj.filter(e => e.xfpc == Some("第二批")).groupBy(_.dwmc).map(e => (e._1, e._2.size))
       )
 
       var sum: Long = 0
       var yhsTotal: Long = 0
       for ((name, count) <- result) {
         val yhs = run(
-          fc2Stxfsj.filter(e => e.dwmc == lift(name) && e.zhqk.isDefined).size
+          fc2Stxfsj.filter(e => e.xfpc == Some("第二批") && e.dwmc == lift(name) && e.zhqk.isDefined).size
         )
         println(f"${name.getOrElse("").padRight(10)} $count%6d $yhs%6d ${count-yhs}%6d")
         sum += count
@@ -283,7 +314,7 @@ object Main {
         println(s"导出 $dw => $file")
         val result: List[FC2Stxfsj] = run(
           fc2Stxfsj
-            .filter(_.dwmc == lift(Option(dw)))
+            .filter(e => e.xfpc == Some("第二批") && e.dwmc == lift(Option(dw)))
             .sortBy(e => (e.address, e.name))
           //.take(10)
         )
