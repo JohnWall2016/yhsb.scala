@@ -1,15 +1,6 @@
 package yhsb.util
 
 object Strings {
-  def appendToFileName(fileName: String, appendString: String) = {
-    val index = fileName.lastIndexOf(".")
-    if (index >= 0) {
-      fileName.substring(0, index) + appendString + fileName.substring(index)
-    } else {
-      fileName + appendString
-    }
-  }
-
   case class CharRange(start: Char, end: Char) {
     if (start > end)
       throw new IllegalArgumentException("start must be <= end")

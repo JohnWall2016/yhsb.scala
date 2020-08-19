@@ -199,6 +199,12 @@ object Excel {
 
     def createCell(columnName: String) =
       row.createCell(CellRef.columnNameToNumber(columnName) - 1)
+
+    def getOrCreateCell(columnName: String) = {
+      var cell = getCell(columnName)
+      if (cell == null) cell = createCell(columnName)
+      cell
+    }
   }
 
   implicit class CellOps(val cell: Cell) extends AnyVal {

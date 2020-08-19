@@ -10,7 +10,7 @@ import yhsb.util.Excel._
 import yhsb.util.datetime.Month
 import yhsb.util.datetime.MonthRange
 import yhsb.util.datetime.MonthOrdering.mkOrderingOps
-import yhsb.util.Strings.appendToFileName
+import yhsb.util.Files.appendToFileName
 
 class Conf(args: Seq[String])
     extends ScallopConf(args)

@@ -13,6 +13,9 @@ import yhsb.util.commands._
 import yhsb.util.Strings.StringOps
 import yhsb.db.Context.JdbcContextOps
 import yhsb.cjb.net.protocol.JBKind
+import yhsb.util.Files.appendToFileName
+
+import yhsb.util.BiMap
 
 class Conf(args: Seq[String]) extends ScallopConf(args) {
   banner("全覆盖数据处理程序")
@@ -31,12 +34,13 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
       opt[Boolean](descr = "是否清除数据表", required = false, default = Some(false))
   }
 
-  val importFC = new Subcommand("importFC") with InputFile with RowRange with SheetIndex {
-    descr("导入全覆盖2省厅下发原始数据")
+  val importFC =
+    new Subcommand("importFC") with InputFile with RowRange with SheetIndex {
+      descr("导入全覆盖2省厅下发原始数据")
 
-    val clear =
-      opt[Boolean](descr = "是否清除数据表", required = false, default = Some(false))
-  }
+      val clear =
+        opt[Boolean](descr = "是否清除数据表", required = false, default = Some(false))
+    }
 
   val updateZhqk = new Subcommand("upZhqk") {
     descr("根据已记录数据更新综合情况")
@@ -60,11 +64,24 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
     val tmplXlsx = """D:\参保管理\参保全覆盖2\雨湖区全覆盖下发数据清册模板2.xlsx"""
   }
 
+  val auditData = new Subcommand("auditData") with InputFile with RowRange {
+    descr("审核数据")
+
+    val outputDir = opt[String](
+      name = "out",
+      short = 'o',
+      descr = "文件导出路径",
+      default = Option("""D:\参保管理\参保全覆盖2\乡镇街上报数据\数据审核""")
+    )
+  }
+
   addSubcommand(updateDwmc)
   addSubcommand(importJB)
   addSubcommand(importFC)
   addSubcommand(updateZhqk)
   addSubcommand(downloadByDwmc)
+
+  addSubcommand(auditData)
 
   verify()
 }
@@ -79,6 +96,7 @@ object Main {
       case Some(conf.importFC)       => importFC(conf)
       case Some(conf.updateZhqk)     => updateZhqk(conf)
       case Some(conf.downloadByDwmc) => downloadByDwmc(conf)
+      case Some(conf.auditData)      => auditData(conf)
       case _                         => conf.printHelp()
     }
   }
@@ -284,20 +302,29 @@ object Main {
 
     if (dwmc.isEmpty) {
       val result = run(
-        fc2Stxfsj.filter(e => e.xfpc == Some("第二批")).groupBy(_.dwmc).map(e => (e._1, e._2.size))
+        fc2Stxfsj
+          .filter(e => e.xfpc == Some("第二批"))
+          .groupBy(_.dwmc)
+          .map(e => (e._1, e._2.size))
       )
 
       var sum: Long = 0
       var yhsTotal: Long = 0
       for ((name, count) <- result) {
         val yhs = run(
-          fc2Stxfsj.filter(e => e.xfpc == Some("第二批") && e.dwmc == lift(name) && e.zhqk.isDefined).size
+          fc2Stxfsj
+            .filter(e =>
+              e.xfpc == Some("第二批") && e.dwmc == lift(name) && e.zhqk.isDefined
+            )
+            .size
         )
-        println(f"${name.getOrElse("").padRight(10)} $count%6d $yhs%6d ${count-yhs}%6d")
+        println(
+          f"${name.getOrElse("").padRight(10)} $count%6d $yhs%6d ${count - yhs}%6d"
+        )
         sum += count
         yhsTotal += yhs
       }
-      println(f"${"合计".padRight(10)} $sum%6d $yhsTotal%6d ${sum-yhsTotal}%6d")
+      println(f"${"合计".padRight(10)} $sum%6d $yhsTotal%6d ${sum - yhsTotal}%6d")
     } else {
       var dwmcs = dwmc()
       if (dwmcs(0).toUpperCase() == "ALL") {
@@ -358,5 +385,82 @@ object Main {
         }
       }
     }
+  }
+
+  val hsqkMap = new BiMap(
+    "参加省职保" -> ("0", "200"),
+    "参加机关保" -> ("0", "201"),
+    "参加省外职保" -> ("0", "202"),
+    "在校学生" -> ("0", "203"),
+    "现役军人" -> ("0", "204"),
+    "服刑人员" -> ("0", "205"),
+    "死亡未销户人员" -> ("0", "207"),
+    "出国（境）人员" -> ("0", "206"),
+    "其他人员" -> ("0", "208"),
+    "我区参加居保" -> ("1", "011"),
+    "无参保意愿" -> ("2", "011")
+  )
+
+  val dwmcMap = new BiMap(
+    "长城乡" -> "43030201",
+    "昭潭街道" -> "43030202",
+    "先锋街道" -> "43030203",
+    "万楼街道" -> "43030204",
+    "楠竹山镇" -> "43030206",
+    "姜畲镇" -> "43030207",
+    "鹤岭镇" -> "43030208",
+    "城正街街道" -> "43030209",
+    "雨湖路街道" -> "43030210",
+    "云塘街道" -> "43030212",
+    "窑湾街道" -> "43030213",
+    "广场街道" -> "43030215"
+  )
+
+  def auditData(conf: Conf) = {
+    import conf.auditData._
+    import scala.collection.mutable
+
+    val workbook = Excel.load(inputFile())
+    val sheet = workbook.getSheetAt(0)
+
+    sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(1, 2, 16, 16))
+
+    sheet.getRow(1).getOrCreateCell("Q").setCellValue("审核结果")
+
+    for (i <- (startRow() - 1) until endRow()) {
+      val row = sheet.getRow(i)
+      val dwmc = row.getCell("K").value
+      val code = row.getCell("N").value
+      val hsqk = row.getCell("O").value
+      val memo = row.getCell("P").value
+
+      val errors = mutable.ListBuffer[String]()
+
+      dwmcMap.get(dwmc) match {
+        case Some(value) => {
+          if (code.length != 12 || !code.startsWith(value))
+            errors.append("12位行政区划编码")
+        }
+        case None => errors.append("单位名称")
+      }
+
+      hsqkMap.get(hsqk) match {
+        case None        => errors.append("核实情况类型")
+        case Some(value) =>
+      }
+
+      val error = if (!errors.isEmpty) errors.mkString(",") + " 有误" else ""
+
+      println(s"${i + 1}行 $error")
+
+      row.getOrCreateCell("Q").setCellValue(error)
+    }
+
+    workbook.save(
+      Paths.get(
+        outputDir(),
+        appendToFileName(Paths.get(inputFile()).getFileName(), "(审核结果)")
+      )
+    )
   }
 }
