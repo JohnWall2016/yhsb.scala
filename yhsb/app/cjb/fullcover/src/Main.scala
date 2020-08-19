@@ -75,6 +75,22 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
     )
   }
 
+  val convertData = new Subcommand("convertData") with InputFile with RowRange {
+    descr("转换数据")
+
+    val outputDir = opt[String](
+      name = "out",
+      short = 'o',
+      descr = "文件导出路径",
+      default = Option("""D:\参保管理\参保全覆盖2\乡镇街上报数据\数据转换""")
+    )
+
+    val tmplXlsx = """D:\参保管理\参保全覆盖2\乡镇街上报数据\qfgplcjmode.xls"""
+
+    val operator = trailArg[String](descr = "采集人")
+    val phone = trailArg[String](descr = "采集人电话")
+  }
+
   addSubcommand(updateDwmc)
   addSubcommand(importJB)
   addSubcommand(importFC)
@@ -82,6 +98,7 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
   addSubcommand(downloadByDwmc)
 
   addSubcommand(auditData)
+  addSubcommand(convertData)
 
   verify()
 }
@@ -97,6 +114,7 @@ object Main {
       case Some(conf.updateZhqk)     => updateZhqk(conf)
       case Some(conf.downloadByDwmc) => downloadByDwmc(conf)
       case Some(conf.auditData)      => auditData(conf)
+      case Some(conf.convertData)    => convertData(conf)
       case _                         => conf.printHelp()
     }
   }
@@ -423,7 +441,13 @@ object Main {
     val workbook = Excel.load(inputFile())
     val sheet = workbook.getSheetAt(0)
 
-    sheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(1, 2, 16, 16))
+    try {
+      sheet.addMergedRegion(
+        new org.apache.poi.ss.util.CellRangeAddress(1, 2, 16, 16)
+      )
+    } catch {
+      case ex: Exception => println(s"ERROR: $ex")
+    }
 
     sheet.getRow(1).getOrCreateCell("Q").setCellValue("审核结果")
 
@@ -451,7 +475,7 @@ object Main {
 
       val error = if (!errors.isEmpty) errors.mkString(",") + " 有误" else ""
 
-      println(s"${i + 1}行 $error")
+      println(s"第 ${i + 1} 行 $error")
 
       row.getOrCreateCell("Q").setCellValue(error)
     }
@@ -460,6 +484,83 @@ object Main {
       Paths.get(
         outputDir(),
         appendToFileName(Paths.get(inputFile()).getFileName(), "(审核结果)")
+      )
+    )
+  }
+
+  def convertData(conf: Conf) = {
+    import conf.convertData._
+    import scala.collection.mutable
+
+    val workbook = Excel.load(inputFile())
+    val sheet = workbook.getSheetAt(0)
+
+    val outWorkbook = Excel.load(tmplXlsx)
+    val outSheet = outWorkbook.getSheetAt(0)
+
+    var index, copyIndex = 1
+
+    for (i <- (startRow() - 1) until endRow()) {
+      val row = sheet.getRow(i)
+      var name = row.getCell("B").value
+      var idcard = row.getCell("C").value
+      val address = row.getCell("D").value
+      val dwmc = row.getCell("K").value
+      val csq = row.getCell("L").value
+      val code = row.getCell("N").value
+      val hsqk = row.getCell("O").value
+      val memo = row.getCell("P").value
+
+      val info = hsqkMap.get(hsqk)
+
+      if (info.isEmpty) {
+        println(s"第 ${index + 1} 行 核实情况类型 有误")
+      } else {
+        val outRow = if (index < 89) {
+          outSheet.getRow(index)
+        } else {
+          outSheet.getOrCopyRow(index, copyIndex, false)
+        }
+        index += 1
+
+        outRow.getCell("A").setCellValue(name)
+        outRow.getCell("B").setCellValue("01")
+        outRow.getCell("C").setCellValue(idcard)
+        /*outRow.getCell("D").setCellValue(
+          if ((idcard.charAt(16) - '0') % 2 == 0) "2"
+          else "1"
+        )*/
+        /*outRow.getCell("D").setCellFormula(
+          f"=IF(B${index+1}=\"01\",IF(LEN(C${index+1})=0,\"\","+
+          f"IF(LEN(C${index+1})<>18,\"请输入18位身份证号\","+
+          f"IF(MOD(MID(C${index+1},17,1),2)=1,\"1\",\"2\"))),\"\")"
+        )*/
+        outRow.getCell("E").setCellValue("01")
+        outRow.getCell("F").setCellValue(idcard.substring(6, 14))
+
+        outRow.getCell("G").setCellValue(info.get._1)
+        outRow.getCell("H").setCellValue(info.get._2)
+
+        outRow
+          .getCell("I")
+          .setCellValue(
+            if (dwmc.endsWith("街道") || csq.endsWith("社区")) "10"
+            else "20"
+          )
+
+        outRow.getCell("J").setCellValue(code)
+        outRow.getCell("K").setCellValue(operator())
+        outRow.getCell("L").setCellValue(phone())
+        outRow.getCell("M").setCellValue("0")
+        outRow.getCell("N").setCellValue(address)
+        outRow.getCell("Q").setCellValue(memo)
+      }
+    }
+
+    outWorkbook.save(
+      Paths.get(
+        outputDir(),
+        appendToFileName(Paths.get(inputFile()).getFileName(), "(批量导入)")
       )
     )
   }
