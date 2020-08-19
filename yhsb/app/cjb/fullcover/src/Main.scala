@@ -530,11 +530,13 @@ object Main {
           if ((idcard.charAt(16) - '0') % 2 == 0) "2"
           else "1"
         )*/
-        /*outRow.getCell("D").setCellFormula(
-          f"=IF(B${index+1}=\"01\",IF(LEN(C${index+1})=0,\"\","+
-          f"IF(LEN(C${index+1})<>18,\"请输入18位身份证号\","+
-          f"IF(MOD(MID(C${index+1},17,1),2)=1,\"1\",\"2\"))),\"\")"
-        )*/
+        outRow
+          .getCell("D")
+          .setCellFormula(
+            s"""=IF(B${index + 1}="01",IF(LEN(C${index + 1})=0,"",""" +
+              s"""IF(LEN(C${index + 1})<>18,"请输入18位身份证号",""" +
+              s"""IF(MOD(MID(C${index + 1},17,1),2)=1,"1","2"))),"")"""
+          )
         outRow.getCell("E").setCellValue("01")
         outRow.getCell("F").setCellValue(idcard.substring(6, 14))
 
