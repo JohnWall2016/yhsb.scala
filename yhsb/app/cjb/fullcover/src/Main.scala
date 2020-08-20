@@ -526,19 +526,23 @@ object Main {
         outRow.getCell("A").setCellValue(name)
         outRow.getCell("B").setCellValue("01")
         outRow.getCell("C").setCellValue(idcard)
-        /*outRow.getCell("D").setCellValue(
-          if ((idcard.charAt(16) - '0') % 2 == 0) "2"
-          else "1"
-        )*/
-        val idx = index + 1
         outRow
           .getCell("D")
           .setCellFormula(
-            s"""=IF(B$idx="01",IF(LEN(C$idx)=0,"",""" +
-              s"""IF(LEN(C$idx)<>18,"请输入18位身份证号",""" +
-              s"""IF(MOD(MID(C$idx,17,1),2)=1,"1","2"))),"")"""
+            s"""IF(B$index="01",IF(LEN(C$index)=0,"",IF(LEN(C$index)<>18,"请输入18位身份证号",IF(MOD(MID(C$index,17,1),2)=1,"1","2"))),"")"""
           )
+        outRow.getCell("D").setCellValue(
+          if ((idcard.charAt(16) - '0') % 2 == 0) "2"
+          else "1"
+        )
+
         outRow.getCell("E").setCellValue("01")
+        
+        outRow
+          .getCell("F")
+          .setCellFormula(
+            s"""IF(B$index="01",IF(LEN(C$index)=0,"",IF(LEN(C$index)<>18,"请输入18位身份证号",MID(C$index,7,8))),"")"""
+          )
         outRow.getCell("F").setCellValue(idcard.substring(6, 14))
 
         outRow.getCell("G").setCellValue(info.get._1)
@@ -547,7 +551,7 @@ object Main {
         outRow
           .getCell("I")
           .setCellValue(
-            if (dwmc.endsWith("街道") || csq.endsWith("社区")) "10"
+            if (dwmc.endsWith("街道") || csq.endsWith("社区") || csq.endsWith("机关")) "10"
             else "20"
           )
 
