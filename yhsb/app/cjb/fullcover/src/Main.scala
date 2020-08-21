@@ -73,6 +73,8 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
       descr = "文件导出路径",
       default = Option("""D:\参保管理\参保全覆盖2\乡镇街上报数据\数据审核""")
     )
+
+    val tmplXlsx = """D:\参保管理\参保全覆盖2\乡镇街上报数据\全覆盖下发数据清册审核模板.xlsx"""
   }
 
   val convertData = new Subcommand("convertData") with InputFile with RowRange {
@@ -437,53 +439,110 @@ object Main {
   def auditData(conf: Conf) = {
     import conf.auditData._
     import scala.collection.mutable
+    import fullcover._
 
     val workbook = Excel.load(inputFile())
     val sheet = workbook.getSheetAt(0)
 
-    try {
-      sheet.addMergedRegion(
-        new org.apache.poi.ss.util.CellRangeAddress(1, 2, 16, 16)
-      )
-    } catch {
-      case ex: Exception => println(s"ERROR: $ex")
-    }
+    val outWorkbook = Excel.load(tmplXlsx)
+    val thisSheet = outWorkbook.getSheetAt(0)
+    val otherSheet = outWorkbook.getSheetAt(1)
 
-    sheet.getRow(1).getOrCreateCell("Q").setCellValue("审核结果")
+    var thisIndex, otherIndex = 2
+    val copyIndex = 2
 
     for (i <- (startRow() - 1) until endRow()) {
       val row = sheet.getRow(i)
+      val no = row.getCell("A").value
+      val name = row.getCell("B").value
+      val idcard = row.getCell("C").value
+      val address = row.getCell("D").value
+      val hjzt = row.getCell("E").value
+      val zqqk = row.getCell("F").value
+      val slcb = row.getCell("G").value
+      val swcb = row.getCell("H").value
+      val sfzxs = row.getCell("I").value
+      val sfwqcb = row.getCell("J").value
       val dwmc = row.getCell("K").value
+      val cs = row.getCell("L").value
+      val cz = row.getCell("M").value
       val code = row.getCell("N").value
       val hsqk = row.getCell("O").value
       val memo = row.getCell("P").value
 
-      val errors = mutable.ListBuffer[String]()
-
-      dwmcMap.get(dwmc) match {
-        case Some(value) => {
-          if (code.length != 12 || !code.startsWith(value))
-            errors.append("12位行政区划编码")
+      val outRow =
+        if (cs.isEmpty && cz.isEmpty && code.isEmpty) {
+          otherSheet.getOrCopyRow(otherIndex, copyIndex)
+        } else {
+          thisSheet.getOrCopyRow(thisIndex, copyIndex)
         }
-        case None => errors.append("单位名称")
+
+      outRow.getCell("A").setCellValue(no)
+      outRow.getCell("B").setCellValue(name)
+      outRow.getCell("C").setCellValue(idcard)
+      outRow.getCell("D").setCellValue(address)
+      outRow.getCell("E").setCellValue(hjzt)
+      outRow.getCell("F").setCellValue(zqqk)
+      outRow.getCell("G").setCellValue(slcb)
+      outRow.getCell("H").setCellValue(swcb)
+      outRow.getCell("I").setCellValue(sfzxs)
+      outRow.getCell("J").setCellValue(sfwqcb)
+      outRow.getCell("K").setCellValue(dwmc)
+      outRow.getCell("L").setCellValue(cs)
+      outRow.getCell("M").setCellValue(cz)
+      outRow.getCell("N").setCellValue(code)
+      outRow.getCell("O").setCellValue(hsqk)
+      outRow.getCell("P").setCellValue(memo)
+
+      if (cs.isEmpty && cz.isEmpty && code.isEmpty) {
+        otherIndex += 1
+
+        val error = "12位行政区划编码 为空"
+        println(s"第 ${i + 1} 行 $error")
+      } else {
+        thisIndex += 1
+
+        val errors = mutable.ListBuffer[String]()
+
+        val data: List[FC2Stxfsj] = run(
+          fc2Stxfsj.filter(e =>
+            e.idcard == lift(idcard) && e.xfpc == Some("第二批")
+          )
+        )
+
+        if (data.isEmpty) {
+          errors.append("身份证号码")
+        } else {
+          val dname = data(0).name
+          if (dname != name)
+            errors.append(s"姓名($dname)")
+        }
+
+        dwmcMap.get(dwmc) match {
+          case Some(value) => {
+            if (code.length != 12 || !code.startsWith(value))
+              errors.append("12位行政区划编码")
+          }
+          case None => errors.append("单位名称")
+        }
+
+        hsqkMap.get(hsqk) match {
+          case None        => errors.append("核实情况类型")
+          case Some(value) =>
+        }
+
+        val error = if (!errors.isEmpty) errors.mkString(",") + " 有误" else ""
+
+        println(s"第 ${i + 1} 行 $error")
+
+        outRow.getCell("Q").setCellValue(error)
       }
-
-      hsqkMap.get(hsqk) match {
-        case None        => errors.append("核实情况类型")
-        case Some(value) =>
-      }
-
-      val error = if (!errors.isEmpty) errors.mkString(",") + " 有误" else ""
-
-      println(s"第 ${i + 1} 行 $error")
-
-      row.getOrCreateCell("Q").setCellValue(error)
     }
 
-    workbook.save(
+    outWorkbook.save(
       Paths.get(
         outputDir(),
-        appendToFileName(Paths.get(inputFile()).getFileName(), "(审核结果)")
+        appendToFileName(Paths.get(inputFile()).getFileName(), "审核结果")
       )
     )
   }
@@ -502,8 +561,8 @@ object Main {
 
     for (i <- (startRow() - 1) until endRow()) {
       val row = sheet.getRow(i)
-      var name = row.getCell("B").value
-      var idcard = row.getCell("C").value
+      val name = row.getCell("B").value
+      val idcard = row.getCell("C").value
       val address = row.getCell("D").value
       val dwmc = row.getCell("K").value
       val csq = row.getCell("L").value
@@ -531,13 +590,15 @@ object Main {
           .setCellFormula(
             s"""IF(B$index="01",IF(LEN(C$index)=0,"",IF(LEN(C$index)<>18,"请输入18位身份证号",IF(MOD(MID(C$index,17,1),2)=1,"1","2"))),"")"""
           )
-        outRow.getCell("D").setCellValue(
-          if ((idcard.charAt(16) - '0') % 2 == 0) "2"
-          else "1"
-        )
+        outRow
+          .getCell("D")
+          .setCellValue(
+            if ((idcard.charAt(16) - '0') % 2 == 0) "2"
+            else "1"
+          )
 
         outRow.getCell("E").setCellValue("01")
-        
+
         outRow
           .getCell("F")
           .setCellFormula(
@@ -551,7 +612,8 @@ object Main {
         outRow
           .getCell("I")
           .setCellValue(
-            if (dwmc.endsWith("街道") || csq.endsWith("社区") || csq.endsWith("机关")) "10"
+            if (dwmc.endsWith("街道") || csq.endsWith("社区") || csq.endsWith("机关"))
+              "10"
             else "20"
           )
 
