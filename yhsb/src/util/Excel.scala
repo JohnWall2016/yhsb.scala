@@ -210,6 +210,7 @@ object Excel {
   implicit class CellOps(val cell: Cell) extends AnyVal {
     def value: String = {
       import org.apache.poi.ss.usermodel.CellType._
+      if (cell == null) return ""
       cell.getCellType() match {
         case STRING => cell.getStringCellValue()
         case NUMERIC => {

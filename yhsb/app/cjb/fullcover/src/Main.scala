@@ -531,11 +531,27 @@ object Main {
           case Some(value) =>
         }
 
-        val error = if (!errors.isEmpty) errors.mkString(",") + " 有误" else ""
+        val error = if (!errors.isEmpty) Some(errors.mkString(",") + " 有误") else None
 
-        println(s"第 ${i + 1} 行 $error")
+        errors.clear()
 
-        outRow.getCell("Q").setCellValue(error)
+        if (error.isDefined) errors.append(error.get)
+
+        if (hsqk == "在校学生") {
+          import java.time._
+          import java.time.temporal._
+          val old = YearMonth.parse(
+            idcard.substring(6, 12), 
+            format.DateTimeFormatter.ofPattern("yyyyMM")
+          ).until(YearMonth.now, ChronoUnit.YEARS)
+          if (old >= 25) errors.append("25岁以上在校学生")
+        }
+
+        val err = if (!errors.isEmpty) errors.mkString(";") else ""
+
+        println(s"第 ${i + 1} 行 $err")
+
+        outRow.getCell("Q").setCellValue(err)
       }
     }
 
