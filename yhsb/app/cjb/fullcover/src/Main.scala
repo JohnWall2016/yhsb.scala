@@ -18,6 +18,8 @@ import yhsb.util.Files.appendToFileName
 import yhsb.util.BiMap
 
 class Conf(args: Seq[String]) extends ScallopConf(args) {
+  shortSubcommandsHelp()
+
   banner("全覆盖数据处理程序")
 
   val updateDwmc = new Subcommand("upDwmc") with InputFile with RowRange {
