@@ -205,6 +205,13 @@ object Excel {
       if (cell == null) cell = createCell(columnName)
       cell
     }
+
+    def copyTo(dest: Row, fields: String*) = {
+      for (field <- fields) {
+        val value = getCell(field).value
+        getOrCreateCell(field).setCellValue(value)
+      }
+    }
   }
 
   implicit class CellOps(val cell: Cell) extends AnyVal {
