@@ -28,10 +28,13 @@ class Query(args: Seq[String]) extends Command(args) {
 
             session.sendService(CbxxRequest(idcard))
             val result = session.getResult[Cbxx]()
-            if (!result.isEmpty)
-              row.getCell("E").setCellValue(
-                s"${result(0).name}$title"
+            if (!result.isEmpty) {
+              val cbxx = result(0)
+              println(cbxx.name)
+              row.getOrCreateCell("E").setCellValue(
+                s"${cbxx.name}$title"
               )
+            }
           }
         }
         workbook.save(appendToFileName(inputFile(), ".upd"))
