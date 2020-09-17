@@ -1,6 +1,6 @@
 package yhsb.util.commands
 
-import org.rogach.scallop._
+import org.rogach.scallop.{Subcommand => ScallopSubcommand, _}
 
 trait RowRange { _: ScallopConf =>
   val startRow = trailArg[Int](descr = "开始行, 从1开始")
@@ -33,33 +33,28 @@ trait OutputDirOpt { _: ScallopConf =>
   val outputDir = opt[String](name = "out", short = 'o', descr = "文件导出路径")
 }
 
-trait Executable {
+abstract class Subcommand(commandNameAndAliases: String*)
+    extends ScallopSubcommand(commandNameAndAliases: _*) {
   def execute(): Unit
 }
 
-abstract class SubExecutable(commandNameAndAliases: String*)
-    extends Subcommand(commandNameAndAliases: _*)
-    with Executable
+class Command(args: Seq[String]) extends ScallopConf(args) {
+  shortSubcommandsHelp()
+  
+  def addSubCommand(cmd: Subcommand) = addSubcommand(cmd)
 
-class ExecutiveConf(args: Seq[String]) {
-  private val conf = new ScallopConf(args) {
-    shortSubcommandsHelp()
-  }
-
-  def banner(b: String) = conf.banner(b)
-
-  def addCommands(cmds: (Subcommand with Executable)*) =
-    cmds.foreach(conf.addSubcommand(_))
-
-  def addCommand(cmd: Subcommand with Executable) =
-    conf.addSubcommand(cmd)
-
-  def execute() = {
-    conf.subcommand match {
-      case Some(exec: Executable) => exec.execute()
-      case _                      =>
+  def runCommand() = {
+    subcommand match {
+      case Some(exec: Subcommand) => exec.execute()
+      case None => execute()
+      case _                      => printHelp()
     }
   }
 
-  def verify() = conf.verify()
+  def execute(): Unit = printHelp()
+  
+  override def assertVerified(): Unit = {
+    if (!verified) verify()
+    super.assertVerified()
+  }
 }

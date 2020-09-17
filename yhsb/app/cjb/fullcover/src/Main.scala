@@ -9,7 +9,7 @@ import yhsb.util.commands.InputFile
 import yhsb.util.Excel
 import yhsb.util.Excel._
 import yhsb.cjb.db.FullCover._
-import yhsb.util.commands._
+import yhsb.util.commands.{Subcommand => _, _}
 import yhsb.util.Strings.StringOps
 import yhsb.db.Context.JdbcContextOps
 import yhsb.cjb.net.protocol.JBKind

@@ -8,12 +8,12 @@ import yhsb.cjb.net.protocol.CbxxRequest
 import yhsb.cjb.net.protocol.Cbxx
 import yhsb.util.Files.appendToFileName
 
-class Conf(args: Seq[String]) extends ExecutiveConf(args) {
+class Query(args: Seq[String]) extends Command(args) {
   
   banner("数据查询处理程序")
 
-  addCommands(
-    new SubExecutable("doc") with InputFile {
+  addSubCommand {
+    new Subcommand("doc") with InputFile {
       descr("档案目录生成")
 
       def execute() = {
@@ -37,11 +37,9 @@ class Conf(args: Seq[String]) extends ExecutiveConf(args) {
         workbook.save(appendToFileName(inputFile(), ".upd"))
       }
     }
-  )
-
-  verify()
+  }
 }
 
 object Main {
-  def main(args: Array[String]) = new Conf(args).execute()
+  def main(args: Array[String]) = new Query(args).runCommand()
 }
