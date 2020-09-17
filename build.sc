@@ -38,6 +38,11 @@ object yhsb extends ScalaModule {
         def moduleDeps = Seq(yhsb)
         def scalaVersion = "2.13.3"
       }
+
+      object query extends ScalaModule {
+        def moduleDeps = Seq(yhsb)
+        def scalaVersion = "2.13.3"
+      }
     }
 
     object qb extends ScalaModule {

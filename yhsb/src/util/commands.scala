@@ -32,3 +32,34 @@ trait OutputDir { _: ScallopConf =>
 trait OutputDirOpt { _: ScallopConf =>
   val outputDir = opt[String](name = "out", short = 'o', descr = "文件导出路径")
 }
+
+trait Executable {
+  def execute(): Unit
+}
+
+abstract class SubExecutable(commandNameAndAliases: String*)
+    extends Subcommand(commandNameAndAliases: _*)
+    with Executable
+
+class ExecutiveConf(args: Seq[String]) {
+  private val conf = new ScallopConf(args) {
+    shortSubcommandsHelp()
+  }
+
+  def banner(b: String) = conf.banner(b)
+
+  def addCommands(cmds: (Subcommand with Executable)*) =
+    cmds.foreach(conf.addSubcommand(_))
+
+  def addCommand(cmd: Subcommand with Executable) =
+    conf.addSubcommand(cmd)
+
+  def execute() = {
+    conf.subcommand match {
+      case Some(exec: Executable) => exec.execute()
+      case _                      =>
+    }
+  }
+
+  def verify() = conf.verify()
+}
