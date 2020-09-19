@@ -40,19 +40,19 @@ abstract class Subcommand(commandNameAndAliases: String*)
 
 class Command(args: Seq[String]) extends ScallopConf(args) {
   shortSubcommandsHelp()
-  
+
   def addSubCommand(cmd: Subcommand) = addSubcommand(cmd)
 
   def runCommand() = {
     subcommand match {
       case Some(exec: Subcommand) => exec.execute()
-      case None => execute()
+      case None                   => execute()
       case _                      => printHelp()
     }
   }
 
   def execute(): Unit = printHelp()
-  
+
   override def assertVerified(): Unit = {
     if (!verified) verify()
     super.assertVerified()
