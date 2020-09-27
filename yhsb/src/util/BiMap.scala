@@ -12,5 +12,5 @@ class BiMap[K, V](entries: (K, V)*) extends collection.immutable.Map[K, V] {
   override def updated[V1 >: V](key: K, value: V1): Map[K, V1] =
     map.updated(key, value)
 
-  val invert = map.map { case (k, v) => (v, k) }
+  lazy val invert = map.map { case (k, v) => (v, k) }
 }
