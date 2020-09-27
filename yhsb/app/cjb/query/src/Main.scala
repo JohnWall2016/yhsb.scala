@@ -28,9 +28,13 @@ class Query(args: Seq[String]) extends Command(args) {
 
             session.sendService(CbxxRequest(idcard))
             val result = session.getResult[Cbxx]()
-            if (!result.isEmpty) {
+            if (result.isEmpty || result(0).idcard == null) {
+              System.err.println(s"Error: ${i + 1} $idcard")
+              System.exit(-1)
+            } else {
               val cbxx = result(0)
-              println(cbxx.name)
+              println(s"${i + 1} ${cbxx.name}")
+              
               row.getOrCreateCell("E").setCellValue(
                 s"${cbxx.name}$title"
               )
