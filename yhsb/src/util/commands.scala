@@ -20,6 +20,10 @@ trait InputFile { _: ScallopConf =>
   val inputFile = trailArg[String](descr = "输入文件路径")
 }
 
+trait OutputFile { _: ScallopConf =>
+  val outputFile = trailArg[String](descr = "输出文件路径")
+}
+
 trait SheetIndex { _: ScallopConf =>
   val sheetIndex =
     trailArg[Int](descr = "数据表序号, 默认为0", default = Some(0), required = false)
