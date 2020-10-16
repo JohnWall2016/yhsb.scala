@@ -19,6 +19,7 @@ import org.apache.poi.openxml4j.exceptions.InvalidOperationException
 import java.io.InputStream
 import java.io.ByteArrayInputStream
 import java.nio.file.Path
+import scala.util.matching.Regex
 
 object Excel {
 
@@ -191,6 +192,11 @@ object Excel {
         }
       }
     }
+
+    def getCell(cellName: String) = {
+      val c = CellRef.from(cellName).get
+      sheet.getRow(c.rowIndex - 1).getCell(c.columnIndex - 1)
+    }
   }
 
   implicit class RowOps(val row: Row) extends AnyVal {
@@ -233,12 +239,69 @@ object Excel {
 
   object CellRef {
     def columnNameToNumber(name: String): Int = {
-      var sum = 0;
+      var sum = 0
       for (ch <- name.toUpperCase()) {
         sum *= 26
         sum += ch - 64
       }
       sum
     }
+
+    def columnNumberToName(number: Int): String = {
+      var dividend = number
+      var name = new StringBuilder()
+      while (dividend > 0) {
+        var modulo = (dividend - 1) % 26
+        name.append((65 + modulo).toChar)
+        dividend = (dividend - modulo) / 26
+      }
+      name.reverse.toString()
+    }
+
+    private val cellRegex = """^(\$?)([A-Z]+)(\$?)(\d+)$""".r
+
+    def from(address: String): Option[CellRef] = {
+      cellRegex.findFirstMatchIn(address) match {
+        case Some(value) =>
+          Some(
+            new CellRef(
+              anchorColumn = !value.group(1).isEmpty(),
+              colName = value.group(2),
+              column = columnNameToNumber(value.group(2)),
+              anchorRow = !value.group(3).isEmpty(),
+              row = value.group(4).toInt
+            )
+          )
+        case None => None
+      }
+    }
+  }
+
+  class CellRef(
+      row: Int,
+      column: Int,
+      anchor: Boolean = false,
+      anchorRow: Boolean = false,
+      anchorColumn: Boolean = false,
+      colName: String = null
+  ) {
+    val rowIndex = row
+    val columnIndex = column
+    val anchored = anchor
+    val rowAnchored = anchor || anchorRow
+    val columnAnchored: Boolean = anchor || anchorColumn
+    val columnName: String =
+      if (colName != null) colName else CellRef.columnNumberToName(column)
+
+    def toAddress: String = {
+      val sb = new StringBuilder()
+      if (columnAnchored) sb.append("$")
+      sb.append(columnName)
+      if (rowAnchored) sb.append("$")
+      sb.append(s"$row")
+      sb.toString()
+    }
+
+    override def toString(): String = toAddress
   }
 }
