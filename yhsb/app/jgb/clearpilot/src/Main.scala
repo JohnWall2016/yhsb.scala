@@ -12,7 +12,7 @@ import java.nio.file.Path
 class ClearPilot(args: Seq[String]) extends Command(args) {
   banner("原试点清理程序")
 
-  val templateXlsx = """E:\机关养老保险\（模板）试点期间参保人员缴费确认表.xls"""
+  val templateXlsx = """/Users/wangjiong/Downloads/（模板）试点期间参保人员缴费确认表.xls"""
 
   addSubCommand {
     new Subcommand("split") with InputFile with RowRange {
@@ -32,7 +32,7 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
         val dwMap  = mutable.Map[String, mutable.ListBuffer[Int]]()
 
         for (i <- (startRow() - 1) until endRow()) {
-          val dw = sheet.getRow(i).getCell(dwCol()).value
+          val dw = sheet.getRow(i).getCell(dwCol()).value.trim()
           if (!dwMap.contains(dw)) {
             dwMap(dw) = mutable.ListBuffer(i)
           } else {
@@ -55,17 +55,21 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
           val outWorkbook = Excel.load(templateXlsx)
           val outSheet = outWorkbook.getSheetAt(0)
 
+          outSheet.getCell("G3").setCellValue(s"$name($sname)")
+
           var index, begIndex = 4
 
           for (i <- records) {
             val row = sheet.getRow(i)
-            val outRow = outSheet.getOrCopyRow(index, begIndex)
+            val outRow = outSheet.getOrCopyRow(index, begIndex, true)
             
-            for (r <- 1 until 11) {
+            for (r <- 1 to 11) {
               if (r == 8 || r == 9) {
                 outRow.getCell(r).setCellValue(
                   row.getCell(r).getNumericCellValue()
                 )
+              } else if (r == 11) {
+                outRow.getOrCreateCell(r).setCellValue("")
               } else {
                 outRow.getCell(r).setCellValue(
                   row.getCell(r).value
@@ -76,16 +80,16 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
             index += 1
           }
 
-          val outRow = outSheet.getOrCopyRow(index, begIndex)
+          val outRow = outSheet.getOrCopyRow(index, begIndex, true)
           outRow.getCell("B").setCellFormula(
-            s"""CONCATENATE("共 ",SUMPRODUCT(1/COUNTIF(C5:C${index-1},C5:C${index-1}&"*"))," 人")"""
+            s"""CONCATENATE("共 ",SUMPRODUCT(1/COUNTIF(C5:C${index},C5:C${index}&"*"))," 人")"""
           )
           outRow.getCell("H").setCellValue("合计")
           outRow.getCell("I").setCellFormula(
-            s"""SUM(I5:I${index-1})"""
+            s"""SUM(I5:I${index})"""
           )
           outRow.getCell("J").setCellFormula(
-            s"""SUM(J5:J${index-1})"""
+            s"""SUM(J5:J${index})"""
           )
 
           outWorkbook.save(Path.of(outputDir, fileName))

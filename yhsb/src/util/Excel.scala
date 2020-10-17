@@ -87,16 +87,16 @@ object Excel {
       var newRow = sheet.getRow(targetRowIndex)
       val srcRow = sheet.getRow(sourceRowIndex)
 
-      if (newRow != null) {
+      /*if (newRow != null) {
         sheet.shiftRows(targetRowIndex, sheet.getLastRowNum(), 1, true, false)
-      }
+      }*/
 
       newRow = sheet.createRow(targetRowIndex)
       newRow.setHeight(srcRow.getHeight())
 
       for (
         index <-
-          srcRow.getFirstCellNum() until srcRow.getPhysicalNumberOfCells()
+          srcRow.getFirstCellNum() until srcRow.getLastCellNum()
       ) {
         val srcCell = srcRow.getCell(index)
         if (srcCell != null) {
@@ -206,11 +206,14 @@ object Excel {
     def createCell(columnName: String) =
       row.createCell(CellRef.columnNameToNumber(columnName) - 1)
 
-    def getOrCreateCell(columnName: String) = {
-      var cell = getCell(columnName)
-      if (cell == null) cell = createCell(columnName)
+    def getOrCreateCell(col: Int): Cell = {
+      var cell = row.getCell(col)
+      if (cell == null) cell = row.createCell(col)
       cell
     }
+
+    def getOrCreateCell(columnName: String): Cell = 
+      getOrCreateCell(CellRef.columnNameToNumber(columnName) - 1)
 
     def copyTo(dest: Row, fields: String*) = {
       for (field <- fields) {
