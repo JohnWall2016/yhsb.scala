@@ -105,7 +105,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
 
               if (
                 (male && (birthMonth + 6000 <= retireTime()))
-                || (!male && (birthMonth + 5500 <= retireTime() + 55))
+                || (!male && (birthMonth + 5500 <= retireTime()))
               ) {
                 sess.sendService(CbxxRequest(idcard))
                 val result = sess.getResult[Cbxx]()
