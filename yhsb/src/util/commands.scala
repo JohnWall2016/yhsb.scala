@@ -29,6 +29,11 @@ trait SheetIndex { _: ScallopConf =>
     trailArg[Int](descr = "数据表序号, 默认为0", default = Some(0), required = false)
 }
 
+trait SheetIndexOpt { _: ScallopConf =>
+  val sheetIndex =
+    opt[Int](name = "sheetIndex", descr = "数据表序号, 默认为0", default = Some(0))
+}
+
 trait OutputDir { _: ScallopConf =>
   val outputDir = trailArg[String](descr = "文件导出路径")
 }
