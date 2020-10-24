@@ -9,6 +9,8 @@ import yhsb.cjb.net.protocol.Cbxx
 import yhsb.util.Files.appendToFileName
 import java.nio.file.Paths
 import scala.util.matching.Regex
+import scala.collection.mutable
+import org.apache.poi.ss.usermodel.Cell
 
 class LandAcq(args: Seq[String]) extends Command(args) {
 
@@ -127,8 +129,124 @@ class LandAcq(args: Seq[String]) extends Command(args) {
       }
     }
 
+  val upsub = new Subcommand("upsub") {
+    descr("更新政府补贴数据")
+
+    val baseXls = trailArg[String](descr = "数据来源excel文件")
+    def baseSheetIndex() = 2
+    def nameCol() = "D"
+    def idcardCol() = "I"
+    def totalYearsCol() = "K"
+    def subsidyYearsCol() = "L"
+    def totalMoneyCol() = "M"
+    def subsidyMoneyCol() = "N"
+    def paidMoneyCol() = "O"
+
+    val updateXls = trailArg[String](descr = "数据更新excel文件")
+
+    def execute(): Unit = {
+      val map = loadBase()
+
+      val workbook = Excel.load(updateXls())
+      val sheet = workbook.getSheetAt(0)
+
+      for (row <- sheet.rowIterator(1)) {
+        val idcard = row("G").value.trim().toUpperCase
+        println(s"更新 $idcard")
+        if (map.contains(idcard)) {
+          def setIntOption(colName: String, value: Option[Int]) = {
+            if (value.isDefined) row(colName).setCellValue(value.get)
+          }
+          def setBigDecOption(colName: String, value: Option[BigDecimal]) = {
+            if (value.isDefined) row(colName).setCellValue(value.get.toString())
+          }
+          val data = map(idcard)
+          setIntOption("H", data.totalYears)
+          setIntOption("I", data.subsidyYears)
+          setBigDecOption("J", data.totalMoney)
+          setBigDecOption("K", data.subsidyMoney)
+          setBigDecOption("L", data.paidMoney)
+          setBigDecOption("M", data.defference)
+        }
+      }
+      workbook.save(appendToFileName(updateXls(), ".up"))
+    }
+
+    private case class Data(
+        name: String,
+        idcard: String,
+        totalYears: Option[Int],
+        subsidyYears: Option[Int],
+        totalMoney: Option[BigDecimal],
+        subsidyMoney: Option[BigDecimal],
+        paidMoney: Option[BigDecimal],
+        defference: Option[BigDecimal]
+    )
+
+    private def loadBase(): mutable.Map[String, Data] = {
+      val workbook = Excel.load(baseXls())
+      val sheet = workbook.getSheetAt(baseSheetIndex())
+
+      val map = mutable.Map[String, Data]()
+
+      for (row <- sheet.rowIterator(1)) {
+        val name = row(nameCol()).value.trim()
+        val idcard = row(idcardCol()).value.trim().toUpperCase()
+        //println(s"$name $idcard")
+        if (map.contains(idcard)) {
+          println(s"$name $idcard 身份证重复")
+        } else {
+          def cellValue2Option[T](
+              colName: String,
+              getValue: Cell => String = _.value
+          )(convert: String => T): Option[T] = {
+            val value = getValue(row(colName))
+            try {
+              if (value != null && !value.isEmpty()) Some(convert(value))
+              else None
+            } catch {
+              case _: Exception => None
+            }
+          }
+          val totalYears = cellValue2Option(totalYearsCol())(_.toInt)
+          val subsidyYears = cellValue2Option(subsidyYearsCol())(_.toInt)
+          val totalMoney = cellValue2Option(totalMoneyCol())(BigDecimal(_))
+          val subsidyMoney = cellValue2Option(subsidyMoneyCol())(BigDecimal(_))
+          val paidMoney = cellValue2Option(paidMoneyCol())(BigDecimal(_))
+          val defference =
+            if (
+              subsidyMoney.isDefined && 
+              subsidyYears.isDefined && 
+              subsidyYears.get != 0 && 
+              subsidyYears.get <= 15
+            )
+              Some(
+                (7279.2 - (subsidyMoney.get / subsidyYears.get)) * subsidyYears.get
+              )
+            else None
+
+          val data = Data(
+            name,
+            idcard,
+            totalYears,
+            subsidyYears,
+            totalMoney,
+            subsidyMoney,
+            paidMoney,
+            defference
+          )
+          map(idcard) = data
+          //println(data)
+        }
+      }
+
+      map
+    }
+  }
+
   addSubCommand(dump)
   addSubCommand(jbstate)
+  addSubCommand(upsub)
 }
 
 object Main {

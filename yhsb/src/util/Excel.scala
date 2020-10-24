@@ -94,10 +94,7 @@ object Excel {
       newRow = sheet.createRow(targetRowIndex)
       newRow.setHeight(srcRow.getHeight())
 
-      for (
-        index <-
-          srcRow.getFirstCellNum() until srcRow.getLastCellNum()
-      ) {
+      for (index <- srcRow.getFirstCellNum() until srcRow.getLastCellNum()) {
         val srcCell = srcRow.getCell(index)
         if (srcCell != null) {
           val newCell = newRow.createCell(index)
@@ -179,16 +176,19 @@ object Excel {
       }
     }
 
-    def rowIterator(start: Int, end: Int): Iterator[Row] = {
+    def rowIterator(start: Int, end: Int = -1): Iterator[Row] = {
       new Iterator[Row]() {
         private var index = math.max(0, start)
-        private val last = math.min(end - 1, sheet.getLastRowNum())
+        private val last =
+          if (end == -1) sheet.getLastRowNum() - 1
+          else math.min(end - 1, sheet.getLastRowNum() - 1)
 
         def hasNext: Boolean = index <= last
 
         def next(): Row = {
+          val row = sheet.getRow(index)
           index += 1
-          sheet.getRow(index)
+          row
         }
       }
     }
@@ -197,11 +197,15 @@ object Excel {
       val c = CellRef.from(cellName).get
       sheet.getRow(c.rowIndex - 1).getCell(c.columnIndex - 1)
     }
+
+    def apply(cellName: String) = getCell(cellName)
   }
 
   implicit class RowOps(val row: Row) extends AnyVal {
     def getCell(columnName: String) =
       row.getCell(CellRef.columnNameToNumber(columnName) - 1)
+
+    def apply(columnName: String) = getCell(columnName)
 
     def createCell(columnName: String) =
       row.createCell(CellRef.columnNameToNumber(columnName) - 1)
@@ -212,7 +216,7 @@ object Excel {
       cell
     }
 
-    def getOrCreateCell(columnName: String): Cell = 
+    def getOrCreateCell(columnName: String): Cell =
       getOrCreateCell(CellRef.columnNameToNumber(columnName) - 1)
 
     def copyTo(dest: Row, fields: String*) = {
@@ -235,6 +239,8 @@ object Excel {
         }
         case BLANK   => ""
         case BOOLEAN => cell.getBooleanCellValue().toString()
+        case ERROR => ""
+        case FORMULA => cell.getStringCellValue()
         case ty      => throw new Exception(s"unsupported type: $ty")
       }
     }
