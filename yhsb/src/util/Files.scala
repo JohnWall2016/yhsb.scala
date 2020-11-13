@@ -1,6 +1,8 @@
 package yhsb.util
 
 import java.nio.file.Path
+import java.io.File
+import scala.util.matching.Regex
 
 object Files {
   def appendToFileName(fileName: String, appendString: String) = {
@@ -22,5 +24,23 @@ object Files {
     } else {
       fileName
     }
+  }
+
+  def listFiles(dir: File, filter: String = ".*"): List[File] = {
+    val result = collection.mutable.ListBuffer[File]()
+
+    val files = dir.listFiles()
+
+    for (f <- files) {
+      if (f.isDirectory())
+        result.appendAll(
+          listFiles(f, filter)
+        )
+      else {
+        if (f.getName().matches(filter))
+          result.append(f)
+      }
+    }
+    result.toList
   }
 }

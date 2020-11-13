@@ -198,6 +198,9 @@ object Excel {
       sheet.getRow(c.rowIndex - 1).getCell(c.columnIndex - 1)
     }
 
+    def getCell(row: Int, col: Int) = 
+      sheet.getRow(row).getCell(col)
+
     def apply(cellName: String) = getCell(cellName)
   }
 
