@@ -11,6 +11,9 @@ import java.nio.file.Paths
 import scala.util.matching.Regex
 import scala.collection.mutable
 import org.apache.poi.ss.usermodel.Cell
+import org.apache.poi.xwpf.usermodel.XWPFDocument
+import java.io.FileInputStream
+import scala.collection.JavaConverters._
 
 class LandAcq(args: Seq[String]) extends Command(args) {
 
@@ -244,9 +247,49 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     }
   }
 
+  val zhbj = new Subcommand("zhbj") with InputFile {
+    descr("转换补缴申请表")
+
+    val template = """D:\征地农民\雨湖区被征地农民一次性补缴养老保险申请表模板.xlsx"""
+
+    def execute(): Unit = {
+      val doc = new XWPFDocument(new FileInputStream(inputFile()))
+      val workbook = Excel.load(template)
+      val sheet = workbook.getSheetAt(0)
+
+      for (par <- doc.getParagraphs().asScala) {
+        for {
+          runs <- par.getRuns().asScala
+          runsText = runs.text() if runsText.matches("项目名称：.*")
+        } {
+          println(runsText)
+          sheet.getCell("A2").setCellValue(runsText)
+        }
+      }
+
+      var startRow, currentRow = 4
+      
+      for (table <- doc.getTables().asScala) {
+        for (row <- table.getRows().asScala.drop(2)) {
+          val r = sheet.getOrCopyRow(currentRow, startRow)
+          r.setHeight(row.getHeight().toShort)
+          for ((cell, index) <- row.getTableCells().asScala.zipWithIndex) {
+            print(s"$index ${cell.getText()} ")
+            r.getCell(index).setCellValue(cell.getText())
+          }
+          println()
+          currentRow += 1
+        }
+      }
+
+      workbook.save(s"${inputFile()}.conv.xlsx")
+    }
+  }
+
   addSubCommand(dump)
   addSubCommand(jbstate)
   addSubCommand(upsub)
+  addSubCommand(zhbj)
 }
 
 object Main {
