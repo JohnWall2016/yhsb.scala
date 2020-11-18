@@ -157,19 +157,13 @@ class LandAcq(args: Seq[String]) extends Command(args) {
         val idcard = row("G").value.trim().toUpperCase
         println(s"更新 $idcard")
         if (map.contains(idcard)) {
-          def setIntOption(colName: String, value: Option[Int]) = {
-            if (value.isDefined) row(colName).setCellValue(value.get)
-          }
-          def setBigDecOption(colName: String, value: Option[BigDecimal]) = {
-            if (value.isDefined) row(colName).setCellValue(value.get.toString())
-          }
           val data = map(idcard)
-          setIntOption("H", data.totalYears)
-          setIntOption("I", data.subsidyYears)
-          setBigDecOption("J", data.totalMoney)
-          setBigDecOption("K", data.subsidyMoney)
-          setBigDecOption("L", data.paidMoney)
-          setBigDecOption("M", data.defference)
+          row.setCellValue("H", data.totalYears)
+          row.setCellValue("I", data.subsidyYears)
+          row.setCellValue("J", data.totalMoney)
+          row.setCellValue("K", data.subsidyMoney)
+          row.setCellValue("L", data.paidMoney)
+          row.setCellValue("M", data.defference)
         }
       }
       workbook.save(appendToFileName(updateXls(), ".up"))
@@ -199,28 +193,16 @@ class LandAcq(args: Seq[String]) extends Command(args) {
         if (map.contains(idcard)) {
           println(s"$name $idcard 身份证重复")
         } else {
-          def cellValue2Option[T](
-              colName: String,
-              getValue: Cell => String = _.value
-          )(convert: String => T): Option[T] = {
-            val value = getValue(row(colName))
-            try {
-              if (value != null && !value.isEmpty()) Some(convert(value))
-              else None
-            } catch {
-              case _: Exception => None
-            }
-          }
-          val totalYears = cellValue2Option(totalYearsCol())(_.toInt)
-          val subsidyYears = cellValue2Option(subsidyYearsCol())(_.toInt)
-          val totalMoney = cellValue2Option(totalMoneyCol())(BigDecimal(_))
-          val subsidyMoney = cellValue2Option(subsidyMoneyCol())(BigDecimal(_))
-          val paidMoney = cellValue2Option(paidMoneyCol())(BigDecimal(_))
+          val totalYears = row.cellValue(totalYearsCol())(_.toInt)
+          val subsidyYears = row.cellValue(subsidyYearsCol())(_.toInt)
+          val totalMoney = row.cellValue(totalMoneyCol())(BigDecimal(_))
+          val subsidyMoney = row.cellValue(subsidyMoneyCol())(BigDecimal(_))
+          val paidMoney = row.cellValue(paidMoneyCol())(BigDecimal(_))
           val defference =
             if (
-              subsidyMoney.isDefined && 
-              subsidyYears.isDefined && 
-              subsidyYears.get != 0 && 
+              subsidyMoney.isDefined &&
+              subsidyYears.isDefined &&
+              subsidyYears.get != 0 &&
               subsidyYears.get <= 15
             )
               Some(
@@ -250,12 +232,20 @@ class LandAcq(args: Seq[String]) extends Command(args) {
   val zhbj = new Subcommand("zhbj") with InputFile {
     descr("转换补缴申请表")
 
+    def baseXls() = """D:\Downloads\三文件总表2016.3.18.xls"""
+    def baseSheetIndex() = 2
+    def nameCol() = "D"
+    def idcardCol() = "I"
+    def btCol() = "N"
+
     val template = """D:\征地农民\雨湖区被征地农民一次性补缴养老保险申请表模板.xlsx"""
 
     def execute(): Unit = {
       val doc = new XWPFDocument(new FileInputStream(inputFile()))
       val workbook = Excel.load(template)
       val sheet = workbook.getSheetAt(0)
+
+      val map = loadBase()
 
       for (par <- doc.getParagraphs().asScala) {
         for {
@@ -268,7 +258,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
       }
 
       var startRow, currentRow = 4
-      
+
       for (table <- doc.getTables().asScala) {
         for (row <- table.getRows().asScala.drop(2)) {
           val r = sheet.getOrCopyRow(currentRow, startRow)
@@ -277,12 +267,36 @@ class LandAcq(args: Seq[String]) extends Command(args) {
             print(s"$index ${cell.getText()} ")
             r.getCell(index).setCellValue(cell.getText())
           }
+          map.get(r.getCell("H").value).map(v =>
+            r.getCell("L").setCellValue(v.toDouble)
+          )
           println()
           currentRow += 1
         }
       }
 
       workbook.save(s"${inputFile()}.conv.xlsx")
+    }
+
+    def loadBase(): collection.Map[String, BigDecimal] = {
+      val workbook = Excel.load(baseXls())
+      val sheet = workbook.getSheetAt(baseSheetIndex())
+
+      val map = mutable.Map[String, BigDecimal]()
+
+      for (row <- sheet.rowIterator(1)) {
+        
+        val name = row(nameCol()).value.trim()
+        val idcard = row(idcardCol()).value.trim().toUpperCase()
+        //println(s"$name $idcard")
+        println(s"${row.getRowNum()} ${idcard} ${name}")
+        if (map.contains(idcard)) {
+          println(s"$name $idcard 身份证重复")
+        } else {
+          row.cellValue(btCol())(BigDecimal(_)).map(map(idcard) = _)
+        }
+      }
+      map
     }
   }
 

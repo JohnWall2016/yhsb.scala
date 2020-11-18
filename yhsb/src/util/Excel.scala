@@ -20,6 +20,7 @@ import java.io.InputStream
 import java.io.ByteArrayInputStream
 import java.nio.file.Path
 import scala.util.matching.Regex
+import org.apache.poi.ss.usermodel.CellType
 
 object Excel {
 
@@ -198,7 +199,7 @@ object Excel {
       sheet.getRow(c.rowIndex - 1).getCell(c.columnIndex - 1)
     }
 
-    def getCell(row: Int, col: Int) = 
+    def getCell(row: Int, col: Int) =
       sheet.getRow(row).getCell(col)
 
     def apply(cellName: String) = getCell(cellName)
@@ -228,24 +229,46 @@ object Excel {
         getOrCreateCell(field).setCellValue(value)
       }
     }
+
+    def cellValue[T](
+        colName: String,
+        getValue: Cell => String = _.value
+    )(convert: String => T): Option[T] = {
+      val value = getValue(row(colName))
+      try {
+        if (value != null && !value.isEmpty()) Some(convert(value))
+        else None
+      } catch {
+        case _: Exception => None
+      }
+    }
+
+    def setCellValue[T](colName: String, value: Option[T]) = {
+      if (value.isDefined) row(colName).setCellValue(value.get.toString())
+    }
   }
 
   implicit class CellOps(val cell: Cell) extends AnyVal {
     def value: String = {
       import org.apache.poi.ss.usermodel.CellType._
       if (cell == null) return ""
-      cell.getCellType() match {
-        case STRING => cell.getStringCellValue()
-        case NUMERIC => {
-          val v = cell.getNumericCellValue()
-          if (v.isValidInt) v.toInt.toString else v.toString
+
+      def getString(typ: CellType): String = {
+        typ match {
+          case STRING => cell.getStringCellValue()
+          case NUMERIC => {
+            val v = cell.getNumericCellValue()
+            if (v.isValidInt) v.toInt.toString else v.toString
+          }
+          case BLANK   => ""
+          case BOOLEAN => cell.getBooleanCellValue().toString()
+          case ERROR   => ""
+          case FORMULA => getString(cell.getCachedFormulaResultType())
+          case ty      => throw new Exception(s"unsupported type: $ty")
         }
-        case BLANK   => ""
-        case BOOLEAN => cell.getBooleanCellValue().toString()
-        case ERROR => ""
-        case FORMULA => cell.getStringCellValue()
-        case ty      => throw new Exception(s"unsupported type: $ty")
       }
+
+      getString(cell.getCellType())
     }
   }
 
