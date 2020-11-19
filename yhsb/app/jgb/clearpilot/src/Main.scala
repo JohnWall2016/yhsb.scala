@@ -137,7 +137,7 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
 
         var break = false
 
-        for (i <- 4 until sheet.getLastRowNum() if !break) {
+        for (i <- 4 to sheet.getLastRowNum() if !break) {
           val row = sheet.getRow(i)
           val startCell = row.getCell(copyRange.start)
           if (startCell != null) {

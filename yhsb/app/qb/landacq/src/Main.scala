@@ -229,14 +229,35 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     }
   }
 
-  val zhbj = new Subcommand("zhbj") with InputFile {
-    descr("转换补缴申请表")
-
+  def loadId2BtMap(): collection.Map[String, Option[BigDecimal]] = {
     def baseXls() = """D:\Downloads\三文件总表2016.3.18.xls"""
     def baseSheetIndex() = 2
     def nameCol() = "D"
     def idcardCol() = "I"
     def btCol() = "N"
+
+    val workbook = Excel.load(baseXls())
+    val sheet = workbook.getSheetAt(baseSheetIndex())
+
+    val map = mutable.Map[String, Option[BigDecimal]]()
+
+    for (row <- sheet.rowIterator(1)) {
+
+      val name = row(nameCol()).value.trim()
+      val idcard = row(idcardCol()).value.trim().toUpperCase()
+      //println(s"$name $idcard")
+      //println(s"${row.getRowNum()} ${idcard} ${name}")
+      if (map.contains(idcard)) {
+        println(s"$name $idcard 身份证重复")
+      } else {
+        map(idcard) = row.cellValue(btCol())(BigDecimal(_))
+      }
+    }
+    map
+  }
+
+  val zhbj = new Subcommand("zhbj") with InputFile {
+    descr("转换补缴申请表")
 
     val template = """D:\征地农民\雨湖区被征地农民一次性补缴养老保险申请表模板.xlsx"""
 
@@ -245,7 +266,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
       val workbook = Excel.load(template)
       val sheet = workbook.getSheetAt(0)
 
-      val map = loadBase()
+      val map = loadId2BtMap()
 
       for (par <- doc.getParagraphs().asScala) {
         for {
@@ -267,9 +288,9 @@ class LandAcq(args: Seq[String]) extends Command(args) {
             print(s"$index ${cell.getText()} ")
             r.getCell(index).setCellValue(cell.getText())
           }
-          map.get(r.getCell("H").value).map(v =>
-            r.getCell("L").setCellValue(v.toDouble)
-          )
+          map
+            .get(r.getCell("H").value)
+            .map(_.map(v => r.getCell("L").setCellValue(v.toDouble)))
           println()
           currentRow += 1
         }
@@ -277,26 +298,40 @@ class LandAcq(args: Seq[String]) extends Command(args) {
 
       workbook.save(s"${inputFile()}.conv.xlsx")
     }
+  }
 
-    def loadBase(): collection.Map[String, BigDecimal] = {
-      val workbook = Excel.load(baseXls())
-      val sheet = workbook.getSheetAt(baseSheetIndex())
+  val check = new Subcommand("check") with InputFile {
+    descr("查询是否在三文件总表中")
 
-      val map = mutable.Map[String, BigDecimal]()
+    val sheetIndexes =
+      trailArg[List[Int]](
+        descr = "数据表序号, 默认为0",
+        default = Some(List(0)),
+        required = false
+      )
 
-      for (row <- sheet.rowIterator(1)) {
-        
-        val name = row(nameCol()).value.trim()
-        val idcard = row(idcardCol()).value.trim().toUpperCase()
-        //println(s"$name $idcard")
-        println(s"${row.getRowNum()} ${idcard} ${name}")
-        if (map.contains(idcard)) {
-          println(s"$name $idcard 身份证重复")
-        } else {
-          row.cellValue(btCol())(BigDecimal(_)).map(map(idcard) = _)
+    def execute(): Unit = {
+      val map = loadId2BtMap()
+
+      val workbook = Excel.load(inputFile())
+
+      for (i <- sheetIndexes()) {
+        val sheet = workbook.getSheetAt(i)
+
+        for (row <- sheet.rowIterator(4)) {
+          val idcard = row.getCell("H").value.trim.toUpperCase()
+          if (idcard != "") {
+            println(idcard)
+            row
+              .getOrCreateCell("M")
+              .setCellValue(
+                if (map.contains(idcard)) "有" else "无"
+              )
+          }
         }
       }
-      map
+
+      workbook.save(appendToFileName(inputFile(), ".upd"))
     }
   }
 
@@ -304,6 +339,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
   addSubCommand(jbstate)
   addSubCommand(upsub)
   addSubCommand(zhbj)
+  addSubCommand(check)
 }
 
 object Main {

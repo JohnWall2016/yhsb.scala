@@ -181,8 +181,8 @@ object Excel {
       new Iterator[Row]() {
         private var index = math.max(0, start)
         private val last =
-          if (end == -1) sheet.getLastRowNum() - 1
-          else math.min(end - 1, sheet.getLastRowNum() - 1)
+          if (end == -1) sheet.getLastRowNum()
+          else math.min(end, sheet.getLastRowNum())
 
         def hasNext: Boolean = index <= last
 
