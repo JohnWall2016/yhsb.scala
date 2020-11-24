@@ -318,15 +318,24 @@ class LandAcq(args: Seq[String]) extends Command(args) {
       for (i <- sheetIndexes()) {
         val sheet = workbook.getSheetAt(i)
 
-        for (row <- sheet.rowIterator(4)) {
+        for (row <- sheet.rowIterator(3)) {
           val idcard = row.getCell("H").value.trim.toUpperCase()
           if (idcard != "") {
             println(idcard)
-            row
-              .getOrCreateCell("M")
-              .setCellValue(
-                if (map.contains(idcard)) "有" else "无"
-              )
+            if (map.contains(idcard)) {
+              row
+                .getOrCreateCell("M")
+                .setCellValue("有")
+              map(idcard).map { bt =>
+                row
+                  .getOrCreateCell("N")
+                  .setCellValue(bt.toDouble)
+              }
+            } else {
+              row
+                .getOrCreateCell("M")
+                .setCellValue("无")
+            }
           }
         }
       }
