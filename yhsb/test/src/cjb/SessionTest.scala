@@ -16,12 +16,14 @@ object SessionTest extends TestSuite {
     }
     test("cbxx") {
       Session.use() { sess =>
-        sess.sendService(CbxxRequest("520113195504010432"))
+        sess.sendService(CbxxRequest("430311194511291027"))
         val result = sess.getResult[Cbxx]()
         println(result)
         result.foreach { cbxx =>
           println(cbxx)
           println(s"${cbxx.cbState} ${cbxx.jfState} ${cbxx.jbKind} ${cbxx.jbState}")
+          println(cbxx.czName)
+          println(Xzqh.getDwName(cbxx.czName))
         }
       }
     }

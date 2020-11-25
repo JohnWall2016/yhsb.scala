@@ -53,6 +53,7 @@ class Query(args: Seq[String]) extends Command(args) {
 
       val idcardRow = trailArg[String](descr = "身份证列名称")
       val updateRow = trailArg[String](descr = "更新列名称")
+      val xzjRow = opt[String](name = "xzj", short = 'x', descr = "更新乡镇街列名称")
 
       def execute(): Unit = {
         val workbook = Excel.load(inputFile())
@@ -66,17 +67,18 @@ class Query(args: Seq[String]) extends Command(args) {
             println(idcard)
 
             session.sendService(CbxxRequest(idcard))
+            //println(session.readBody())
             val result = session.getResult[Cbxx]()
-
-            row
-              .getOrCreateCell(updateRow())
-              .setCellValue {
-                if (result.isEmpty || result(0).idcard == null) {
-                  ""
-                } else {
-                  result(0).jbState
-                }
+            result.map(cbxx => {
+              row
+                .getOrCreateCell(updateRow())
+                .setCellValue(cbxx.jbState)
+              if (xzjRow.isDefined) {
+                row
+                  .getOrCreateCell(xzjRow())
+                  .setCellValue(cbxx.dwName.get)
               }
+            })
           }
         }
         workbook.save(appendToFileName(inputFile(), ".upd"))
