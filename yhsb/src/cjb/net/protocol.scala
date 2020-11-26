@@ -83,6 +83,7 @@ trait JBState {
 trait XzqhName {
   val czName: String
   lazy val dwName = Xzqh.getDwName(czName)
+  lazy val dwAndCsName = Xzqh.getDwAndCsName(czName)
 }
 
 case class Cbxx(
@@ -173,13 +174,23 @@ object Xzqh {
     "湘潭市雨湖区((.*?镇)(.*?村)).*".r,
     "湘潭市雨湖区((.*?街道)办事处(.*?村)).*".r,
     "湘潭市雨湖区((.*?镇)(.*?政府机关)).*".r,
-    "湘潭市雨湖区((.*?街道)办事处()).*".r,
+    "湘潭市雨湖区((.*?街道)办事处(.*))".r,
   )
 
   def getDwName(fullName: String): Option[String] = {
     for (r <- Xzqh.regexps) {
       fullName match {
         case r(_, n, _) => return Some(n)
+        case _ =>
+      }
+    }
+    None
+  }
+
+  def getDwAndCsName(fullName: String): Option[(String, String)] = {
+    for (r <- Xzqh.regexps) {
+      fullName match {
+        case r(_, dw, cs) => return Some((dw, cs))
         case _ =>
       }
     }
