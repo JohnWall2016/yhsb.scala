@@ -51,9 +51,11 @@ class Query(args: Seq[String]) extends Command(args) {
     new Subcommand("up") with InputFile with RowRange {
       descr("更新参保信息")
 
+      val nameRow = trailArg[String](descr = "姓名列名称")
       val idcardRow = trailArg[String](descr = "身份证列名称")
       val updateRow = trailArg[String](descr = "更新列名称")
       val xzjRow = opt[String](name = "xzj", short = 'x', descr = "更新乡镇街列名称")
+      val mzbdRow = opt[String](name = "mzbd", short = 'm', descr = "更新姓名比对列名称")
 
       def execute(): Unit = {
         val workbook = Excel.load(inputFile())
@@ -62,6 +64,7 @@ class Query(args: Seq[String]) extends Command(args) {
         Session.use() { session =>
           for (i <- (startRow() - 1) until endRow()) {
             val row = sheet.getRow(i)
+            val name = row.getCell(nameRow()).value.trim()
             val idcard = row.getCell(idcardRow()).value.trim().toUpperCase()
 
             println(idcard)
@@ -77,6 +80,11 @@ class Query(args: Seq[String]) extends Command(args) {
                 row
                   .getOrCreateCell(xzjRow())
                   .setCellValue(cbxx.dwName.get)
+              }
+              if (mzbdRow.isDefined && cbxx.name != name) {
+                row
+                  .getOrCreateCell(mzbdRow())
+                  .setCellValue(cbxx.name)
               }
             })
           }
