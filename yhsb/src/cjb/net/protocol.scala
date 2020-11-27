@@ -174,14 +174,14 @@ object Xzqh {
     "湘潭市雨湖区((.*?镇)(.*?村)).*".r,
     "湘潭市雨湖区((.*?街道)办事处(.*?村)).*".r,
     "湘潭市雨湖区((.*?镇)(.*?政府机关)).*".r,
-    "湘潭市雨湖区((.*?街道)办事处(.*))".r,
+    "湘潭市雨湖区((.*?街道)办事处(.*))".r
   )
 
   def getDwName(fullName: String): Option[String] = {
     for (r <- Xzqh.regexps) {
       fullName match {
         case r(_, n, _) => return Some(n)
-        case _ =>
+        case _          =>
       }
     }
     None
@@ -191,9 +191,59 @@ object Xzqh {
     for (r <- Xzqh.regexps) {
       fullName match {
         case r(_, dw, cs) => return Some((dw, cs))
-        case _ =>
+        case _            =>
       }
     }
     None
   }
+}
+
+case class JfxxQuery(
+    @JsonName("aac002") idcard: String
+) extends PageRequest(
+      "executeSncbqkcxjfxxQ",
+      pageSize = 500
+    )
+
+object Jfxx {
+  class Type extends JsonField {
+    override def valueMap = {
+      case "10" => "正常应缴"
+      case "31" => "补缴"
+      case ty => s"未知值: $ty"
+    }
+  }
+
+  class Item extends JsonField {
+    override def valueMap = {
+      case "1" => "个人缴费"
+      case "3" => "省级财政补贴"
+      case "4" => "市级财政补贴"
+      case "5" => "县级财政补贴"
+      case "11" => "政府代缴"
+      case ty => s"未知值: $ty"
+    }
+  }
+
+  class Method extends JsonField {
+    override def valueMap = {
+      case "2" => "银行代收"
+      case "3" => "经办机构自收"
+      case ty => s"未知值: $ty"
+    }
+  }
+}
+
+case class Jfxx(
+    @JsonName("aae003") year: Int, // 缴费年度
+    @JsonName("aae013") memo: String, // 备注
+    @JsonName("aae022") amount: BigDecimal, // 金额
+    @JsonName("aaa115") typ: Jfxx.Type, // 缴费类型
+    @JsonName("aae341") item: Jfxx.Item, // 缴费项目
+    @JsonName("aab033") method: Jfxx.Method, // 缴费方式
+    @JsonName("aae006") payedOffDay: String, // 划拨日期
+    @JsonName("aaa027") agency: String, // 社保机构
+    @JsonName("aaf101") xzqhCode: String, // 行政区划代码
+) extends Jsonable {
+  def isPayedOff = payedOffDay != null
 }
