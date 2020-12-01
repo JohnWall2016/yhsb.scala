@@ -229,17 +229,20 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     }
   }
 
-  def loadId2BtMap(): collection.Map[String, Option[BigDecimal]] = {
+  case class Data(btje: Option[BigDecimal], daxh: Option[Int])
+
+  def loadId2BtMap(): collection.Map[String, Data] = {
     def baseXls() = """D:\Downloads\三文件总表2016.3.18.xls"""
     def baseSheetIndex() = 2
     def nameCol() = "D"
     def idcardCol() = "I"
     def btCol() = "N"
+    def daxhCol() = "C"
 
     val workbook = Excel.load(baseXls())
     val sheet = workbook.getSheetAt(baseSheetIndex())
 
-    val map = mutable.Map[String, Option[BigDecimal]]()
+    val map = mutable.Map[String, Data]()
 
     for (row <- sheet.rowIterator(1)) {
 
@@ -250,7 +253,10 @@ class LandAcq(args: Seq[String]) extends Command(args) {
       if (map.contains(idcard)) {
         println(s"$name $idcard 身份证重复")
       } else {
-        map(idcard) = row.cellValue(btCol())(BigDecimal(_))
+        map(idcard) = Data(
+          row.cellValue(btCol())(BigDecimal(_)),
+          row.cellValue(daxhCol())(_.toInt)
+        )
       }
     }
     map
@@ -290,7 +296,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
           }
           map
             .get(r.getCell("H").value)
-            .map(_.map(v => r.getCell("L").setCellValue(v.toDouble)))
+            .map(_.btje.map(v => r.getCell("L").setCellValue(v.toDouble)))
           println()
           currentRow += 1
         }
@@ -326,7 +332,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
               row
                 .getOrCreateCell("M")
                 .setCellValue("有")
-              map(idcard).map { bt =>
+              map(idcard).btje.map { bt =>
                 row
                   .getOrCreateCell("N")
                   .setCellValue(bt.toDouble)
@@ -344,11 +350,56 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     }
   }
 
+  val fetch = new Subcommand("fetch") with InputFile {
+    descr("获取三文件总表中数据")
+
+    val sheetIndexes =
+      trailArg[List[Int]](
+        descr = "数据表序号, 默认为0",
+        default = Some(List(0)),
+        required = false
+      )
+
+    def execute(): Unit = {
+      val map = loadId2BtMap()
+
+      val workbook = Excel.load(inputFile())
+
+      for (i <- sheetIndexes()) {
+        val sheet = workbook.getSheetAt(i)
+
+        for (row <- sheet.rowIterator(3)) {
+          val idcard = row.getCell("H").value.trim.toUpperCase()
+          if (idcard != "") {
+            println(idcard)
+            if (map.contains(idcard)) {
+              val data = map(idcard)
+              data.btje.map { bt =>
+                row
+                  .getOrCreateCell("L")
+                  .setCellValue(bt.toDouble)
+              }
+              data.daxh.map { xh =>
+                row
+                  .getOrCreateCell("M")
+                  .setCellValue(xh)
+              }
+            }
+          }
+        }
+      }
+
+      workbook.save(appendToFileName(inputFile(), ".upd"))
+    }
+  }
+
+
   addSubCommand(dump)
   addSubCommand(jbstate)
   addSubCommand(upsub)
   addSubCommand(zhbj)
   addSubCommand(check)
+  addSubCommand(fetch)
 }
 
 object Main {
