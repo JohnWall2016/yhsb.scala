@@ -229,7 +229,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     }
   }
 
-  case class Data(btje: Option[BigDecimal], daxh: Option[Int])
+  case class Data(btje: Option[BigDecimal], xmmc: Option[String], daxh: Option[Int])
 
   def loadId2BtMap(): collection.Map[String, Data] = {
     def baseXls() = """D:\Downloads\三文件总表2016.3.18.xls"""
@@ -238,6 +238,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     def idcardCol() = "I"
     def btCol() = "N"
     def daxhCol() = "C"
+    def xmmcCols() = List("T", "R")
 
     val workbook = Excel.load(baseXls())
     val sheet = workbook.getSheetAt(baseSheetIndex())
@@ -253,8 +254,15 @@ class LandAcq(args: Seq[String]) extends Command(args) {
       if (map.contains(idcard)) {
         println(s"$name $idcard 身份证重复")
       } else {
+        var xmmc: Option[String] = None
+        for (col <- xmmcCols() if xmmc.isEmpty) {
+          val v = row.getCell(col).value
+          xmmc = if (v.length() > 2) Some(v) else None
+        }
+
         map(idcard) = Data(
           row.cellValue(btCol())(BigDecimal(_)),
+          xmmc,
           row.cellValue(daxhCol())(_.toInt)
         )
       }
@@ -381,8 +389,13 @@ class LandAcq(args: Seq[String]) extends Command(args) {
               }
               data.daxh.map { xh =>
                 row
-                  .getOrCreateCell("M")
+                  .getOrCreateCell("N")
                   .setCellValue(xh)
+              }
+              data.xmmc.map { xm =>
+                row
+                  .getOrCreateCell("M")
+                  .setCellValue(xm)
               }
             }
           }
