@@ -238,7 +238,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     def idcardCol() = "I"
     def btCol() = "N"
     def daxhCol() = "C"
-    def xmmcCols() = List("T", "R")
+    def xmmcCols() = List("T", "S", "R")
 
     val workbook = Excel.load(baseXls())
     val sheet = workbook.getSheetAt(baseSheetIndex())
@@ -257,7 +257,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
         var xmmc: Option[String] = None
         for (col <- xmmcCols() if xmmc.isEmpty) {
           val v = row.getCell(col).value
-          xmmc = if (v.length() > 2) Some(v) else None
+          xmmc = if (v.length() > 5) Some(v) else None
         }
 
         map(idcard) = Data(

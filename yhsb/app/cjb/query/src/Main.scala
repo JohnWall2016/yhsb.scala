@@ -6,7 +6,9 @@ import yhsb.util.Excel._
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.CbxxRequest
 import yhsb.cjb.net.protocol.Cbxx
+import yhsb.cjb.net.protocol.Jfxx
 import yhsb.util.Files.appendToFileName
+import yhsb.cjb.net.Result
 
 class Query(args: Seq[String]) extends Command(args) {
 
@@ -91,6 +93,55 @@ class Query(args: Seq[String]) extends Command(args) {
         }
         workbook.save(appendToFileName(inputFile(), ".upd"))
       }
+    }
+
+  val jfxx =
+    new Subcommand("jfxx") with Export {
+      descr("缴费信息查询")
+
+      val idcard = trailArg[String](descr = "身份证号码")
+
+      class JfxxRecord(
+        val year: Int,
+        val grjf: Option[BigDecimal] = None,
+        val sjbt: Option[BigDecimal] = None,
+        val sqbt: Option[BigDecimal] = None,
+        val xjbt: Option[BigDecimal] = None,
+        val zfdj: Option[BigDecimal] = None,
+        val hbrq: Set[String] = Set(),
+        val sbjg: Set[String] = Set(),
+      )
+
+      class JfxxTotalRecord(
+        year: Int,
+        grjf: Option[BigDecimal],
+        sjbt: Option[BigDecimal],
+        sqbt: Option[BigDecimal],
+        xjbt: Option[BigDecimal],
+        zfdj: Option[BigDecimal],
+        hbrq: Set[String] = Set(),
+        sbjg: Set[String] = Set(),
+        val total: BigDecimal = 0
+      ) extends JfxxRecord(
+        year, grjf, sjbt, sqbt, xjbt, zfdj, hbrq, sbjg
+      )
+
+      def getJfxxRecords(
+        jfxx: Result[Jfxx],
+        payedRecords: Map[Int, JfxxRecord],
+        unpayedRecords: Map[Int, JfxxRecord]
+      ) = {
+        for (data <- jfxx) {
+          if (data.year != 0) {
+            var records = if (data.isPayedOff) payedRecords else unpayedRecords
+            if (!records.contains(data.year)) {
+              //records(data.year) = new JfxxRecord(data.year)
+            }
+          }
+        }
+      }
+
+      override def execute(): Unit = ???
     }
 
   addSubCommand(doc)

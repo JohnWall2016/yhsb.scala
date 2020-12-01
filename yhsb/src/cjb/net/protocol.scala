@@ -8,6 +8,8 @@ import yhsb.cjb.net.PageRequest
 import yhsb.util.BiMap
 import scala.util.matching.Regex
 
+import java.math.{BigDecimal => JBigDecimal}
+
 case class SysLogin(
     @JsonName("username") userName: String,
     @JsonName("passwd") password: String
@@ -237,7 +239,7 @@ object Jfxx {
 case class Jfxx(
     @JsonName("aae003") year: Int, // 缴费年度
     @JsonName("aae013") memo: String, // 备注
-    @JsonName("aae022") amount: BigDecimal, // 金额
+    @JsonName("aae022") amount: JBigDecimal, // 金额
     @JsonName("aaa115") typ: Jfxx.Type, // 缴费类型
     @JsonName("aae341") item: Jfxx.Item, // 缴费项目
     @JsonName("aab033") method: Jfxx.Method, // 缴费方式

@@ -6,7 +6,7 @@ import yhsb.cjb.net.protocol._
 
 object SessionTest extends TestSuite {
   def tests = Tests {
-    test("login") {
+    /*test("login") {
       Session.use(autoLogin = false) { sess =>
         println("=" * 50)
         println(sess.login())
@@ -34,6 +34,14 @@ object SessionTest extends TestSuite {
         result.foreach { cbsh =>
           println(cbsh)
         }
+      }
+    }*/
+    test("jfcx") {
+      Session.use() { sess =>
+        //sess.sendService(JfxxQuery("430302197604224525"))
+        sess.sendService(JfxxQuery("110108196511289010"))
+        val result = sess.getResult[Jfxx]()
+        result.foreach(println(_))
       }
     }
   }
