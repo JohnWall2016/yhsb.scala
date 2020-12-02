@@ -3,12 +3,14 @@ package yhsb.app.cjb.query
 import yhsb.util.commands._
 import yhsb.util.Excel
 import yhsb.util.Excel._
+import yhsb.util.Optional._
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.CbxxRequest
 import yhsb.cjb.net.protocol.Cbxx
 import yhsb.cjb.net.protocol.Jfxx
 import yhsb.util.Files.appendToFileName
 import yhsb.cjb.net.Result
+import scala.collection.mutable
 
 class Query(args: Seq[String]) extends Command(args) {
 
@@ -103,42 +105,88 @@ class Query(args: Seq[String]) extends Command(args) {
 
       class JfxxRecord(
         val year: Int,
-        val grjf: Option[BigDecimal] = None,
-        val sjbt: Option[BigDecimal] = None,
-        val sqbt: Option[BigDecimal] = None,
-        val xjbt: Option[BigDecimal] = None,
-        val zfdj: Option[BigDecimal] = None,
-        val hbrq: Set[String] = Set(),
-        val sbjg: Set[String] = Set(),
+        var grjf: Option[BigDecimal] = None,
+        var sjbt: Option[BigDecimal] = None,
+        var sqbt: Option[BigDecimal] = None,
+        var xjbt: Option[BigDecimal] = None,
+        var zfdj: Option[BigDecimal] = None,
+        var jtbz: Option[BigDecimal] = None,
+        val hbrq: mutable.Set[String] = mutable.Set(),
+        val sbjg: mutable.Set[String] = mutable.Set(),
       )
 
       class JfxxTotalRecord(
-        year: Int,
-        grjf: Option[BigDecimal],
-        sjbt: Option[BigDecimal],
-        sqbt: Option[BigDecimal],
-        xjbt: Option[BigDecimal],
-        zfdj: Option[BigDecimal],
-        hbrq: Set[String] = Set(),
-        sbjg: Set[String] = Set(),
-        val total: BigDecimal = 0
+        grjf: Option[BigDecimal] = None,
+        sjbt: Option[BigDecimal] = None,
+        sqbt: Option[BigDecimal] = None,
+        xjbt: Option[BigDecimal] = None,
+        zfdj: Option[BigDecimal] = None,
+        jtbz: Option[BigDecimal] = None,
+        var total: Option[BigDecimal] = None
       ) extends JfxxRecord(
-        year, grjf, sjbt, sqbt, xjbt, zfdj, hbrq, sbjg
+        0, grjf, sjbt, sqbt, xjbt, zfdj, jtbz
       )
+
+      private implicit class OptionBigDecimalOps(left: Option[BigDecimal]) {
+        def +(right: BigDecimal): Option[BigDecimal] = 
+          if (left.isDefined) {
+            Some(left.get + right)
+          } else {
+            Some(right)
+          }
+
+        def +(right: Option[BigDecimal]): Option[BigDecimal] =
+          if (left.isDefined) {
+            if (right.isDefined) Some(left.get + right.get)
+            else left
+          } else {
+            right
+          }
+      }
 
       def getJfxxRecords(
         jfxx: Result[Jfxx],
-        payedRecords: Map[Int, JfxxRecord],
-        unpayedRecords: Map[Int, JfxxRecord]
+        payedRecords: mutable.Map[Int, JfxxRecord],
+        unpayedRecords: mutable.Map[Int, JfxxRecord]
       ) = {
         for (data <- jfxx) {
           if (data.year != 0) {
             var records = if (data.isPayedOff) payedRecords else unpayedRecords
             if (!records.contains(data.year)) {
-              //records(data.year) = new JfxxRecord(data.year)
+              records(data.year) = new JfxxRecord(data.year)
             }
+            val record = records(data.year)
+            data.item.value match {
+              case "1" => record.grjf += data.amount
+              case "3" => record.sjbt += data.amount
+              case "4" => record.sqbt += data.amount
+              case "5" => record.xjbt += data.amount
+              case "6" => record.jtbz += data.amount
+              case "11" => record.zfdj += data.amount
+              case _ => println(s"未知缴费类型${data.item.value}, 金额${data.amount}")
+            }
+            record.sbjg.add(data.agency ?: "")
+            record.hbrq.add(data.payedOffDay ?: "")
           }
         }
+      }
+
+      def orderAndTotal(records: collection.Map[Int, JfxxRecord]) = {
+        var results = mutable.ListBuffer.from(records.values)
+        results = results.sortWith((a, b) => a.year < b.year)
+        val total = new JfxxTotalRecord
+        for (r <- results) {
+          total.grjf += r.grjf
+          total.sjbt += r.sjbt
+          total.sqbt += r.sqbt
+          total.xjbt += r.xjbt
+          total.zfdj += r.zfdj
+          total.jtbz += r.jtbz
+        }
+        total.total = 
+          total.grjf + total.sjbt + total.sqbt
+          total.xjbt + total.zfdj + total.jtbz
+        results.addOne(total)
       }
 
       override def execute(): Unit = ???
