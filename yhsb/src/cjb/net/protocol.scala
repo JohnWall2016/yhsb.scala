@@ -15,7 +15,7 @@ case class SysLogin(
     @JsonName("passwd") password: String
 ) extends Request("syslogin")
 
-case class CbxxRequest(
+case class CbxxQuery(
     @JsonName("aac002") idcard: String
 ) extends Request("executeSncbxxConQ")
 
@@ -104,7 +104,13 @@ case class Cbxx(
     //@JsonName("aaf103") csName: String
 ) extends Jsonable
     with JBState
-    with XzqhName
+    with XzqhName {
+  
+  def valid = idcard != null && !idcard.isEmpty()
+
+  def invalid = !valid
+
+}
 
 class CbshQuery(
     startDate: String, // "2019-04-29"
