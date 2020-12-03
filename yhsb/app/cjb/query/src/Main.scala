@@ -297,7 +297,7 @@ class Query(args: Seq[String]) extends Command(args) {
 
         if (export()) {
           val path = """D:\征缴管理"""
-          val xlsx = s"${path}\\雨湖区城乡居民基本养老保险缴费查询单模板.xlsx"
+          val xlsx = raw"$path\雨湖区城乡居民基本养老保险缴费查询单模板.xlsx"
           val workbook = Excel.load(xlsx)
           val sheet = workbook.getSheetAt(0)
           sheet.getCell("A5").setCellValue(info.name)
