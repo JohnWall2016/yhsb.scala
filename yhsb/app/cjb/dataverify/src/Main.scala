@@ -4,7 +4,7 @@ import yhsb.util.commands._
 import yhsb.util.Excel
 import yhsb.util.Excel._
 import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol.CbxxRequest
+import yhsb.cjb.net.protocol.CbxxQuery
 import yhsb.cjb.net.protocol.Cbxx
 import scala.collection.mutable
 import yhsb.util.Files.appendToFileName
@@ -48,7 +48,7 @@ class Verify(args: Seq[String])
         val name = row.getCell("C").value.trim
         val idcard = row.getCell("D").value.trim
         println(s"  $name $idcard")
-        sess.sendService(CbxxRequest(idcard))
+        sess.sendService(CbxxQuery(idcard))
         val result = sess.getResult[Cbxx]()
         if (!result.isEmpty && result(0).name != name) {
           val cbxx = result(0)

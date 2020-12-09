@@ -4,7 +4,7 @@ import yhsb.util.commands._
 import yhsb.util.Excel
 import yhsb.util.Excel._
 import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol.CbxxRequest
+import yhsb.cjb.net.protocol.CbxxQuery
 import yhsb.cjb.net.protocol.Cbxx
 import yhsb.util.Files.appendToFileName
 import java.nio.file.Paths
@@ -112,7 +112,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
                 (male && (birthMonth + 6000 <= retireTime()))
                 || (!male && (birthMonth + 5500 <= retireTime()))
               ) {
-                sess.sendService(CbxxRequest(idcard))
+                sess.sendService(CbxxQuery(idcard))
                 val result = sess.getResult[Cbxx]()
                 val jbState = {
                   val cbxx = result(0)
