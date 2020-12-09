@@ -196,7 +196,7 @@ class Query(args: Seq[String]) extends Command(args) {
           total.jtbz += r.jtbz
         }
         total.total = 
-          total.grjf + total.sjbt + total.sqbt
+          total.grjf + total.sjbt + total.sqbt +
           total.xjbt + total.zfdj + total.jtbz
         results.addOne(total)
       }
