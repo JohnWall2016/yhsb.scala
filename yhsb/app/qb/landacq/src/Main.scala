@@ -233,8 +233,8 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     btje: Option[BigDecimal], // 补贴金额
     xmmc: Option[String],     // 项目名称
     daxh: Option[Int],        // ??序号
-    age: Option[String],      // 年龄
-    bjnx: Option[String],     // 补缴年限
+    age: Option[Int],      // 年龄
+    bjnx: Option[Int],     // 补缴年限
     hjje: Option[BigDecimal], // 合计金额
     grjf: Option[BigDecimal], // 个人缴费
   )
@@ -247,13 +247,14 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     def btCol() = "N"
     def daxhCol() = "C"
     def xmmcCols() = List("T", "S", "R")
-    def ageCol() = "F"
+    def ageCols() = List("F", "G")
     def bjnxCol() = "K"
     def hjjeCol() = "M"
     def grjfCol() = "O"
 
     val workbook = Excel.load(baseXls())
     val sheet = workbook.getSheetAt(baseSheetIndex())
+    println(sheet.getSheetName())
 
     val map = mutable.Map[String, Data]()
 
@@ -272,12 +273,18 @@ class LandAcq(args: Seq[String]) extends Command(args) {
           xmmc = if (v.length() > 5) Some(v) else None
         }
 
+        var age: Option[Int] = None
+        for (col <- ageCols() if age.isEmpty) {
+          val v = row.getCell(col).value.trim()
+          age = if (v.length == 2) Some(v.toInt) else None
+        }
+
         map(idcard) = Data(
           row.cellValue(btCol())(BigDecimal(_)),
           xmmc,
           row.cellValue(daxhCol())(_.toInt),
-          row.cellValue(ageCol())(_.toString()),
-          row.cellValue(bjnxCol())(_.toString()),
+          age,
+          row.cellValue(bjnxCol())(_.toInt),
           row.cellValue(hjjeCol())(BigDecimal(_)),
           row.cellValue(grjfCol())(BigDecimal(_)),
         )
