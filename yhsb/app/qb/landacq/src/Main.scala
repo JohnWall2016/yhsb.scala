@@ -229,16 +229,28 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     }
   }
 
-  case class Data(btje: Option[BigDecimal], xmmc: Option[String], daxh: Option[Int])
+  case class Data(
+    btje: Option[BigDecimal], // 补贴金额
+    xmmc: Option[String],     // 项目名称
+    daxh: Option[Int],        // ??序号
+    age: Option[String],      // 年龄
+    bjnx: Option[String],     // 补缴年限
+    hjje: Option[BigDecimal], // 合计金额
+    grjf: Option[BigDecimal], // 个人缴费
+  )
 
   def loadId2BtMap(): collection.Map[String, Data] = {
-    def baseXls() = """D:\Downloads\三文件总表2016.3.18.xls"""
-    def baseSheetIndex() = 2
+    def baseXls() = """D:\征地农民\3文件总表2016.3.18.xls"""//"""D:\Downloads\三文件总表2016.3.18.xls"""
+    def baseSheetIndex() = 5
     def nameCol() = "D"
     def idcardCol() = "I"
     def btCol() = "N"
     def daxhCol() = "C"
     def xmmcCols() = List("T", "S", "R")
+    def ageCol() = "F"
+    def bjnxCol() = "K"
+    def hjjeCol() = "M"
+    def grjfCol() = "O"
 
     val workbook = Excel.load(baseXls())
     val sheet = workbook.getSheetAt(baseSheetIndex())
@@ -263,7 +275,11 @@ class LandAcq(args: Seq[String]) extends Command(args) {
         map(idcard) = Data(
           row.cellValue(btCol())(BigDecimal(_)),
           xmmc,
-          row.cellValue(daxhCol())(_.toInt)
+          row.cellValue(daxhCol())(_.toInt),
+          row.cellValue(ageCol())(_.toString()),
+          row.cellValue(bjnxCol())(_.toString()),
+          row.cellValue(hjjeCol())(BigDecimal(_)),
+          row.cellValue(grjfCol())(BigDecimal(_)),
         )
       }
     }
@@ -371,18 +387,22 @@ class LandAcq(args: Seq[String]) extends Command(args) {
     def execute(): Unit = {
       val map = loadId2BtMap()
 
+      println(inputFile())
       val workbook = Excel.load(inputFile())
 
       for (i <- sheetIndexes()) {
+        println(i)
         val sheet = workbook.getSheetAt(i)
+        println(sheet.getSheetName())
+        println(sheet.getLastRowNum())
 
         for (row <- sheet.rowIterator(3)) {
-          val idcard = row.getCell("H").value.trim.toUpperCase()
+          val idcard = row.getCell("J").value.trim.toUpperCase()
           if (idcard != "") {
             println(idcard)
             if (map.contains(idcard)) {
               val data = map(idcard)
-              data.btje.map { bt =>
+              /*data.btje.map { bt =>
                 row
                   .getOrCreateCell("L")
                   .setCellValue(bt.toDouble)
@@ -396,6 +416,26 @@ class LandAcq(args: Seq[String]) extends Command(args) {
                 row
                   .getOrCreateCell("M")
                   .setCellValue(xm)
+              }*/
+              data.age.map { age =>
+                row
+                  .getOrCreateCell("H")
+                  .setCellValue(age)
+              }
+              data.bjnx.map { bjnx =>
+                row
+                  .getOrCreateCell("K")
+                  .setCellValue(bjnx)
+              }
+              data.hjje.map { hjje =>
+                row
+                  .getOrCreateCell("M")
+                  .setCellValue(hjje.toDouble)
+              }
+              data.grjf.map { grjf =>
+                row
+                  .getOrCreateCell("O")
+                  .setCellValue(grjf.toDouble)
               }
             }
           }
