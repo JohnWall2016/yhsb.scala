@@ -1,7 +1,9 @@
 package yhsb.base.io
 
-import java.nio.file.Path
 import java.io.File
+import java.nio.file.Path
+import java.nio.file.Paths
+
 import scala.util.matching.Regex
 
 object Files {
@@ -42,5 +44,17 @@ object Files {
       }
     }
     result.toList
+  }
+}
+
+object PathOps {
+  implicit class StringEx(path: String) {
+    def /(rest: String) = Paths.get(path, rest)
+    def /(rest: Path) = Paths.get(path, rest.toString())
+  }
+
+  implicit class PathEx(path: Path) {
+    def /(rest: String) = path.resolve(rest)
+    def /(rest: Path) = path.resolve(rest)
   }
 }

@@ -94,7 +94,10 @@ object Excel {
         sheet.shiftRows(targetRowIndex, sheet.getLastRowNum(), 1, true, false)
       }*/
 
-      newRow = sheet.createRow(targetRowIndex)
+      if (newRow == null) {
+        newRow = sheet.createRow(targetRowIndex)
+      }
+      
       newRow.setHeight(srcRow.getHeight())
 
       for (index <- srcRow.getFirstCellNum() until srcRow.getLastCellNum()) {
@@ -105,27 +108,23 @@ object Excel {
           newCell.setCellComment(srcCell.getCellComment())
           newCell.setHyperlink(srcCell.getHyperlink())
 
-          import org.apache.poi.ss.usermodel.CellType._
-          srcCell.getCellType() match {
-            case NUMERIC =>
-              newCell.setCellValue(
-                if (clearValue) 0 else srcCell.getNumericCellValue()
-              )
-            case STRING =>
-              newCell.setCellValue(
-                if (clearValue) "" else srcCell.getStringCellValue()
-              )
-            case FORMULA =>
-              newCell.setCellFormula(
-                if (clearValue) null else srcCell.getCellFormula()
-              )
-            case BLANK => newCell.setBlank()
-            case BOOLEAN =>
-              newCell.setCellValue(
-                if (clearValue) false else srcCell.getBooleanCellValue()
-              )
-            case ERROR => newCell.setCellErrorValue(srcCell.getErrorCellValue())
-            case _     => {}
+          if (clearValue) {
+            newCell.setBlank()
+          } else {
+            import org.apache.poi.ss.usermodel.CellType._
+            srcCell.getCellType() match {
+              case NUMERIC =>
+                newCell.setCellValue(srcCell.getNumericCellValue())
+              case STRING =>
+                newCell.setCellValue(srcCell.getStringCellValue())
+              case FORMULA =>
+                newCell.setCellFormula(srcCell.getCellFormula())
+              case BLANK => newCell.setBlank()
+              case BOOLEAN =>
+                newCell.setCellValue(srcCell.getBooleanCellValue())
+              case ERROR => newCell.setCellErrorValue(srcCell.getErrorCellValue())
+              case _     => {}
+            }
           }
         }
       }
