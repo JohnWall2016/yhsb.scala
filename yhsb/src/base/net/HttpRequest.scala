@@ -1,4 +1,4 @@
-package yhsb.net
+package yhsb.base.net
 
 import java.io.ByteArrayOutputStream
 import yhsb.base.io.AutoClose.use

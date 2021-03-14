@@ -61,13 +61,9 @@ class Audit(args: Seq[String])
           )
           val row = sheet.getOrCopyRow(index, copyIndex, false)
           index += 1
-          row.getCell("B").setCellValue(cbsh.idcard)
-          row.getCell("E").setCellValue(cbsh.name)
-          row
-            .getCell("J")
-            .setCellValue(
-              JBKind.invert.getOrElse(info.jbrdsf.getOrElse(""), "")
-            )
+          row("B").value = cbsh.idcard
+          row("E").value = cbsh.name
+          row("J").value = JBKind.invert.getOrElse(info.jbrdsf.getOrElse(""), "")
           canExport = true
         } else {
           println(s"${cbsh.idcard} ${cbsh.name.padRight(6)} ${cbsh.birthDay}")

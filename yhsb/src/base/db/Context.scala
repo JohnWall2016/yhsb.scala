@@ -1,4 +1,4 @@
-package yhsb.db
+package yhsb.base.db
 
 import io.getquill.context.jdbc.JdbcContext
 import io.getquill.context.sql.idiom.SqlIdiom

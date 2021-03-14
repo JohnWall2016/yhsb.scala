@@ -272,6 +272,28 @@ object Excel {
 
       getString(cell.getCellType())
     }
+
+    def value_=(v: String) {
+      if (cell == null) return
+      if (v != null) cell.setCellValue(v)
+      else cell.setBlank()
+    }
+
+    def value_=(v: Double) {
+      if (cell == null) return
+      cell.setCellValue(v)
+    }
+
+    def value_=(v: BigDecimal) {
+      if (cell == null) return
+      if (v != null) cell.setCellValue(v.toDouble)
+      else cell.setBlank()
+    }
+
+    def value_=(v: Int) {
+      if (cell == null) return
+      cell.setCellValue(v.toDouble)
+    }
   }
 
   object CellRef {

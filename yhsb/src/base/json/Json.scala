@@ -1,4 +1,5 @@
-package yhsb.base.json
+package yhsb.base
+package json
 
 import com.google.gson.JsonSerializer
 import com.google.gson.JsonDeserializer
@@ -12,29 +13,16 @@ import scala.reflect.ClassTag
 import scala.reflect.classTag
 import com.google.gson.annotations.SerializedName
 
-class JsonField {
-  private[base] var _value: String = null
-
-  def value = _value
-
-  def name = {
-    if (valueMap.isDefinedAt(value)) {
-      valueMap(value)
-    } else {
-      s"未知值: $value"
-    }
-  }
-
-  def valueMap: PartialFunction[String, String] = PartialFunction.empty
-  
-  override def toString(): String = name
-}
+import struct.{MapField, ListField}
+import java.lang.reflect.ParameterizedType
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 
 trait JsonAdapter[T] extends JsonSerializer[T] with JsonDeserializer[T]
 
-class JsonFieldAdapter extends JsonAdapter[JsonField] {
+class MapFieldAdapter extends JsonAdapter[MapField] {
   def serialize(
-      src: JsonField,
+      src: MapField,
       typeOfSrc: Type,
       context: JsonSerializationContext
   ): JsonElement = new JsonPrimitive(src._value)
@@ -43,10 +31,42 @@ class JsonFieldAdapter extends JsonAdapter[JsonField] {
       json: JsonElement,
       typeOfT: Type,
       context: JsonDeserializationContext
-  ): JsonField = {
+  ): MapField = {
     val clazz = typeOfT.asInstanceOf[Class[_]]
-    val field = clazz.getConstructor().newInstance().asInstanceOf[JsonField]
+    val field = clazz.getConstructor().newInstance().asInstanceOf[MapField]
     field._value = json.getAsString()
+    field
+  }
+}
+
+class ListFieldAdapter extends JsonAdapter[ListField[_]] {
+  def serialize(
+      src: ListField[_],
+      typeOfSrc: Type,
+      context: JsonSerializationContext
+  ): JsonElement = context.serialize(src.items)
+
+  def deserialize(
+      json: JsonElement,
+      typeOfT: Type,
+      context: JsonDeserializationContext
+  ): ListField[_] = {
+    val paramType = typeOfT.asInstanceOf[ParameterizedType]
+    val rawClass = paramType.getRawType().asInstanceOf[Class[_]]
+    val argClass = paramType.getActualTypeArguments().asInstanceOf[Class[_]]
+
+    val field = rawClass.getConstructor().newInstance().asInstanceOf[ListField[_]]
+
+    json match {
+      case array: JsonArray => {
+        array.forEach {
+          _ match {
+            case obj: JsonObject if obj.size() > 0 => field.items.addOne(Json.fromJson(obj, argClass))
+          }
+        }
+      }
+    }
+
     field
   }
 }
@@ -54,13 +74,16 @@ class JsonFieldAdapter extends JsonAdapter[JsonField] {
 object Json {
   private[json] val gson = new GsonBuilder()
     .serializeNulls()
-    .registerTypeHierarchyAdapter(classOf[JsonField], new JsonFieldAdapter)
+    .registerTypeHierarchyAdapter(classOf[MapField], new MapFieldAdapter)
+    .registerTypeHierarchyAdapter(classOf[ListField[_]], new ListFieldAdapter)
     .create()
 
   def fromJson[T: ClassTag](json: String): T =
     gson.fromJson(json, classTag[T].runtimeClass)
 
   def fromJson[T](json: String, typeOfT: Type): T = gson.fromJson(json, typeOfT)
+
+  def fromJson[T](elem: JsonElement, typeOfT: Type) = gson.fromJson(elem, typeOfT)
 
   def toJson[T](obj: T): String = gson.toJson(obj)
 

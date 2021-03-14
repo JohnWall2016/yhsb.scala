@@ -1,14 +1,15 @@
 package yhsb.cjb.net.protocol
 
-import yhsb.base.json.Jsonable
-import yhsb.base.json.Json.JsonName
-import yhsb.cjb.net.Request
-import yhsb.base.json.JsonField
-import yhsb.cjb.net.PageRequest
-import yhsb.base.collection.BiMap
+import java.math.{BigDecimal => JBigDecimal}
+
 import scala.util.matching.Regex
 
-import java.math.{BigDecimal => JBigDecimal}
+import yhsb.base.collection.BiMap
+import yhsb.base.json.Json.JsonName
+import yhsb.base.json.Jsonable
+import yhsb.base.struct.MapField
+import yhsb.cjb.net.PageRequest
+import yhsb.cjb.net.Request
 
 case class SysLogin(
     @JsonName("username") userName: String,
@@ -19,7 +20,7 @@ case class CbxxQuery(
     @JsonName("aac002") idcard: String
 ) extends Request("executeSncbxxConQ")
 
-class CBState extends JsonField {
+class CBState extends MapField {
   override def valueMap = {
     case "0" => "未参保"
     case "1" => "正常参保"
@@ -28,7 +29,7 @@ class CBState extends JsonField {
   }
 }
 
-class JFState extends JsonField {
+class JFState extends MapField {
   override def valueMap = {
     case "1" => "参保缴费"
     case "2" => "暂停缴费"
@@ -55,7 +56,7 @@ object JBKind
       "090" -> "其他"
     )
 
-class JBKind extends JsonField {
+class JBKind extends MapField {
   override def valueMap = JBKind
 }
 
@@ -214,7 +215,7 @@ case class JfxxQuery(
     )
 
 object Jfxx {
-  class Type extends JsonField {
+  class Type extends MapField {
     override def valueMap = {
       case "10" => "正常应缴"
       case "31" => "补缴"
@@ -222,7 +223,7 @@ object Jfxx {
     }
   }
 
-  class Item extends JsonField {
+  class Item extends MapField {
     override def valueMap = {
       case "1" => "个人缴费"
       case "3" => "省级财政补贴"
@@ -233,7 +234,7 @@ object Jfxx {
     }
   }
 
-  class Method extends JsonField {
+  class Method extends MapField {
     override def valueMap = {
       case "2" => "银行代收"
       case "3" => "经办机构自收"
