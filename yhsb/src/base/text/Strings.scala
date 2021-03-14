@@ -1,4 +1,4 @@
-package yhsb.util
+package yhsb.base.text
 
 object Strings {
   case class CharRange(start: Char, end: Char) {

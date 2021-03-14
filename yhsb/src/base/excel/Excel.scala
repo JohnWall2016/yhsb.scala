@@ -1,4 +1,6 @@
-package yhsb.util
+package yhsb.base
+
+package excel
 
 import org.apache.poi
 import org.apache.poi.ss.usermodel.Sheet
@@ -13,7 +15,7 @@ import scala.annotation.meta.field
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.apache.poi.ss.usermodel.Workbook
 
-import AutoClose.use
+import io.AutoClose.use
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.openxml4j.exceptions.InvalidOperationException
 import java.io.InputStream

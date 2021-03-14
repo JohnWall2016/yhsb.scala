@@ -5,8 +5,8 @@ import io.getquill.context.sql.idiom.SqlIdiom
 import io.getquill.NamingStrategy
 import io.getquill.ast.Entity
 
-import yhsb.util.Excel
-import yhsb.util.Excel.{RowOps, CellOps}
+import yhsb.base.excel.Excel
+import yhsb.base.excel.Excel.{RowOps, CellOps}
 import scala.util.matching.Regex
 import scala.collection.mutable
 import java.nio.file.Paths

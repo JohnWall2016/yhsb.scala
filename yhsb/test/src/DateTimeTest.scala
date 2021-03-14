@@ -1,13 +1,13 @@
 package yhsb
 
 import utest._
-import yhsb.util.datetime._
-import yhsb.util.datetime.MonthRange.MonthRangeSeq
+import yhsb.base.datetime._
+import yhsb.base.datetime.MonthRange.MonthRangeSeq
 
 object DateTimeTest extends TestSuite {
   def tests = Tests {
     test("month") {
-      import yhsb.util.datetime.MonthOrdering.mkOrderingOps
+      import yhsb.base.datetime.MonthOrdering.mkOrderingOps
 
       val birthDay = Month(1990, 12) //??
       val boughtSpans = Seq( //??

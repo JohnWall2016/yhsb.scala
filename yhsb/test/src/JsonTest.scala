@@ -1,7 +1,7 @@
 package yhsb
 
 import utest._
-import yhsb.util.Config
+import yhsb.base.util.Config
 import yhsb.cjb.net.JsonService
 import yhsb.cjb.net.protocol.SysLogin
 import yhsb.cjb.net.PageRequest

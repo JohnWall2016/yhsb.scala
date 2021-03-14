@@ -1,4 +1,4 @@
-package yhsb.util.datetime
+package yhsb.base.datetime
 
 import scala.util.matching.Regex
 import java.{util => ju}

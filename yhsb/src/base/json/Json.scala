@@ -1,4 +1,4 @@
-package yhsb.util.json
+package yhsb.base.json
 
 import com.google.gson.JsonSerializer
 import com.google.gson.JsonDeserializer
@@ -13,7 +13,7 @@ import scala.reflect.classTag
 import com.google.gson.annotations.SerializedName
 
 class JsonField {
-  private[json] var _value: String = null
+  private[base] var _value: String = null
 
   def value = _value
 

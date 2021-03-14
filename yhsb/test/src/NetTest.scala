@@ -2,7 +2,7 @@ package yhsb
 
 import utest._
 import net.HttpSocket
-import util.AutoClose.use
+import base.io.AutoClose.use
 
 object NetTest extends TestSuite {
   def tests = Tests {

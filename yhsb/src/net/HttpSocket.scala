@@ -1,7 +1,7 @@
 package yhsb.net
 
 import java.net.Socket
-import yhsb.util.AutoClose.use
+import yhsb.base.io.AutoClose.use
 import java.io.ByteArrayOutputStream
 import yhsb.net.HttpHeader
 import java.io.InputStream

@@ -2,15 +2,15 @@ package yhsb.cjb.net
 
 import yhsb.net.HttpSocket
 import yhsb.net.HttpRequest
-import yhsb.util.json.Jsonable
+import yhsb.base.json.Jsonable
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.reflect.classTag
 import com.google.gson.reflect.TypeToken
-import yhsb.util.json.Json
-import yhsb.util.json.Json.JsonName
-import yhsb.util.Config
-import yhsb.util.AutoClose
+import yhsb.base.json.Json
+import yhsb.base.json.Json.JsonName
+import yhsb.base.util.Config
+import yhsb.base.io.AutoClose
 import yhsb.cjb.net.protocol._
 import java.{util => ju}
 

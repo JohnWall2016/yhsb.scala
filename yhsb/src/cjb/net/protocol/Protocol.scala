@@ -1,11 +1,11 @@
 package yhsb.cjb.net.protocol
 
-import yhsb.util.json.Jsonable
-import yhsb.util.json.Json.JsonName
+import yhsb.base.json.Jsonable
+import yhsb.base.json.Json.JsonName
 import yhsb.cjb.net.Request
-import yhsb.util.json.JsonField
+import yhsb.base.json.JsonField
 import yhsb.cjb.net.PageRequest
-import yhsb.util.BiMap
+import yhsb.base.collection.BiMap
 import scala.util.matching.Regex
 
 import java.math.{BigDecimal => JBigDecimal}

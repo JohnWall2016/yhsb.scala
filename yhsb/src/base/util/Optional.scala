@@ -1,4 +1,4 @@
-package yhsb.util
+package yhsb.base.util
 
 object Optional {
   implicit class OptionalOps[T <: AnyRef](right: T) {

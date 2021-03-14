@@ -1,4 +1,4 @@
-package yhsb.util
+package yhsb.base.util
 
 import scala.util.matching.Regex
 
