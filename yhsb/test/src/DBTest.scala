@@ -4,7 +4,7 @@ import utest.TestSuite
 import utest.Tests
 import utest.test
 
-import util.AutoClose.use
+import base.io.AutoClose.use
 
 import cjb.db.FullCover._
 

@@ -4,18 +4,18 @@ import org.rogach.scallop._
 
 import java.nio.file.Paths
 
-import yhsb.util.commands.RowRange
-import yhsb.util.commands.InputFile
-import yhsb.util.Excel
-import yhsb.util.Excel._
+import yhsb.base.command.RowRange
+import yhsb.base.command.InputFile
+import yhsb.base.excel.Excel
+import yhsb.base.excel.Excel._
 import yhsb.cjb.db.FullCover._
-import yhsb.util.commands.{Subcommand => _, _}
-import yhsb.util.Strings.StringOps
-import yhsb.db.Context.JdbcContextOps
+import yhsb.base.command.{Subcommand => _, _}
+import yhsb.base.text.Strings.StringOps
+import yhsb.base.db.Context.JdbcContextOps
 import yhsb.cjb.net.protocol.JBKind
-import yhsb.util.Files.appendToFileName
+import yhsb.base.io.Files.appendToFileName
 
-import yhsb.util.BiMap
+import yhsb.base.collection.BiMap
 
 class Conf(args: Seq[String]) extends ScallopConf(args) {
   shortSubcommandsHelp()

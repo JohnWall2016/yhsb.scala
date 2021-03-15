@@ -1,4 +1,4 @@
-package yhsb.util
+package yhsb.base.collection
 
 class BiMap[K, V](entries: (K, V)*) extends collection.immutable.Map[K, V] {
   private val map = Map(entries: _*)

@@ -1,4 +1,6 @@
-package yhsb.util
+package yhsb.base
+
+package excel
 
 import org.apache.poi
 import org.apache.poi.ss.usermodel.Sheet
@@ -13,7 +15,7 @@ import scala.annotation.meta.field
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.apache.poi.ss.usermodel.Workbook
 
-import AutoClose.use
+import io.AutoClose.use
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.openxml4j.exceptions.InvalidOperationException
 import java.io.InputStream
@@ -92,7 +94,10 @@ object Excel {
         sheet.shiftRows(targetRowIndex, sheet.getLastRowNum(), 1, true, false)
       }*/
 
-      newRow = sheet.createRow(targetRowIndex)
+      if (newRow == null) {
+        newRow = sheet.createRow(targetRowIndex)
+      }
+      
       newRow.setHeight(srcRow.getHeight())
 
       for (index <- srcRow.getFirstCellNum() until srcRow.getLastCellNum()) {
@@ -103,27 +108,23 @@ object Excel {
           newCell.setCellComment(srcCell.getCellComment())
           newCell.setHyperlink(srcCell.getHyperlink())
 
-          import org.apache.poi.ss.usermodel.CellType._
-          srcCell.getCellType() match {
-            case NUMERIC =>
-              newCell.setCellValue(
-                if (clearValue) 0 else srcCell.getNumericCellValue()
-              )
-            case STRING =>
-              newCell.setCellValue(
-                if (clearValue) "" else srcCell.getStringCellValue()
-              )
-            case FORMULA =>
-              newCell.setCellFormula(
-                if (clearValue) null else srcCell.getCellFormula()
-              )
-            case BLANK => newCell.setBlank()
-            case BOOLEAN =>
-              newCell.setCellValue(
-                if (clearValue) false else srcCell.getBooleanCellValue()
-              )
-            case ERROR => newCell.setCellErrorValue(srcCell.getErrorCellValue())
-            case _     => {}
+          if (clearValue) {
+            newCell.setBlank()
+          } else {
+            import org.apache.poi.ss.usermodel.CellType._
+            srcCell.getCellType() match {
+              case NUMERIC =>
+                newCell.setCellValue(srcCell.getNumericCellValue())
+              case STRING =>
+                newCell.setCellValue(srcCell.getStringCellValue())
+              case FORMULA =>
+                newCell.setCellFormula(srcCell.getCellFormula())
+              case BLANK => newCell.setBlank()
+              case BOOLEAN =>
+                newCell.setCellValue(srcCell.getBooleanCellValue())
+              case ERROR => newCell.setCellErrorValue(srcCell.getErrorCellValue())
+              case _     => {}
+            }
           }
         }
       }
@@ -269,6 +270,28 @@ object Excel {
       }
 
       getString(cell.getCellType())
+    }
+
+    def value_=(v: String) {
+      if (cell == null) return
+      if (v != null) cell.setCellValue(v)
+      else cell.setBlank()
+    }
+
+    def value_=(v: Double) {
+      if (cell == null) return
+      cell.setCellValue(v)
+    }
+
+    def value_=(v: BigDecimal) {
+      if (cell == null) return
+      if (v != null) cell.setCellValue(v.toDouble)
+      else cell.setBlank()
+    }
+
+    def value_=(v: Int) {
+      if (cell == null) return
+      cell.setCellValue(v.toDouble)
     }
   }
 

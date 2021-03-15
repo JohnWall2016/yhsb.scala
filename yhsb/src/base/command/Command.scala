@@ -1,4 +1,4 @@
-package yhsb.util.commands
+package yhsb.base.command
 
 import org.rogach.scallop.{Subcommand => ScallopSubcommand, _}
 

@@ -1,4 +1,4 @@
-package yhsb.net
+package yhsb.base.net
 
 import scala.collection.mutable
 

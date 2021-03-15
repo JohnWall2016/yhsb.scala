@@ -1,9 +1,9 @@
 package yhsb
 
-import util.Excel._
+import base.excel.Excel._
 import utest._
 
-import util.Excel._
+import base.excel.Excel._
 
 object ExcelTest extends TestSuite {
   def tests = Tests {

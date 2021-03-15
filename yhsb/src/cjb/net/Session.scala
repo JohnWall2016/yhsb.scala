@@ -1,18 +1,21 @@
 package yhsb.cjb.net
 
-import yhsb.net.HttpSocket
-import yhsb.net.HttpRequest
-import yhsb.util.json.Jsonable
+import java.{util => ju}
+
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.reflect.classTag
+
 import com.google.gson.reflect.TypeToken
-import yhsb.util.json.Json
-import yhsb.util.json.Json.JsonName
-import yhsb.util.Config
-import yhsb.util.AutoClose
+import yhsb.base.io.AutoClose
+import yhsb.base.json.Json
+import yhsb.base.json.Json.JsonName
+import yhsb.base.json.Jsonable
+import yhsb.base.net.HttpRequest
+import yhsb.base.net.HttpSocket
+import yhsb.base.util.Config
 import yhsb.cjb.net.protocol._
-import java.{util => ju}
+import yhsb.base.struct.ListField
 
 class Session(
     host: String,
@@ -176,33 +179,26 @@ class JsonService[T <: Request](
 }
 
 class Result[T <: Jsonable] extends Iterable[T] with Jsonable {
-  var rowcount = 0
-  var page = 0
-  var pagesize = 0
-  var serviceid: String = null
+  val rowcount = 0
+  val page = 0
+  val pagesize = 0
+  val serviceid: String = null
 
   @JsonName("type")
-  var typeOf: String = null
+  val typeOf: String = null
 
-  var vcode: String = null
-  var message: String = null
-  var messagedetail: String = null
+  val vcode: String = null
+  val message: String = null
+  val messagedetail: String = null
 
   @JsonName("datas")
-  private var data = ju.List.of[T]()
+  private val data = ListField[T]()
 
-  def add(d: T) = data.add(d)
-
-  def apply(index: Int) = data.get(index)
+  def apply(index: Int) = data(index)
 
   override def size = data.size
 
-  override def isEmpty = data.isEmpty()
-
-  def iterator = {
-    import scala.collection.JavaConverters.asScalaIteratorConverter
-    data.iterator.asScala
-  }
+  override def iterator = data.iterator
 }
 
 object Result {
