@@ -1,21 +1,15 @@
 package yhsb.cjb.net
 
-import java.{util => ju}
 
 import scala.collection.mutable
 import scala.reflect.ClassTag
-import scala.reflect.classTag
 
-import com.google.gson.reflect.TypeToken
 import yhsb.base.io.AutoClose
-import yhsb.base.json.Json
-import yhsb.base.json.Json.JsonName
 import yhsb.base.json.Jsonable
 import yhsb.base.net.HttpRequest
 import yhsb.base.net.HttpSocket
 import yhsb.base.util.Config
 import yhsb.cjb.net.protocol._
-import yhsb.base.struct.ListField
 
 class Session(
     host: String,
@@ -129,84 +123,3 @@ object Session {
     }
   }
 }
-
-class Request(@transient val id: String) extends Jsonable
-
-class PageRequest(
-    id: String,
-    val page: Int = 1,
-    @JsonName("pagesize") val pageSize: Int = 15,
-    sortOpts : ju.Map[String, String] = null,
-    totalOpts: ju.Map[String, String] = null,
-    filterOpts: ju.Map[String, String] = null,
-) extends Request(id) {
-  val filtering = ju.List.of[AnyRef]()
-  
-  val sorting = if (sortOpts == null) {
-    ju.List.of[AnyRef]()
-  } else {
-    ju.List.of(sortOpts)
-  }
-  
-  val totals = if (totalOpts == null) {
-    ju.List.of[AnyRef]()
-  } else {
-    ju.List.of(totalOpts)
-  }
-}
-
-class JsonService[T <: Request](
-    param: T,
-    userID: String,
-    password_ : String
-) extends Jsonable {
-  @JsonName("serviceid")
-  val serviceID = param.id
-
-  val target = ""
-
-  @JsonName("sessionid")
-  var sessionID: String = null
-
-  @JsonName("loginname")
-  val loginName: String = userID
-
-  val password: String = password_
-
-  private val params: T = param
-
-  private val datas = ju.List.of(param)
-}
-
-class Result[T <: Jsonable] extends Iterable[T] with Jsonable {
-  val rowcount = 0
-  val page = 0
-  val pagesize = 0
-  val serviceid: String = null
-
-  @JsonName("type")
-  val typeOf: String = null
-
-  val vcode: String = null
-  val message: String = null
-  val messagedetail: String = null
-
-  @JsonName("datas")
-  private val data = ListField[T]()
-
-  def apply(index: Int) = data(index)
-
-  override def size = data.size
-
-  override def iterator = data.iterator
-}
-
-object Result {
-  def fromJson[T <: Jsonable: ClassTag](json: String): Result[T] = {
-    val typeOf = TypeToken
-      .getParameterized(classOf[Result[_]], classTag[T].runtimeClass)
-      .getType()
-    Json.fromJson(json, typeOf)
-  }
-}
-

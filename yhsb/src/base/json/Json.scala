@@ -53,7 +53,8 @@ class ListFieldAdapter extends JsonAdapter[ListField[_]] {
   ): ListField[_] = {
     val paramType = typeOfT.asInstanceOf[ParameterizedType]
     val rawClass = paramType.getRawType().asInstanceOf[Class[_]]
-    val argClass = paramType.getActualTypeArguments().asInstanceOf[Class[_]]
+    val argClass = paramType.getActualTypeArguments()(0).asInstanceOf[Class[_]]
+    // println(s"$paramType $rawClass $argClass")
 
     val field = rawClass.getConstructor().newInstance().asInstanceOf[ListField[_]]
 
@@ -83,7 +84,7 @@ object Json {
 
   def fromJson[T](json: String, typeOfT: Type): T = gson.fromJson(json, typeOfT)
 
-  def fromJson[T](elem: JsonElement, typeOfT: Type) = gson.fromJson(elem, typeOfT)
+  def fromJson[T](elem: JsonElement, typeOfT: Type): T = gson.fromJson(elem, typeOfT)
 
   def toJson[T](obj: T): String = gson.toJson(obj)
 

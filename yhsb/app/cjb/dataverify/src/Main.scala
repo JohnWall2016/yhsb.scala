@@ -4,12 +4,10 @@ import yhsb.base.command._
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol.CbxxQuery
-import yhsb.cjb.net.protocol.Cbxx
 import scala.collection.mutable
-import yhsb.base.io.Files.appendToFileName
-import java.nio.file.Paths
 import yhsb.base.text.Strings._
+import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
+import yhsb.base.io.PathOps._
 
 class Verify(args: Seq[String])
     extends Command(args)
@@ -48,8 +46,8 @@ class Verify(args: Seq[String])
         val name = row.getCell("C").value.trim
         val idcard = row.getCell("D").value.trim
         println(s"  $name $idcard")
-        sess.sendService(CbxxQuery(idcard))
-        val result = sess.getResult[Cbxx]()
+        sess.sendService(PersonInfoInProvinceQuery(idcard))
+        val result = sess.getResult[PersonInfoInProvinceQuery#Item]()
         if (!result.isEmpty && result(0).name != name) {
           val cbxx = result(0)
           val typ = Type.from(cbxx.jbState)
@@ -93,7 +91,7 @@ class Verify(args: Seq[String])
       }
       println(s" ${currentRow - startRow}")
 
-      workbook.save(Paths.get(outputDir(), s"${dw}.xls"))
+      workbook.save(outputDir() / s"${dw}.xls")
     }
   }
 }

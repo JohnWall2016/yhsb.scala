@@ -2,11 +2,11 @@ package yhsb
 
 import utest._
 import yhsb.base.util.Config
-import yhsb.cjb.net.JsonService
+import yhsb.cjb.net.protocol.JsonService
 import yhsb.cjb.net.protocol.SysLogin
-import yhsb.cjb.net.PageRequest
+import yhsb.cjb.net.protocol.PageRequest
 import java.{util => ju}
-import yhsb.cjb.net.protocol.CbshQuery
+import yhsb.cjb.net.protocol.JoinAuditQuery
 
 object JsonTest extends TestSuite {
   def tests = Tests {
@@ -31,7 +31,7 @@ object JsonTest extends TestSuite {
       println(req.toString())
     }
     test("cbsh") {
-      val req = CbshQuery("2020-03-22", "2020-06-23", "1")
+      val req = JoinAuditQuery("2020-03-22", "2020-06-23", "1")
       println(req)
     }
   }

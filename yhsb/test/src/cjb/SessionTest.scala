@@ -38,9 +38,9 @@ object SessionTest extends TestSuite {
     }*/
     test("jfcx") {
       Session.use() { sess =>
-        //sess.sendService(JfxxQuery("430302197604224525"))
-        sess.sendService(JfxxQuery("110108196511289010"))
-        val result = sess.getResult[Jfxx]()
+        sess.sendService(PayingInfoInProvinceQuery("430302197604224525"))
+        //sess.sendService(PayingInfoInProvinceQuery("110108196511289010"))
+        val result = sess.getResult[PayingInfoInProvinceQuery#Item]()
         result.foreach(println(_))
       }
     }

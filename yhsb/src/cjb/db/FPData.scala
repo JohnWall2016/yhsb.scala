@@ -2,12 +2,8 @@ package yhsb.cjb.db
 
 import io.getquill._
 
-object FPData2020 {
-  lazy val fpData2020 = new MysqlJdbcContext(LowerCase, "jzfp2020")
-  import fpData2020._
-
-  /** 扶贫数据表 */
-  case class FPData (
+/** 扶贫数据表 */
+case class FPData(
     no: Int, // 序号
     xzj: Option[String], // 乡镇街
     csq: Option[String], // 村社区
@@ -32,12 +28,21 @@ object FPData2020 {
     jbrdsfFirstDate: Option[String], // 居保认定身份最初日期
     jbrdsfLastDate: Option[String], // 居保认定身份最后日期
     jbcbqk: Option[String], // 居保参保情况
-    jbcbqkDate: Option[String], // 居保参保情况日期
-  )
+    jbcbqkDate: Option[String] // 居保参保情况日期
+)
 
+trait FPHistoryData { this: MysqlJdbcContext[_] =>
   val fphistoryData = quote {
     querySchema[FPData](
-      "fphistorydata",
+      "fphistorydata"
     )
   }
 }
+
+object FPData2020
+    extends MysqlJdbcContext(LowerCase, "jzfp2020")
+    with FPHistoryData
+
+object FPData2021
+    extends MysqlJdbcContext(LowerCase, "jzfp2021")
+    with FPHistoryData

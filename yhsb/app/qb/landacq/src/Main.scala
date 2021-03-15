@@ -4,9 +4,6 @@ import yhsb.base.command._
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol.CbxxQuery
-import yhsb.cjb.net.protocol.Cbxx
-import yhsb.base.io.Files.appendToFileName
 import java.nio.file.Paths
 import scala.util.matching.Regex
 import scala.collection.mutable
@@ -14,6 +11,8 @@ import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import java.io.FileInputStream
 import scala.collection.JavaConverters._
+import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
+import yhsb.base.text.Strings._
 
 class LandAcq(args: Seq[String]) extends Command(args) {
 
@@ -112,8 +111,8 @@ class LandAcq(args: Seq[String]) extends Command(args) {
                 (male && (birthMonth + 6000 <= retireTime()))
                 || (!male && (birthMonth + 5500 <= retireTime()))
               ) {
-                sess.sendService(CbxxQuery(idcard))
-                val result = sess.getResult[Cbxx]()
+                sess.sendService(PersonInfoInProvinceQuery(idcard))
+                val result = sess.getResult[PersonInfoInProvinceQuery#Item]()
                 val jbState = {
                   val cbxx = result(0)
                   if (name == cbxx.name || cbxx.name == null) cbxx.jbState
@@ -128,7 +127,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
           }
         }
 
-        workbook.save(appendToFileName(inputFile(), ".up"))
+        workbook.save(inputFile().insertBeforeLast(".up"))
       }
     }
 
@@ -166,7 +165,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
           row.setCellValue("M", data.defference)
         }
       }
-      workbook.save(appendToFileName(updateXls(), ".up"))
+      workbook.save(updateXls().insertBeforeLast(".up"))
     }
 
     private case class Data(
@@ -377,7 +376,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
         }
       }
 
-      workbook.save(appendToFileName(inputFile(), ".upd"))
+      workbook.save(inputFile().insertBeforeLast(".upd"))
     }
   }
 
@@ -449,7 +448,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
         }
       }
 
-      workbook.save(appendToFileName(inputFile(), ".upd"))
+      workbook.save(inputFile().insertBeforeLast(".upd"))
     }
   }
 

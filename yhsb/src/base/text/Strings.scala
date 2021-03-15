@@ -58,5 +58,17 @@ object Strings {
         padChar: Char = ' ',
         specialChars: Seq[SpecialChars] = Seq(chineseChars)
     ) = s.pad(width, padChar, specialChars, false)
+
+    def insertBeforeLast(
+      insert: String,
+      pattern: String = "."
+    ) = {
+      val index = s.lastIndexOf(pattern)
+      if (index >= 0) {
+        s.substring(0, index) + index + s.substring(index)
+      } else {
+        s + insert
+      }
+    }
   }
 }

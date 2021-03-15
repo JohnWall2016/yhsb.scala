@@ -3,17 +3,14 @@ package yhsb.app.cjb.query
 import yhsb.base.command._
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
-import yhsb.base.util.Optional._
 import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol.CbxxQuery
-import yhsb.cjb.net.protocol.Cbxx
-import yhsb.cjb.net.protocol.Jfxx
-import yhsb.base.io.Files.appendToFileName
-import yhsb.cjb.net.Result
 import scala.collection.mutable
-import yhsb.cjb.net.protocol.JfxxQuery
 import yhsb.base.text.Strings._
-import java.nio.file.Path
+import yhsb.base.io.PathOps._
+import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
+import yhsb.cjb.net.protocol.Result
+import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
+import yhsb.base.util.OptionalOps
 
 class Query(args: Seq[String]) extends Command(args) {
 
@@ -33,8 +30,8 @@ class Query(args: Seq[String]) extends Command(args) {
             val idcard = row.getCell("A").value
             val title = row.getCell("D").value
 
-            session.sendService(CbxxQuery(idcard))
-            val result = session.getResult[Cbxx]()
+            session.sendService(PersonInfoInProvinceQuery(idcard))
+            val result = session.getResult[PersonInfoInProvinceQuery#Item]()
             if (result.isEmpty || result(0).idcard == null) {
               System.err.println(s"Error: ${i + 1} $idcard")
               System.exit(-1)
@@ -50,7 +47,7 @@ class Query(args: Seq[String]) extends Command(args) {
             }
           }
         }
-        workbook.save(appendToFileName(inputFile(), ".upd"))
+        workbook.save(inputFile().insertBeforeLast(".upd"))
       }
     }
 
@@ -76,9 +73,9 @@ class Query(args: Seq[String]) extends Command(args) {
 
             println(idcard)
 
-            session.sendService(CbxxQuery(idcard))
+            session.sendService(PersonInfoInProvinceQuery(idcard))
             //println(session.readBody())
-            val result = session.getResult[Cbxx]()
+            val result = session.getResult[PersonInfoInProvinceQuery#Item]()
             result.map(cbxx => {
               row
                 .getOrCreateCell(updateRow())
@@ -96,7 +93,7 @@ class Query(args: Seq[String]) extends Command(args) {
             })
           }
         }
-        workbook.save(appendToFileName(inputFile(), ".upd"))
+        workbook.save(inputFile().insertBeforeLast(".upd"))
       }
     }
 
@@ -157,7 +154,7 @@ class Query(args: Seq[String]) extends Command(args) {
       }
 
       def getJfxxRecords(
-        jfxx: Result[Jfxx],
+        jfxx: Result[PayingInfoInProvinceQuery#Item],
         payedRecords: mutable.Map[Int, JfxxRecord],
         unpayedRecords: mutable.Map[Int, JfxxRecord]
       ) = {
@@ -201,7 +198,7 @@ class Query(args: Seq[String]) extends Command(args) {
         results.addOne(total)
       }
 
-      def printInfo(info: Cbxx) = {
+      def printInfo(info: PersonInfoInProvinceQuery#Item) = {
         println("个人信息:")
         println(
             s"${info.name} ${info.idcard} ${info.jbState} " +
@@ -248,16 +245,16 @@ class Query(args: Seq[String]) extends Command(args) {
 
       override def execute(): Unit = {
         val (info, jfxx) = Session.use() { sess =>
-          sess.sendService(CbxxQuery(idcard()))
-          val cbxxResult = sess.getResult[Cbxx]()
+          sess.sendService(PersonInfoInProvinceQuery(idcard()))
+          val cbxxResult = sess.getResult[PersonInfoInProvinceQuery#Item]()
           val info = if (cbxxResult.isEmpty || cbxxResult(0).invalid) {
             null
           } else {
             cbxxResult(0)
           }
 
-          sess.sendService(JfxxQuery(idcard()))
-          val jfxxResult = sess.getResult[Jfxx]()
+          sess.sendService(PayingInfoInProvinceQuery(idcard()))
+          val jfxxResult = sess.getResult[PayingInfoInProvinceQuery#Item]()
           val jfxx = if (jfxxResult.isEmpty || 
             (jfxxResult.size == 1 && jfxxResult(0).year == 0)) {
             null
@@ -297,8 +294,9 @@ class Query(args: Seq[String]) extends Command(args) {
 
         if (export()) {
           val path = """D:\征缴管理"""
-          val xlsx = raw"$path\雨湖区城乡居民基本养老保险缴费查询单模板.xlsx"
-          val workbook = Excel.load(xlsx)
+          val xlsx = """雨湖区城乡居民基本养老保险缴费查询单模板.xlsx"""
+
+          val workbook = Excel.load(path / xlsx)
           val sheet = workbook.getSheetAt(0)
           sheet.getCell("A5").setCellValue(info.name)
           sheet.getCell("C5").setCellValue(info.idcard)
@@ -344,7 +342,7 @@ class Query(args: Seq[String]) extends Command(args) {
                   case _ => r.hbrq.mkString("|")
                 }
               )
-              workbook.save(Path.of(path, s"${info.name}缴费查询单.xlsx"))
+              workbook.save(path / s"${info.name}缴费查询单.xlsx")
             }
           }
         }

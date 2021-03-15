@@ -14,7 +14,7 @@ object formater {
     format.findFirstMatchIn(date) match {
       case Some(m) => m.group(1) + "-" + m.group(2) + "-" + m.group(3)
       case None =>
-        throw new IllegalArgumentException("Invalid date format (YYYYMMDD)")
+        throw new IllegalArgumentException(s"Invalid date format (YYYYMMDD): $date")
     }
 
   def formatDate(
