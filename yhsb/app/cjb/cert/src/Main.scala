@@ -1,16 +1,11 @@
-package yhsb.app.cjb.cert
-
 import yhsb.base.command._
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
+import yhsb.base.io.PathOps._
 import yhsb.base.text.Strings.StringOps
 import yhsb.cjb.net.protocol.Division._
-import yhsb.base.io.PathOps._
 
-import scala.collection.mutable
-
-import java.nio.file.Files
-import java.nio.file.Path
+import java.nio.file.{Files, Path}
 
 class Cert(args: Seq[String]) extends Command(args) {
   banner("待遇认证数据统计和表格生成程序")
@@ -34,8 +29,8 @@ class Cert(args: Seq[String]) extends Command(args) {
 
         println(s"生成数据分组")
         val groups = (for (index <- (startRow() - 1) until endRow())
-          yield (sheet.getRow(index)(xzqhRow()).value, index)
-          ).iterator.groupByDwAndCsName()
+          yield (sheet.getRow(index)(xzqhRow()).value, index)).iterator
+          .groupByDwAndCsName()
 
         var total = 0
         println(s"导出数据到: ${outputDir()}")
@@ -54,7 +49,7 @@ class Cert(args: Seq[String]) extends Command(args) {
             var startRow, currentRow = 4
             for (i <- indexes) {
               val row = sheet.getRow(i)
-              val outRow = outSheet.getOrCopyRow(currentRow, startRow, true)
+              val outRow = outSheet.getOrCopyRow(currentRow, startRow)
               outRow.getCell("A").setCellValue(currentRow - startRow + 1)
               outRow.getCell("B").setCellValue(row.getCell("C").value)
               outRow
@@ -74,7 +69,7 @@ class Cert(args: Seq[String]) extends Command(args) {
               currentRow += 1
             }
 
-            outWorkbook.save(outputDir() / dw / s"${cs}.xls")
+            outWorkbook.save(outputDir() / dw / s"$cs.xls")
           }
         }
         println(s"\n${"合计:".padRight(11)} $total")

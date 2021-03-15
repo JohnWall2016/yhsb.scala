@@ -1,5 +1,7 @@
 .bloop
 .metals
 .vscode
+.idea
+.idea_modules
 out
 yhsb/resources/application.properties

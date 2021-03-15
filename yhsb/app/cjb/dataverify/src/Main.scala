@@ -1,13 +1,12 @@
-package yhsb.app.cjb.dataverify
-
 import yhsb.base.command._
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
-import yhsb.cjb.net.Session
-import scala.collection.mutable
-import yhsb.base.text.Strings._
-import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.base.io.PathOps._
+import yhsb.base.text.Strings._
+import yhsb.cjb.net.Session
+import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
+
+import scala.collection.mutable
 
 class Verify(args: Seq[String])
     extends Command(args)
@@ -23,7 +22,7 @@ class Verify(args: Seq[String])
     val Dyry = Value("正常待遇人员")
 
     def from(name: String): Option[Value] =
-      values.find(name == _.toString())
+      values.find(name == _.toString)
   }
 
   case class Data(
@@ -47,8 +46,8 @@ class Verify(args: Seq[String])
         val idcard = row.getCell("D").value.trim
         println(s"  $name $idcard")
         sess.sendService(PersonInfoInProvinceQuery(idcard))
-        val result = sess.getResult[PersonInfoInProvinceQuery#Item]()
-        if (!result.isEmpty && result(0).name != name) {
+        val result = sess.getResult[PersonInfoInProvinceQuery#Item]
+        if (result.nonEmpty && result(0).name != name) {
           val cbxx = result(0)
           val typ = Type.from(cbxx.jbState)
           if (typ.isDefined) {
@@ -71,17 +70,19 @@ class Verify(args: Seq[String])
       val sheet = workbook.getSheetAt(0)
       var currentRow, startRow = 3
 
-      sheet.getCell("A2").setCellValue(
-        sheet.getCell("A2").value + dw
-      )
-      
+      sheet
+        .getCell("A2")
+        .setCellValue(
+          sheet.getCell("A2").value + dw
+        )
+
       print(s"  导出 ${dw.padRight(12)}")
       for (dt <- data(dw).sortBy(_.memo)) {
         val row = sheet.getOrCopyRow(currentRow, startRow)
         row.getCell("A").setCellValue(currentRow - startRow + 1)
         row.getCell("B").setCellValue(dt.idcard)
         row.getCell("C").setCellValue(dt.name)
-        row.getCell("D").setCellValue(dt.typ.toString())
+        row.getCell("D").setCellValue(dt.typ.toString)
         row.getCell("E").setCellValue("姓名")
         row.getCell("F").setCellValue(dt.oldName)
         row.getCell("G").setCellValue(dt.name)
@@ -91,7 +92,7 @@ class Verify(args: Seq[String])
       }
       println(s" ${currentRow - startRow}")
 
-      workbook.save(outputDir() / s"${dw}.xls")
+      workbook.save(outputDir() / s"$dw.xls")
     }
   }
 }

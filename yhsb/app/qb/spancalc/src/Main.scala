@@ -1,7 +1,4 @@
-package yhsb.app.qb.spancalc
-
 import org.rogach.scallop._
-import yhsb.base.datetime.formater.toDashedDate
 import yhsb.base.command.RowRange
 import yhsb.base.command.InputFile
 import yhsb.base.excel.Excel
@@ -10,7 +7,7 @@ import yhsb.base.excel.Excel._
 import yhsb.base.datetime.Month
 import yhsb.base.datetime.MonthRange
 import yhsb.base.datetime.MonthOrdering.mkOrderingOps
-import yhsb.base.io.Files.appendToFileName
+import yhsb.base.text.Strings.StringOps
 
 class Conf(args: Seq[String])
     extends ScallopConf(args)
@@ -31,11 +28,11 @@ object Main {
       val row = sheet.getRow(index)
       try {
         val name = row.getCell("B").value
-        val idcard = row.getCell("F").value
+        val idCard = row.getCell("F").value
 
-        println(s"${index + 1} $name $idcard")
+        println(s"${index + 1} $name $idCard")
 
-        val birthDay = Month.from(idcard.substring(6, 12).toInt)
+        val birthDay = Month.from(idCard.substring(6, 12).toInt)
         val totalMonths = row.getCell("H").getNumericCellValue.toInt
         val bonusMonths = row.getCell("I").getNumericCellValue.toInt
 
@@ -45,7 +42,7 @@ object Main {
         val boughtSpans = bought.flatMap { b =>
           reSpan.findFirstMatchIn(b.trim()) match {
             case None => None
-            case Some(m) => {
+            case Some(m) =>
               Some(if (m.group(3) == null) {
                 MonthRange(
                   Month.from(m.group(1).toInt),
@@ -57,7 +54,6 @@ object Main {
                   Month.from(m.group(3).toInt)
                 )
               })
-            }
           }
         }
 
@@ -98,15 +94,14 @@ object Main {
         row.createCell("O").setCellValue(bonusSpanSummary)
         row.createCell("P").setCellValue(ownBuySpanSummary)
       } catch {
-        case ex: Exception => {
-          val err = s"第 ${index + 1} 行错误: ${ex.getMessage()}"
+        case ex: Exception =>
+          val err = s"第 ${index + 1} 行错误: ${ex.getMessage}"
           println(err)
           println("-" * 80)
 
           row.createCell("O").setCellValue(err)
-        }
       }
     }
-    workbook.save(appendToFileName(conf.inputFile(), ".out"))
+    workbook.save(conf.inputFile().insertBeforeLast(".out"))
   }
 }

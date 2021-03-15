@@ -1,5 +1,3 @@
-package yhsb.app.cjb.query
-
 import yhsb.base.command._
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
@@ -25,13 +23,13 @@ class Query(args: Seq[String]) extends Command(args) {
         val sheet = workbook.getSheetAt(0)
 
         Session.use() { session =>
-          for (i <- 0 to sheet.getLastRowNum()) {
+          for (i <- 0 to sheet.getLastRowNum) {
             val row = sheet.getRow(i)
             val idcard = row.getCell("A").value
             val title = row.getCell("D").value
 
             session.sendService(PersonInfoInProvinceQuery(idcard))
-            val result = session.getResult[PersonInfoInProvinceQuery#Item]()
+            val result = session.getResult[PersonInfoInProvinceQuery#Item]
             if (result.isEmpty || result(0).idCard == null) {
               System.err.println(s"Error: ${i + 1} $idcard")
               System.exit(-1)
@@ -75,7 +73,7 @@ class Query(args: Seq[String]) extends Command(args) {
 
             session.sendService(PersonInfoInProvinceQuery(idcard))
             //println(session.readBody())
-            val result = session.getResult[PersonInfoInProvinceQuery#Item]()
+            val result = session.getResult[PersonInfoInProvinceQuery#Item]
             result.map(cbxx => {
               row
                 .getOrCreateCell(updateRow())
@@ -154,13 +152,14 @@ class Query(args: Seq[String]) extends Command(args) {
       }
 
       def getJfxxRecords(
-        jfxx: Result[PayingInfoInProvinceQuery#Item],
-        payedRecords: mutable.Map[Int, JfxxRecord],
-        unpayedRecords: mutable.Map[Int, JfxxRecord]
+        jfxx: Result[PayingInfoInProvinceQuery#Item]
       ) = {
+        val payedRecords = mutable.Map[Int, JfxxRecord]()
+        val unpayedRecords = mutable.Map[Int, JfxxRecord]()
+
         for (data <- jfxx) {
           if (data.year != 0) {
-            var records = if (data.isPayedOff) payedRecords else unpayedRecords
+            val records = if (data.isPayedOff) payedRecords else unpayedRecords
             if (!records.contains(data.year)) {
               records(data.year) = new JfxxRecord(data.year)
             }
@@ -178,6 +177,8 @@ class Query(args: Seq[String]) extends Command(args) {
             record.hbrq.add(data.payedOffDay ?: "")
           }
         }
+
+        (payedRecords, unpayedRecords)
       }
 
       def orderAndTotal(records: collection.Map[Int, JfxxRecord]) = {
@@ -204,7 +205,7 @@ class Query(args: Seq[String]) extends Command(args) {
             s"${info.name} ${info.idCard} ${info.jbState} " +
             s"${info.jbKind} ${info.agency} ${info.czName} " +
             s"${info.opTime}\n"
-        );
+        )
       }
 
       def printJfxxRecords(
@@ -223,9 +224,9 @@ class Query(args: Seq[String]) extends Command(args) {
             case t: JfxxTotalRecord =>
               s"合计${r.grjf.padLeft(9)}${r.sjbt.padLeft(9)}${r.sqbt.padLeft(9)}" +
               s"${r.xjbt.padLeft(9)}${r.zfdj.padLeft(9)}${r.jtbz.padLeft(9)}   " +
-              (s"总计: ${t.total.getOrElse(0)}").padLeft(9)
+              s"总计: ${t.total.getOrElse(0)}".padLeft(9)
             case _ =>
-              s"${r.year.toString().padLeft(4)}${r.grjf.padLeft(9)}${r.sjbt.padLeft(9)}" +
+              s"${r.year.toString.padLeft(4)}${r.grjf.padLeft(9)}${r.sjbt.padLeft(9)}" +
               s"${r.sqbt.padLeft(9)}${r.xjbt.padLeft(9)}${r.zfdj.padLeft(9)}" +
               s"${r.jtbz.padLeft(9)}   ${r.sbjg.mkString("|")} ${r.hbrq.mkString("|")}"
           }
@@ -234,7 +235,7 @@ class Query(args: Seq[String]) extends Command(args) {
         var i = 1
         for (r <- records) {
           r match {
-            case t: JfxxTotalRecord =>
+            case _: JfxxTotalRecord =>
               println(s"     ${format(r)}")
             case _ =>
               println(s"${i.toString.padLeft(3)}  ${format(r)}")
@@ -246,7 +247,7 @@ class Query(args: Seq[String]) extends Command(args) {
       override def execute(): Unit = {
         val (info, jfxx) = Session.use() { sess =>
           sess.sendService(PersonInfoInProvinceQuery(idcard()))
-          val cbxxResult = sess.getResult[PersonInfoInProvinceQuery#Item]()
+          val cbxxResult = sess.getResult[PersonInfoInProvinceQuery#Item]
           val info = if (cbxxResult.isEmpty || cbxxResult(0).invalid) {
             null
           } else {
@@ -254,7 +255,7 @@ class Query(args: Seq[String]) extends Command(args) {
           }
 
           sess.sendService(PayingInfoInProvinceQuery(idcard()))
-          val jfxxResult = sess.getResult[PayingInfoInProvinceQuery#Item]()
+          val jfxxResult = sess.getResult[PayingInfoInProvinceQuery#Item]
           val jfxx = if (jfxxResult.isEmpty || 
             (jfxxResult.size == 1 && jfxxResult(0).year == 0)) {
             null
@@ -276,16 +277,13 @@ class Query(args: Seq[String]) extends Command(args) {
           println("未查询到缴费信息")
           (null, null)
         } else {
-          val payedRecords = mutable.Map[Int, JfxxRecord]()
-          val unpayedRecords = mutable.Map[Int, JfxxRecord]()
-
-          getJfxxRecords(jfxx, payedRecords, unpayedRecords)
+          val (payedRecords, unpayedRecords) = getJfxxRecords(jfxx)
 
           val records = orderAndTotal(payedRecords)
           val unrecords = orderAndTotal(unpayedRecords)
 
           printJfxxRecords(records, "已拨付缴费历史记录:")
-          if (unpayedRecords.size > 0) {
+          if (unpayedRecords.nonEmpty) {
             printJfxxRecords(unrecords, "\n未拨付补录入记录:")
           }
 

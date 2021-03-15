@@ -1,11 +1,10 @@
-package yhsb.app.jgb.clearpilot
-
 import scala.collection.mutable
 
 import yhsb.base.command._
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.base.io.Files._
+import yhsb.base.text.Strings.StringOps
 import java.nio.file.Files
 import java.nio.file.Path
 import java.io.File
@@ -47,7 +46,7 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
       val name = sheet.getCell("G3").value
 
       for ((dw, records) <- dwMap) {
-        val sname = if (dw == null || dw.isEmpty()) "其它" else dw
+        val sname = if (dw == null || dw.isEmpty) "其它" else dw
         val fileName = s"试点期间参保人员缴费确认表_${code}_$name($sname).xls"
 
         println(s"生成 $fileName")
@@ -61,14 +60,14 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
 
         for (i <- records) {
           val row = sheet.getRow(i)
-          val outRow = outSheet.getOrCopyRow(index, begIndex, true)
+          val outRow = outSheet.getOrCopyRow(index, begIndex)
 
           for (r <- 1 to 11) {
             if (r == 8 || r == 9) {
               outRow
                 .getCell(r)
                 .setCellValue(
-                  row.getCell(r).getNumericCellValue()
+                  row.getCell(r).getNumericCellValue
                 )
             } else if (r == 11) {
               outRow.getOrCreateCell(r).setCellValue("")
@@ -84,22 +83,22 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
           index += 1
         }
 
-        val outRow = outSheet.getOrCopyRow(index, begIndex, true)
+        val outRow = outSheet.getOrCopyRow(index, begIndex)
         outRow
           .getCell("B")
           .setCellFormula(
-            s"""CONCATENATE("共 ",SUMPRODUCT(1/COUNTIF(C5:C${index},C5:C${index}&"*"))," 人")"""
+            s"""CONCATENATE("共 ",SUMPRODUCT(1/COUNTIF(C5:C$index,C5:C$index&"*"))," 人")"""
           )
         outRow.getCell("H").setCellValue("合计")
         outRow
           .getCell("I")
           .setCellFormula(
-            s"""SUM(I5:I${index})"""
+            s"""SUM(I5:I$index)"""
           )
         outRow
           .getCell("J")
           .setCellFormula(
-            s"""SUM(J5:J${index})"""
+            s"""SUM(J5:J$index)"""
           )
 
         outWorkbook.save(Path.of(outputDir, fileName))
@@ -111,7 +110,7 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
     descr("转换确认表格式")
 
     def execute() = {
-      val outputDir = appendToFileName(inputDir(), "(新表)")
+      val outputDir = inputDir().insertBeforeLast("(新表)")
       Files.createDirectory(Path.of(outputDir))
 
       val inputFiles = listFiles(new File(inputDir()), """.*确认表.*\.xls""")
@@ -119,7 +118,7 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
       for (f <- inputFiles) {
         println(s"转换 $f")
 
-        val workbook = Excel.load(f.toPath())
+        val workbook = Excel.load(f.toPath)
         val sheet = workbook.getSheetAt(0)
 
         val outWorkbook = Excel.load(templateXlsx)
@@ -137,7 +136,7 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
 
         var break = false
 
-        for (i <- 4 to sheet.getLastRowNum() if !break) {
+        for (i <- 4 to sheet.getLastRowNum if !break) {
           val row = sheet.getRow(i)
           val startCell = row.getCell(copyRange.start)
           if (startCell != null) {
@@ -152,7 +151,7 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
                   outRow
                     .getCell(r)
                     .setCellValue(
-                      row.getCell(r).getNumericCellValue()
+                      row.getCell(r).getNumericCellValue
                     )
                 } else {
                   outRow
@@ -164,29 +163,29 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
               }
               currentRow += 1
             } else if (id == "说明：") {
-              val outRow = outSheet.getOrCopyRow(currentRow, startRow, true)
+              val outRow = outSheet.getOrCopyRow(currentRow, startRow)
               outRow
                 .getCell("B")
                 .setCellFormula(
-                  s"""CONCATENATE("共 ",SUMPRODUCT(1/COUNTIF(C5:C${currentRow},C5:C${currentRow}&"*"))," 人")"""
+                  s"""CONCATENATE("共 ",SUMPRODUCT(1/COUNTIF(C5:C$currentRow,C5:C$currentRow&"*"))," 人")"""
                 )
               outRow.getCell("H").setCellValue("合计")
               outRow
                 .getCell("I")
                 .setCellFormula(
-                  s"""SUM(I5:I${currentRow})"""
+                  s"""SUM(I5:I$currentRow)"""
                 )
               outRow
                 .getCell("J")
                 .setCellFormula(
-                  s"""SUM(J5:J${currentRow})"""
+                  s"""SUM(J5:J$currentRow)"""
                 )
               break = true
             }
           }
         }
         outWorkbook.save(
-          Path.of(outputDir, s"试点期间参保人员缴费确认表_${code}_${name}.xls")
+          Path.of(outputDir, s"试点期间参保人员缴费确认表_${code}_$name.xls")
         )
       }
     }

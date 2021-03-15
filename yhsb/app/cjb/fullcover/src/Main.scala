@@ -1,9 +1,6 @@
-package yhsb.app.cjb.fullcover
-
 import org.rogach.scallop._
 
 import yhsb.base.io.PathOps._
-import yhsb.base.text.Strings._
 import yhsb.base.command.RowRange
 import yhsb.base.command.InputFile
 import yhsb.base.excel.Excel
@@ -12,7 +9,6 @@ import yhsb.cjb.db.FullCover._
 import yhsb.base.command.{Subcommand => _, _}
 import yhsb.base.text.Strings.StringOps
 import yhsb.base.db.Context.JdbcContextOps
-import yhsb.cjb.net.protocol.JBKind
 
 import yhsb.base.collection.BiMap
 import java.nio.file.Paths
@@ -201,7 +197,7 @@ object Main {
     println("更新 高校学生数据")
     run(
       fc2Stxfsj
-        .filter(_.inZxxssj == Some("1"))
+        .filter(_.inZxxssj.contains("1"))
         .update(_.zhqk -> Some("在校学生"), _.memo -> Some("高校学生数据"))
     )
 
@@ -209,7 +205,7 @@ object Main {
     println("更新 户籍状态数据")
     run(
       fc2Stxfsj
-        .filter(e => e.manageName == Some("迁出") || e.manageName == Some("注销"))
+        .filter(e => e.manageName.contains("迁出") || e.manageName.contains("注销"))
         .update(
           _.zhqk -> Some("其他人员"),
           e => e.memo -> Some("户籍状态: " + e.manageName)
@@ -217,7 +213,7 @@ object Main {
     )
     run(
       fc2Stxfsj
-        .filter(_.manageName == Some("死亡"))
+        .filter(_.manageName.contains("死亡"))
         .update(_.zhqk -> Some("死亡未销户人员"), e => e.memo -> Some("户籍状态: 死亡"))
     )
 
@@ -225,25 +221,24 @@ object Main {
     println("更新 之前全覆盖落实情况数据")
     run(
       fc2Stxfsj
-        .filter(_.hsqk == Some("自愿放弃"))
+        .filter(_.hsqk.contains("自愿放弃"))
         .update(_.zhqk -> Some("无参保意愿"), _.memo -> Some("之前落实情况: 自愿放弃"))
     )
     run(
       fc2Stxfsj
-        .filter(_.hsqk == Some("已录入居保"))
+        .filter(_.hsqk.contains("已录入居保"))
         .update(_.zhqk -> Some("我区参加居保"), _.memo -> Some("之前落实情况: 已录入居保"))
     )
     run(
       fc2Stxfsj
-        .filter(_.hsqk == Some("参职保（含退休）"))
+        .filter(_.hsqk.contains("参职保（含退休）"))
         .update(_.zhqk -> Some("参加省职保"), _.memo -> Some("之前落实情况: 参职保（含退休）"))
     )
     run(
       fc2Stxfsj
         .filter(e =>
-          e.hsqk == Some("数据错误") || e.hsqk == Some("户口不在本地") || e.hsqk == Some(
-            "空挂户"
-          )
+          e.hsqk.contains("数据错误") || e.hsqk.contains("户口不在本地") || e.hsqk
+            .contains("空挂户")
         )
         .update(
           _.zhqk -> Some("其他人员"),
@@ -252,22 +247,22 @@ object Main {
     )
     run(
       fc2Stxfsj
-        .filter(_.hsqk == Some("死亡（失踪）"))
+        .filter(_.hsqk.contains("死亡（失踪）"))
         .update(_.zhqk -> Some("死亡未销户人员"), _.memo -> Some("之前落实情况: 死亡（失踪）"))
     )
     run(
       fc2Stxfsj
-        .filter(_.hsqk == Some("服刑人员"))
+        .filter(_.hsqk.contains("服刑人员"))
         .update(_.zhqk -> Some("服刑人员"), _.memo -> Some("之前落实情况: 服刑人员"))
     )
     run(
       fc2Stxfsj
-        .filter(_.hsqk == Some("参军"))
+        .filter(_.hsqk.contains("参军"))
         .update(_.zhqk -> Some("现役军人"), _.memo -> Some("之前落实情况: 参军"))
     )
     run(
       fc2Stxfsj
-        .filter(_.hsqk == Some("16岁以上在校生"))
+        .filter(_.hsqk.contains("16岁以上在校生"))
         .update(_.zhqk -> Some("在校学生"), _.memo -> Some("之前落实情况: 16岁以上在校生"))
     )
 
@@ -275,32 +270,32 @@ object Main {
     println("更新 数据比对结果")
     run(
       fc2Stxfsj
-        .filter(_.swcb == Some("机关事业"))
+        .filter(_.swcb.contains("机关事业"))
         .update(_.zhqk -> Some("参加机关保"), _.memo -> Some("比对结果: 省外机关养老保险"))
     )
     run(
       fc2Stxfsj
-        .filter(_.swcb == Some("企业职工"))
+        .filter(_.swcb.contains("企业职工"))
         .update(_.zhqk -> Some("参加省外职保"), _.memo -> Some("比对结果: 省外职工养老保险"))
     )
     run(
       fc2Stxfsj
-        .filter(_.swcb == Some("城乡居民"))
+        .filter(_.swcb.contains("城乡居民"))
         .update(_.zhqk -> Some("其他人员"), _.memo -> Some("比对结果: 省外居民养老保险"))
     )
     run(
       fc2Stxfsj
-        .filter(_.slcb == Some("机关事业"))
+        .filter(_.slcb.contains("机关事业"))
         .update(_.zhqk -> Some("参加机关保"), _.memo -> Some("比对结果: 省内机关养老保险"))
     )
     run(
       fc2Stxfsj
-        .filter(_.slcb == Some("企业职工"))
+        .filter(_.slcb.contains("企业职工"))
         .update(_.zhqk -> Some("参加省职保"), _.memo -> Some("比对结果: 省内职工养老保险"))
     )
     run(
       fc2Stxfsj
-        .filter(_.slcb == Some("城乡居民"))
+        .filter(_.slcb.contains("城乡居民"))
         .update(_.zhqk -> Some("其他人员"), _.memo -> Some("比对结果: 省内居民养老保险"))
     )
 
@@ -308,7 +303,7 @@ object Main {
     println("更新 我区参加居保结果")
     run(
       fc2Stxfsj
-        .filter(_.inSfwqjb == Some("1"))
+        .filter(_.inSfwqjb.contains("1"))
         .update(
           _.zhqk -> Some("我区参加居保"),
           e => e.memo -> Some("参保身份: " + e.wqjbsf)
@@ -325,7 +320,7 @@ object Main {
     if (dwmc.isEmpty) {
       val result = run(
         fc2Stxfsj
-          .filter(e => e.xfpc == Some("第二批"))
+          .filter(e => e.xfpc.contains("第二批"))
           .groupBy(_.dwmc)
           .map(e => (e._1, e._2.size))
       )
@@ -336,7 +331,7 @@ object Main {
         val yhs = run(
           fc2Stxfsj
             .filter(e =>
-              e.xfpc == Some("第二批") && e.dwmc == lift(name) && e.zhqk.isDefined
+              e.xfpc.contains("第二批") && e.dwmc == lift(name) && e.zhqk.isDefined
             )
             .size
         )
@@ -349,7 +344,7 @@ object Main {
       println(f"${"合计".padRight(10)} $sum%6d $yhsTotal%6d ${sum - yhsTotal}%6d")
     } else {
       var dwmcs = dwmc()
-      if (dwmcs(0).toUpperCase() == "ALL") {
+      if (dwmcs.head.toUpperCase() == "ALL") {
         val result = run(
           fc2Stxfsj.groupBy(_.dwmc).map(_._1)
         )
@@ -363,11 +358,11 @@ object Main {
         println(s"导出 $dw => $file")
         val result: List[FC2Stxfsj] = run(
           fc2Stxfsj
-            .filter(e => e.xfpc == Some("第二批") && e.dwmc == lift(Option(dw)))
+            .filter(e => e.xfpc.contains("第二批") && e.dwmc == lift(Option(dw)))
             .sortBy(e => (e.address, e.name))
           //.take(10)
         )
-        if (!result.isEmpty) {
+        if (result.nonEmpty) {
           val workbook = Excel.load(tmplXlsx)
           val sheet = workbook.getSheetAt(0)
           var index, start = 2
@@ -508,23 +503,22 @@ object Main {
 
         val data: List[FC2Stxfsj] = run(
           fc2Stxfsj.filter(e =>
-            e.idcard == lift(idcard) && e.xfpc == Some("第二批")
+            e.idcard == lift(idcard) && e.xfpc.contains("第二批")
           )
         )
 
         if (data.isEmpty) {
           errors.append("身份证号码")
         } else {
-          val dname = data(0).name
+          val dname = data.head.name
           if (dname != name)
             errors.append(s"姓名($dname)")
         }
 
         dwmcMap.get(dwmc) match {
-          case Some(value) => {
+          case Some(value) =>
             if (code.length != 12 || !code.startsWith(value))
               errors.append("12位行政区划编码")
-          }
           case None => errors.append("单位名称")
         }
 
@@ -534,7 +528,7 @@ object Main {
         }
 
         val error =
-          if (!errors.isEmpty) Some(errors.mkString(",") + " 有误") else None
+          if (errors.nonEmpty) Some(errors.mkString(",") + " 有误") else None
 
         errors.clear()
 
@@ -552,7 +546,7 @@ object Main {
           if (old >= 25) errors.append("25岁以上在校学生")
         }
 
-        val err = if (!errors.isEmpty) errors.mkString(";") else ""
+        val err = if (errors.nonEmpty) errors.mkString(";") else ""
 
         println(s"第 ${i + 1} 行 $err")
 
@@ -562,13 +556,12 @@ object Main {
 
     outWorkbook.save(
       outputDir() /
-        Paths.get(inputFile()).getFileName().toString.insertBeforeLast("审核结果")
+        Paths.get(inputFile()).getFileName.toString.insertBeforeLast("审核结果")
     )
   }
 
   def convertData(conf: Conf) = {
     import conf.convertData._
-    import scala.collection.mutable
 
     val workbook = Excel.load(inputFile())
     val sheet = workbook.getSheetAt(0)
@@ -597,7 +590,7 @@ object Main {
         val outRow = if (index < 89) {
           outSheet.getRow(index)
         } else {
-          outSheet.getOrCopyRow(index, copyIndex, false)
+          outSheet.getOrCopyRow(index, copyIndex, clearValue = false)
         }
         index += 1
 
@@ -649,7 +642,7 @@ object Main {
       outputDir() /
         Paths
           .get(inputFile())
-          .getFileName()
+          .getFileName
           .toString
           .insertBeforeLast("(批量导入)")
     )

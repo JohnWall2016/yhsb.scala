@@ -1,5 +1,3 @@
-package yhsb.app.qb.landacq
-
 import yhsb.base.command._
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
@@ -7,10 +5,9 @@ import yhsb.cjb.net.Session
 import java.nio.file.Paths
 import scala.util.matching.Regex
 import scala.collection.mutable
-import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import java.io.FileInputStream
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.base.text.Strings._
 
@@ -42,7 +39,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
       val regex = if (filter.isDefined) filter() else dwName()
       val mat = new Regex(s".*((万楼)|(护潭)).*") //new Regex(s".*$regex.*")
 
-      for (i <- 3 to inSheet.getLastRowNum()) {
+      for (i <- 3 to inSheet.getLastRowNum) {
         val inRow = inSheet.getRow(i)
         val xcz = inRow.getCell("U").value
 
@@ -62,7 +59,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
 
           val memo = xcz
 
-          val outRow = outSheet.getOrCopyRow(index, copyIndex, false)
+          val outRow = outSheet.getOrCopyRow(index, copyIndex, clearValue = false)
           outRow.getCell("A").setCellValue(index)
           outRow.getCell("B").setCellValue(no)
           outRow.getCell("C").setCellValue(project)
@@ -112,7 +109,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
                 || (!male && (birthMonth + 5500 <= retireTime()))
               ) {
                 sess.sendService(PersonInfoInProvinceQuery(idcard))
-                val result = sess.getResult[PersonInfoInProvinceQuery#Item]()
+                val result = sess.getResult[PersonInfoInProvinceQuery#Item]
                 val jbState = {
                   val cbxx = result(0)
                   if (name == cbxx.name || cbxx.name == null) cbxx.jbState
@@ -253,7 +250,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
 
     val workbook = Excel.load(baseXls())
     val sheet = workbook.getSheetAt(baseSheetIndex())
-    println(sheet.getSheetName())
+    println(sheet.getSheetName)
 
     val map = mutable.Map[String, Data]()
 
@@ -304,9 +301,9 @@ class LandAcq(args: Seq[String]) extends Command(args) {
 
       val map = loadId2BtMap()
 
-      for (par <- doc.getParagraphs().asScala) {
+      for (par <- doc.getParagraphs.asScala) {
         for {
-          runs <- par.getRuns().asScala
+          runs <- par.getRuns.asScala
           runsText = runs.text() if runsText.matches("项目名称：.*")
         } {
           println(runsText)
@@ -316,13 +313,13 @@ class LandAcq(args: Seq[String]) extends Command(args) {
 
       var startRow, currentRow = 4
 
-      for (table <- doc.getTables().asScala) {
-        for (row <- table.getRows().asScala.drop(2)) {
+      for (table <- doc.getTables.asScala) {
+        for (row <- table.getRows.asScala.drop(2)) {
           val r = sheet.getOrCopyRow(currentRow, startRow)
-          r.setHeight(row.getHeight().toShort)
-          for ((cell, index) <- row.getTableCells().asScala.zipWithIndex) {
-            print(s"$index ${cell.getText()} ")
-            r.getCell(index).setCellValue(cell.getText())
+          r.setHeight(row.getHeight.toShort)
+          for ((cell, index) <- row.getTableCells.asScala.zipWithIndex) {
+            print(s"$index ${cell.getText} ")
+            r.getCell(index).setCellValue(cell.getText)
           }
           map
             .get(r.getCell("H").value)
@@ -399,8 +396,8 @@ class LandAcq(args: Seq[String]) extends Command(args) {
       for (i <- sheetIndexes()) {
         println(i)
         val sheet = workbook.getSheetAt(i)
-        println(sheet.getSheetName())
-        println(sheet.getLastRowNum())
+        println(sheet.getSheetName)
+        println(sheet.getLastRowNum)
 
         for (row <- sheet.rowIterator(3)) {
           val idcard = row.getCell("J").value.trim.toUpperCase()
@@ -423,17 +420,17 @@ class LandAcq(args: Seq[String]) extends Command(args) {
                   .getOrCreateCell("M")
                   .setCellValue(xm)
               }*/
-              data.age.map { age =>
+              data.age.foreach { age =>
                 row
                   .getOrCreateCell("H")
                   .setCellValue(age)
               }
-              data.bjnx.map { bjnx =>
+              data.bjnx.foreach { bjnx =>
                 row
                   .getOrCreateCell("K")
                   .setCellValue(bjnx)
               }
-              data.hjje.map { hjje =>
+              data.hjje.foreach { hjje =>
                 row
                   .getOrCreateCell("M")
                   .setCellValue(hjje.toDouble)
