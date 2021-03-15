@@ -60,7 +60,7 @@ class JsonService[T <: Request](
   private val datas = ju.List.of(param)
 }
 
-class Result[T <: Jsonable] extends Iterable[T] with Jsonable {
+class Result[T] extends Iterable[T] with Jsonable {
   val rowcount = 0
   val page = 0
   val pagesize = 0
@@ -84,7 +84,7 @@ class Result[T <: Jsonable] extends Iterable[T] with Jsonable {
 }
 
 object Result {
-  def fromJson[T <: Jsonable: ClassTag](json: String): Result[T] = {
+  def fromJson[T : ClassTag](json: String): Result[T] = {
     val typeOf = TypeToken
       .getParameterized(classOf[Result[_]], classTag[T].runtimeClass)
       .getType()

@@ -2,15 +2,13 @@ package yhsb.cjb.net.protocol
 
 /**
   * 省内参保信息查询
-  *
-  * @param idcard
   */
 case class PersonInfoInProvinceQuery(
     @JsonName("aac002") idcard: String
 ) extends Request("executeSncbxxConQ") {
   case class Item(
       @JsonName("aac001") pid: Int,
-      @JsonName("aac002") idcard: String,
+      @JsonName("aac002") idCard: String,
       @JsonName("aac003") name: String,
       @JsonName("aac006") birthDay: String,
       @JsonName("aac008") cbState: CBState,
@@ -26,7 +24,7 @@ case class PersonInfoInProvinceQuery(
       with JBState
       with DivisionName {
     
-    def valid = idcard != null && !idcard.isEmpty()
+    def valid = idCard != null && !idcard.isEmpty()
 
     def invalid = !valid
   }

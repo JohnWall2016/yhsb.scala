@@ -1,39 +1,68 @@
 package yhsb.cjb.net.protocol
 
+/** 参保审核查询 */
 class JoinAuditQuery(
-    startDate: String, // "2019-04-29"
-    endDate: String,
-    shState: String // "1"
+    startDate: String = "",
+    endDate: String = "",
+    auditState: String = "0",
+    operator: String = ""
 ) extends PageRequest(
       "cbshQuery",
       pageSize = 500
     ) {
-  val aaf013: String = ""
-  val aaf030: String = ""
-  val aae011: String = ""
-  val aae036: String = ""
-  val aae036s: String = ""
-  val aae014: String = ""
-  val aac009: String = ""
-  val aac002: String = ""
-  val aac003: String = ""
-  val sfccb: String = ""
+  val aaf013 = ""
+  val aaf030 = ""
 
-  val aae015 = startDate
-  val aae015s = endDate
-  val aae016 = shState
+  @JsonName("aae016")
+  val auditState_ = auditState
+
+  @JsonName("aae011")
+  val operator_ = operator
+
+  val aae036 = ""
+  val aae036s = ""
+
+  val aae014 = ""
+
+  @JsonName("aae015")
+  val startDate_ = startDate
+
+  @JsonName("aae015s")
+  val endDate_ = endDate
+
+  val aac009 = ""
+  val aac002 = ""
+  val aac003 = ""
+  val sfccb = ""
 
   case class Item(
-      @JsonName("aac002") idcard: String,
-      @JsonName("aac003") name: String,
-      @JsonName("aac006") birthDay: String
-  ) extends Jsonable
+      @JsonName("aac002")
+      idCard: String,
+      @JsonName("aac003")
+      name: String,
+      @JsonName("aac006")
+      birthDay: String,
+      @JsonName("aaf102")
+      val czName: String,
+      @JsonName("aae011")
+      operator: String,
+      /** 经办时间 */
+      @JsonName("aae036")
+      opTime: String
+  ) extends DivisionName
 }
 
 object JoinAuditQuery {
   def apply(
-      startDate: String, // "2019-04-29"
+      startDate: String = "",
       endDate: String = "",
-      shState: String = "1" // "1"
-  ) = new JoinAuditQuery(startDate, endDate, shState)
+      auditState: String = "0",
+      operator: String = ""
+  ) =
+    new JoinAuditQuery(
+      startDate,
+      endDate,
+      auditState,
+      operator
+    )
 }

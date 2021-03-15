@@ -32,7 +32,7 @@ class Query(args: Seq[String]) extends Command(args) {
 
             session.sendService(PersonInfoInProvinceQuery(idcard))
             val result = session.getResult[PersonInfoInProvinceQuery#Item]()
-            if (result.isEmpty || result(0).idcard == null) {
+            if (result.isEmpty || result(0).idCard == null) {
               System.err.println(s"Error: ${i + 1} $idcard")
               System.exit(-1)
             } else {
@@ -201,7 +201,7 @@ class Query(args: Seq[String]) extends Command(args) {
       def printInfo(info: PersonInfoInProvinceQuery#Item) = {
         println("个人信息:")
         println(
-            s"${info.name} ${info.idcard} ${info.jbState} " +
+            s"${info.name} ${info.idCard} ${info.jbState} " +
             s"${info.jbKind} ${info.agency} ${info.czName} " +
             s"${info.opTime}\n"
         );
@@ -299,7 +299,7 @@ class Query(args: Seq[String]) extends Command(args) {
           val workbook = Excel.load(path / xlsx)
           val sheet = workbook.getSheetAt(0)
           sheet.getCell("A5").setCellValue(info.name)
-          sheet.getCell("C5").setCellValue(info.idcard)
+          sheet.getCell("C5").setCellValue(info.idCard)
           sheet.getCell("E5").setCellValue(info.agency)
           sheet.getCell("G5").setCellValue(info.czName)
           sheet.getCell("K5").setCellValue(info.opTime)

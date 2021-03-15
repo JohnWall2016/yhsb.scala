@@ -27,7 +27,6 @@ class JFType extends MapField {
   override def valueMap = {
     case "10" => "正常应缴"
     case "31" => "补缴"
-    case ty   => s"未知值: $ty"
   }
 }
 
@@ -38,7 +37,6 @@ class JFItem extends MapField {
     case "4"  => "市级财政补贴"
     case "5"  => "县级财政补贴"
     case "11" => "政府代缴"
-    case ty   => s"未知值: $ty"
   }
 }
 
@@ -46,7 +44,6 @@ class JFMethod extends MapField {
   override def valueMap = {
     case "2" => "银行代收"
     case "3" => "经办机构自收"
-    case ty  => s"未知值: $ty"
   }
 }
 
@@ -199,5 +196,75 @@ object Division {
       }
       map
     }
+  }
+}
+
+class BankType extends MapField {
+  override def valueMap = {
+    case "LY" => "中国农业银行"
+    case "ZG" => "中国银行"
+    case "JS" => "中国建设银行"
+    case "NH" => "农村信用合作社"
+    case "YZ" => "邮政"
+    case "JT" => "交通银行"
+    case "GS" => "中国工商银行"
+  }
+}
+
+class DFType extends MapField {
+  override def valueMap = {
+    case "801" => "独生子女"
+    case "802" => "乡村教师"
+    case "803" => "乡村医生"
+    case "807" => "电影放映"
+    case "808" => "核工业"
+  }
+}
+
+class DFState extends MapField {
+  override def valueMap = {
+    case "1" => "正常发放"
+    case "2" => "暂停发放"
+    case "3" => "终止发放"
+  }
+}
+
+/** 暂停参保原因 */
+class PauseReason extends MapField {
+  override def valueMap = {
+    case "1201" => "养老待遇享受人员未提供生存证明"
+    case "1299" => "其他原因暂停养老待遇"
+    case "6399" => "其他原因中断缴费"
+  }
+}
+
+/** 审核状态 */
+class AuditState extends MapField {
+  override def valueMap = {
+    case "0" => "未审核"
+    case "1" => "审核通过"
+  }
+}
+
+/** 终止参保原因 */
+class StopReason extends MapField {
+  override def valueMap = {
+    case "1401" => "死亡"
+    case "1406" => "出外定居"
+    case "1407" => "参加职保"
+    case "1499" => "其他原因"
+    case "6401" => "死亡"
+    case "6406" => "出外定居"
+    case "6407" => "参加职保"
+    case "6499" => "其他原因"
+  }
+}
+
+/** 支付业务类型 */
+class PayType extends MapField {
+  override def valueMap = {
+    case "F10004" => "重复缴费退费"
+    case "F10006" => "享受终止退保"
+    case "F10007" => "缴费调整退款"
   }
 }

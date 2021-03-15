@@ -68,10 +68,10 @@ class Session(
 
   def sendService(id: String) = request(toService(id))
 
-  def fromJson[T <: Jsonable: ClassTag](json: String): Result[T] =
+  def fromJson[T : ClassTag](json: String): Result[T] =
     Result.fromJson(json)
 
-  def getResult[T <: Jsonable: ClassTag](): Result[T] = {
+  def getResult[T : ClassTag](): Result[T] = {
     val result = readBody()
     // println(s"getResult: $result")
     Result.fromJson(result)

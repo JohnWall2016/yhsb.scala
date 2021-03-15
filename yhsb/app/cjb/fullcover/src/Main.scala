@@ -2,8 +2,8 @@ package yhsb.app.cjb.fullcover
 
 import org.rogach.scallop._
 
-import java.nio.file.Paths
-
+import yhsb.base.io.PathOps._
+import yhsb.base.text.Strings._
 import yhsb.base.command.RowRange
 import yhsb.base.command.InputFile
 import yhsb.base.excel.Excel
@@ -13,9 +13,9 @@ import yhsb.base.command.{Subcommand => _, _}
 import yhsb.base.text.Strings.StringOps
 import yhsb.base.db.Context.JdbcContextOps
 import yhsb.cjb.net.protocol.JBKind
-import yhsb.base.io.Files.appendToFileName
 
 import yhsb.base.collection.BiMap
+import java.nio.file.Paths
 
 class Conf(args: Seq[String]) extends ScallopConf(args) {
   shortSubcommandsHelp()
@@ -359,7 +359,7 @@ object Main {
         }
       }
       for (dw <- dwmcs) {
-        val file = Paths.get(outputDir(), s"${dw}全覆盖数据底册.xlsx")
+        val file = outputDir() / s"${dw}全覆盖数据底册.xlsx"
         println(s"导出 $dw => $file")
         val result: List[FC2Stxfsj] = run(
           fc2Stxfsj
@@ -533,7 +533,8 @@ object Main {
           case Some(value) =>
         }
 
-        val error = if (!errors.isEmpty) Some(errors.mkString(",") + " 有误") else None
+        val error =
+          if (!errors.isEmpty) Some(errors.mkString(",") + " 有误") else None
 
         errors.clear()
 
@@ -542,10 +543,12 @@ object Main {
         if (hsqk == "在校学生") {
           import java.time._
           import java.time.temporal._
-          val old = YearMonth.parse(
-            idcard.substring(6, 12), 
-            format.DateTimeFormatter.ofPattern("yyyyMM")
-          ).until(YearMonth.now, ChronoUnit.YEARS)
+          val old = YearMonth
+            .parse(
+              idcard.substring(6, 12),
+              format.DateTimeFormatter.ofPattern("yyyyMM")
+            )
+            .until(YearMonth.now, ChronoUnit.YEARS)
           if (old >= 25) errors.append("25岁以上在校学生")
         }
 
@@ -558,10 +561,8 @@ object Main {
     }
 
     outWorkbook.save(
-      Paths.get(
-        outputDir(),
-        appendToFileName(Paths.get(inputFile()).getFileName(), "审核结果")
-      )
+      outputDir() /
+        Paths.get(inputFile()).getFileName().toString.insertBeforeLast("审核结果")
     )
   }
 
@@ -645,10 +646,12 @@ object Main {
     }
 
     outWorkbook.save(
-      Paths.get(
-        outputDir(),
-        appendToFileName(Paths.get(inputFile()).getFileName(), "(批量导入)")
-      )
+      outputDir() /
+        Paths
+          .get(inputFile())
+          .getFileName()
+          .toString
+          .insertBeforeLast("(批量导入)")
     )
   }
 }

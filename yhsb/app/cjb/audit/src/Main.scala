@@ -48,9 +48,9 @@ class Audit(args: Seq[String])
       import FPData2021._
 
       for (cbsh <- result) {
-        val message = s"${cbsh.idcard} ${cbsh.name.padRight(6)} ${cbsh.birthDay}"
+        val message = s"${cbsh.idCard} ${cbsh.name.padRight(6)} ${cbsh.birthDay}"
         val data: List[FPData] = run(
-          fphistoryData.filter(_.idcard == lift(cbsh.idcard))
+          fphistoryData.filter(_.idcard == lift(cbsh.idCard))
         )
         data.headOption match {
             case Some(v) =>
@@ -58,7 +58,7 @@ class Audit(args: Seq[String])
                 s"$message ${v.jbrdsf.getOrElse("")} " +
                 s"${if (v.name != cbsh.name) v.name else ""}"
               )
-              items.addOne(Item(cbsh.idcard, cbsh.name, v.jbcbqk.getOrElse("")))
+              items.addOne(Item(cbsh.idCard, cbsh.name, v.jbrdsf.getOrElse("")))
             case None => println(message)
         }
       }
