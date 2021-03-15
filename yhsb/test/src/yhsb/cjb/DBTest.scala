@@ -1,4 +1,4 @@
-package yhsb
+package yhsb.cjb
 
 import utest.{TestSuite, Tests, test}
 import yhsb.cjb.db.FullCover.{fc2Stxfsj, fullcover}
@@ -16,7 +16,7 @@ object DBTest extends TestSuite {
       }
 
       test("fpdata2021") {
-        import cjb.db.FPData2021._
+        import yhsb.cjb.db.FPData2021._
 
         println(fphistoryData.quoted.name)
 
