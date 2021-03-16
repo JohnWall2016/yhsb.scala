@@ -17,7 +17,6 @@ import yhsb.cjb.net.protocol.{
   RetiredPersonPauseAuditQuery,
   RetiredPersonStopAuditQuery
 }
-import yhsb.base.text.Strings.StringOps
 
 import scala.collection.mutable
 
@@ -139,48 +138,42 @@ class OnlineAudit extends Subcommand("online") {
       session.sendService(PayingPersonPauseAuditQuery())
       session
         .getResult[PayingPersonPauseAuditQuery#Item]
-        .map { item =>
+        .flatMap { item =>
           session.sendService(PayingPersonPauseAuditDetailQuery(item))
-          (
-            session
-              .getResult[PayingPersonPauseAuditDetailQuery#Item]
-              .head
-              .operator,
-            item
-          )
-        }
-        .filter {
-          operator_ == "" || _._1 == operator_
+          session.getResult[PayingPersonPauseAuditDetailQuery#Item]
+            .headOption match {
+            case Some(v) if operator_ == "" || operator_ == v.operator =>
+              Some((v.operator, item))
+            case _ =>
+              None
+          }
         }
         .zipWithIndex
         .foreach {
-          case (item, i) =>
-            println(s"${(i + 1).toString.padRight(3)} ${item._2.name
-              .padRight(6)} ${item._2.idCard} ${item._2.opTime}")
+          case ((oper, item), i) =>
+            println(s"${(i + 1).toString.padRight(3)} ${item.name
+              .padRight(6)} ${item.idCard} ${item.opTime} $oper")
         }
 
       println(" 待遇人员暂停查询 ".bar(60, '='))
       session.sendService(RetiredPersonPauseAuditQuery())
       session
         .getResult[RetiredPersonPauseAuditQuery#Item]
-        .map { item =>
+        .flatMap { item =>
           session.sendService(RetiredPersonPauseAuditDetailQuery(item))
-          (
-            session
-              .getResult[RetiredPersonPauseAuditDetailQuery#Item]
-              .head
-              .operator,
-            item
-          )
-        }
-        .filter {
-          operator_ == "" || _._1 == operator_
+          session.getResult[RetiredPersonPauseAuditDetailQuery#Item]
+            .headOption match {
+            case Some(v) if operator_ == "" || operator_ == v.operator =>
+              Some((v.operator, item))
+            case _ =>
+              None
+          }
         }
         .zipWithIndex
         .foreach {
-          case (item, i) =>
-            println(s"${(i + 1).toString.padRight(3)} ${item._2.name
-              .padRight(6)} ${item._2.idCard} ${item._2.opTime}")
+          case ((oper, item), i) =>
+            println(s"${(i + 1).toString.padRight(3)} ${item.name
+              .padRight(6)} ${item.idCard} ${item.opTime} $oper")
         }
     }
   }
