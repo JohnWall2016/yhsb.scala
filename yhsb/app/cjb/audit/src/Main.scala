@@ -146,7 +146,8 @@ class OnlineAudit extends Subcommand("online") {
               .getResult[PayingPersonPauseAuditDetailQuery#Item]
               .head
               .operator,
-            item)
+            item
+          )
         }
         .filter {
           operator_ == "" || _._1 == operator_
@@ -169,7 +170,8 @@ class OnlineAudit extends Subcommand("online") {
               .getResult[RetiredPersonPauseAuditDetailQuery#Item]
               .head
               .operator,
-            item)
+            item
+          )
         }
         .filter {
           operator_ == "" || _._1 == operator_
