@@ -10,6 +10,7 @@ import yhsb.base.io.AutoClose.use
 
 import java.io.ByteArrayInputStream
 import java.nio.file.{Files, Path, Paths}
+import scala.annotation.tailrec
 
 object Excel {
 
@@ -166,10 +167,10 @@ object Excel {
 
     def rowIterator(start: Int, end: Int = -1): Iterator[Row] = {
       new Iterator[Row]() {
-        private var index = math.max(0, start)
+        private var index = Math.max(0, start)
         private val last =
           if (end == -1) sheet.getLastRowNum
-          else math.min(end, sheet.getLastRowNum)
+          else Math.min(end, sheet.getLastRowNum)
 
         def hasNext: Boolean = index <= last
 
@@ -213,7 +214,7 @@ object Excel {
     def copyTo(dest: Row, fields: String*) = {
       for (field <- fields) {
         val value = getCell(field).value
-        getOrCreateCell(field).setCellValue(value)
+        dest.getOrCreateCell(field).setCellValue(value)
       }
     }
 
@@ -240,6 +241,7 @@ object Excel {
       import org.apache.poi.ss.usermodel.CellType._
       if (cell == null) return ""
 
+      @tailrec
       def getString(typ: CellType): String = {
         typ match {
           case STRING => cell.getStringCellValue
@@ -302,9 +304,9 @@ object Excel {
 
     def columnNumberToName(number: Int): String = {
       var dividend = number
-      var name = new StringBuilder()
+      val name = new StringBuilder()
       while (dividend > 0) {
-        var modulo = (dividend - 1) % 26
+        val modulo = (dividend - 1) % 26
         name.append((65 + modulo).toChar)
         dividend = (dividend - modulo) / 26
       }
