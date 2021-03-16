@@ -68,3 +68,14 @@ class PayingPersonStopAuditQuery(
       aac001: Int
   )
 }
+
+object PayingPersonStopAuditQuery {
+  def apply(
+    idCard: String = "",
+    auditState: String = "0",
+    operator: String = ""
+  ): PayingPersonStopAuditQuery =
+    new PayingPersonStopAuditQuery(
+      idCard, auditState, operator
+    )
+}

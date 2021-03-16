@@ -70,3 +70,11 @@ class RetiredPersonPauseAuditQuery(
       aaz173: Int
   ) extends DivisionName
 }
+
+object RetiredPersonPauseAuditQuery {
+  def apply(
+    idCard: String = "",
+    auditState: String = "0"
+  ): RetiredPersonPauseAuditQuery =
+    new RetiredPersonPauseAuditQuery(idCard, auditState)
+}

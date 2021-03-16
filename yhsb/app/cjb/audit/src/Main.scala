@@ -7,15 +7,29 @@ import yhsb.base.text.Strings.StringOps
 import yhsb.base.util.UtilOps
 import yhsb.cjb.db._
 import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol.{JBKind, JoinAuditQuery}
+import yhsb.cjb.net.protocol.{
+  JBKind,
+  JoinAuditQuery,
+  PayingPersonPauseAuditDetailQuery,
+  PayingPersonPauseAuditQuery,
+  PayingPersonStopAuditQuery,
+  RetiredPersonPauseAuditDetailQuery,
+  RetiredPersonPauseAuditQuery,
+  RetiredPersonStopAuditQuery
+}
+import yhsb.base.text.Strings.StringOps
 
 import scala.collection.mutable
 
-class Audit(args: Seq[String])
-    extends Command(args)
-    with DateRange
-    with Export {
-  banner("参保审核与参保身份变更程序")
+class Audit(args: Seq[String]) extends Command(args) {
+  banner("城居保数据审核程序")
+
+  addSubCommand(new JoinAudit)
+  addSubCommand(new OnlineAudit)
+}
+
+class JoinAudit extends Subcommand("join") with DateRange with Export {
+  descr("参保审核与参保身份变更程序")
 
   val outputDir = """D:\特殊缴费"""
   val tmplXls = """批量信息变更模板.xls"""
@@ -78,6 +92,94 @@ class Audit(args: Seq[String])
         println(s"导出 批量信息变更$timeSpan.xls")
         workbook.save(outputDir / s"批量信息变更$timeSpan.xls")
       }
+    }
+  }
+}
+
+class OnlineAudit extends Subcommand("online") {
+  descr("网上居保审核查询程序")
+
+  val operator = trailArg[String](
+    descr = "网络经办人名称, 默认: wsjb",
+    required = false,
+    default = Option("wsjb"))
+
+  override def execute(): Unit = {
+    Session.use() { session =>
+      val operator_ = operator().let { op =>
+        if (op == "_") "" else op
+      }
+      println(s"查询经办人: ${if (operator_.isEmpty) "所有" else operator_}")
+
+      println(" 参保审核查询 ".bar(60, '='))
+      session.sendService(JoinAuditQuery(operator = operator_))
+      session.getResult[JoinAuditQuery#Item].zipWithIndex.foreach {
+        case (item, i) =>
+          println(s"${(i + 1).toString.padRight(3)} ${item.name
+            .padRight(6)} ${item.idCard} ${item.opTime} ${item.operator}")
+      }
+
+      println(" 缴费人员终止查询 ".bar(60, '='))
+      session.sendService(PayingPersonStopAuditQuery(operator = operator_))
+      session.getResult[PayingPersonStopAuditQuery#Item].zipWithIndex.foreach {
+        case (item, i) =>
+          println(s"${(i + 1).toString.padRight(3)} ${item.name
+            .padRight(6)} ${item.idCard} ${item.opTime} ${item.operator}")
+      }
+
+      println(" 待遇人员终止查询 ".bar(60, '='))
+      session.sendService(RetiredPersonStopAuditQuery(operator = operator_))
+      session.getResult[RetiredPersonStopAuditQuery#Item].zipWithIndex.foreach {
+        case (item, i) =>
+          println(s"${(i + 1).toString.padRight(3)} ${item.name
+            .padRight(6)} ${item.idCard} ${item.opTime} ${item.operator}")
+      }
+
+      println(" 缴费人员暂停查询 ".bar(60, '='))
+      session.sendService(PayingPersonPauseAuditQuery())
+      session
+        .getResult[PayingPersonPauseAuditQuery#Item]
+        .map { item =>
+          session.sendService(PayingPersonPauseAuditDetailQuery(item))
+          (
+            session
+              .getResult[PayingPersonPauseAuditDetailQuery#Item]
+              .head
+              .operator,
+            item)
+        }
+        .filter {
+          operator_ == "" || _._1 == operator_
+        }
+        .zipWithIndex
+        .foreach {
+          case (item, i) =>
+            println(s"${(i + 1).toString.padRight(3)} ${item._2.name
+              .padRight(6)} ${item._2.idCard} ${item._2.opTime}")
+        }
+
+      println(" 待遇人员暂停查询 ".bar(60, '='))
+      session.sendService(RetiredPersonPauseAuditQuery())
+      session
+        .getResult[RetiredPersonPauseAuditQuery#Item]
+        .map { item =>
+          session.sendService(RetiredPersonPauseAuditDetailQuery(item))
+          (
+            session
+              .getResult[RetiredPersonPauseAuditDetailQuery#Item]
+              .head
+              .operator,
+            item)
+        }
+        .filter {
+          operator_ == "" || _._1 == operator_
+        }
+        .zipWithIndex
+        .foreach {
+          case (item, i) =>
+            println(s"${(i + 1).toString.padRight(3)} ${item._2.name
+              .padRight(6)} ${item._2.idCard} ${item._2.opTime}")
+        }
     }
   }
 }

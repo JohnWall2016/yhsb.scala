@@ -75,3 +75,12 @@ class RetiredPersonStopAuditQuery(
       aaz176: Int
   )
 }
+
+object RetiredPersonStopAuditQuery {
+  def apply(
+    idCard: String = "",
+    auditState: String = "0",
+    operator: String = ""
+  ): RetiredPersonStopAuditQuery =
+    new RetiredPersonStopAuditQuery(idCard, auditState, operator)
+}

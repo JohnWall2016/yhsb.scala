@@ -1,5 +1,7 @@
 package yhsb.base.text
 
+import yhsb.base.text.Strings.PadMode.PadMode
+
 object Strings {
   case class CharRange(start: Char, end: Char) {
     if (start > end)
@@ -28,19 +30,32 @@ object Strings {
     }
   }
 
+  object PadMode extends Enumeration {
+    type PadMode = Value
+    val Left, Right, Both = Value
+  }
+
   implicit class StringOps(val s: String) extends AnyVal {
     def pad(
         width: Int,
         padChar: Char = ' ',
         specialChars: Seq[SpecialChars] = Seq(chineseChars),
-        left: Boolean = false
+        mode: PadMode = PadMode.Left
     ): String = {
       val count = padCount(s, width, specialChars)
       if (count > 0) {
         val b = new StringBuilder
-        if (left) b.append(padChar.toString * count)
+        if (mode == PadMode.Left) {
+          b.append(padChar.toString * count)
+        } else if (mode == PadMode.Both) {
+          b.append(padChar.toString * ((count + 1) / 2))
+        }
         b.append(s)
-        if (!left) b.append(padChar.toString * count)
+        if (mode == PadMode.Right) {
+          b.append(padChar.toString * count)
+        } else if (mode == PadMode.Both) {
+          b.append(padChar.toString * (count - ((count + 1) / 2)))
+        }
         b.toString()
       } else {
         s
@@ -51,13 +66,19 @@ object Strings {
         width: Int,
         padChar: Char = ' ',
         specialChars: Seq[SpecialChars] = Seq(chineseChars)
-    ) = s.pad(width, padChar, specialChars, left = true)
+    ) = pad(width, padChar, specialChars, PadMode.Left)
 
     def padRight(
         width: Int,
         padChar: Char = ' ',
         specialChars: Seq[SpecialChars] = Seq(chineseChars)
-    ) = s.pad(width, padChar, specialChars)
+    ) = pad(width, padChar, specialChars, PadMode.Right)
+
+    def bar(
+      width: Int,
+      padChar: Char = ' ',
+      specialChars: Seq[SpecialChars] = Seq(chineseChars)
+    ) = pad(width, padChar, specialChars, PadMode.Both)
 
     def insertBeforeLast(
       insert: String,

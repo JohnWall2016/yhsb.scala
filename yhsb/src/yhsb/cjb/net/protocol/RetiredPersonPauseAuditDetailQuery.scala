@@ -18,3 +18,10 @@ class RetiredPersonPauseAuditDetailQuery(
       opTime: String
   )
 }
+
+object RetiredPersonPauseAuditDetailQuery {
+  def apply(
+    item: RetiredPersonPauseAuditQuery#Item
+  ): RetiredPersonPauseAuditDetailQuery =
+    new RetiredPersonPauseAuditDetailQuery(item)
+}

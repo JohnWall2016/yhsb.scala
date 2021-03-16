@@ -62,3 +62,11 @@ class PayingPersonPauseAuditQuery(
       id: Int
   ) extends DivisionName
 }
+
+object PayingPersonPauseAuditQuery {
+  def apply(
+    idCard: String = "",
+    auditState: String = "0"
+  ): PayingPersonPauseAuditQuery =
+    new PayingPersonPauseAuditQuery(idCard, auditState)
+}
