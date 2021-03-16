@@ -9,6 +9,7 @@ import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.cjb.net.protocol.Result
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
 import yhsb.base.util.OptionalOps
+import yhsb.base.util.UtilOps
 
 class Query(args: Seq[String]) extends Command(args) {
 
@@ -25,22 +26,22 @@ class Query(args: Seq[String]) extends Command(args) {
         Session.use() { session =>
           for (i <- 0 to sheet.getLastRowNum) {
             val row = sheet.getRow(i)
-            val idcard = row.getCell("A").value
+            val idCard = row.getCell("A").value
             val title = row.getCell("D").value
 
-            session.sendService(PersonInfoInProvinceQuery(idcard))
+            session.sendService(PersonInfoInProvinceQuery(idCard))
             val result = session.getResult[PersonInfoInProvinceQuery#Item]
             if (result.isEmpty || result(0).idCard == null) {
-              System.err.println(s"Error: ${i + 1} $idcard")
+              System.err.println(s"Error: ${i + 1} $idCard")
               System.exit(-1)
             } else {
-              val cbxx = result(0)
-              println(s"${i + 1} ${cbxx.name}")
+              val info = result(0)
+              println(s"${i + 1} ${info.name}")
 
               row
                 .getOrCreateCell("E")
                 .setCellValue(
-                  s"${cbxx.name}$title"
+                  s"${info.name}$title"
                 )
             }
           }
@@ -54,10 +55,10 @@ class Query(args: Seq[String]) extends Command(args) {
       descr("更新参保信息")
 
       val nameRow = trailArg[String](descr = "姓名列名称")
-      val idcardRow = trailArg[String](descr = "身份证列名称")
+      val idCardRow = trailArg[String](descr = "身份证列名称")
       val updateRow = trailArg[String](descr = "更新列名称")
-      val xzjRow = opt[String](name = "xzj", short = 'x', descr = "更新乡镇街列名称")
-      val mzbdRow = opt[String](name = "mzbd", short = 'm', descr = "更新姓名比对列名称")
+      val neighborhoodRow = opt[String](name = "xzj", short = 'x', descr = "更新乡镇街列名称")
+      val nameComparedRow = opt[String](name = "mzbd", short = 'm', descr = "更新姓名比对列名称")
 
       def execute(): Unit = {
         val workbook = Excel.load(inputFile())
@@ -67,26 +68,26 @@ class Query(args: Seq[String]) extends Command(args) {
           for (i <- (startRow() - 1) until endRow()) {
             val row = sheet.getRow(i)
             val name = row.getCell(nameRow()).value.trim()
-            val idcard = row.getCell(idcardRow()).value.trim().toUpperCase()
+            val idCard = row.getCell(idCardRow()).value.trim().toUpperCase()
 
-            println(idcard)
+            println(idCard)
 
-            session.sendService(PersonInfoInProvinceQuery(idcard))
+            session.sendService(PersonInfoInProvinceQuery(idCard))
             //println(session.readBody())
             val result = session.getResult[PersonInfoInProvinceQuery#Item]
-            result.map(cbxx => {
+            result.map(item => {
               row
                 .getOrCreateCell(updateRow())
-                .setCellValue(cbxx.jbState)
-              if (xzjRow.isDefined) {
+                .setCellValue(item.jbState)
+              if (neighborhoodRow.isDefined) {
                 row
-                  .getOrCreateCell(xzjRow())
-                  .setCellValue(cbxx.dwName.get)
+                  .getOrCreateCell(neighborhoodRow())
+                  .setCellValue(item.dwName.get)
               }
-              if (mzbdRow.isDefined && cbxx.name != name) {
+              if (nameComparedRow.isDefined && item.name != name) {
                 row
-                  .getOrCreateCell(mzbdRow())
-                  .setCellValue(cbxx.name)
+                  .getOrCreateCell(nameComparedRow())
+                  .setCellValue(item.name)
               }
             })
           }
@@ -95,38 +96,31 @@ class Query(args: Seq[String]) extends Command(args) {
       }
     }
 
-  val jfxx =
-    new Subcommand("jfxx") with Export {
+  val payInfo =
+    new Subcommand("pay") with Export {
       descr("缴费信息查询")
 
-      val idcard = trailArg[String](descr = "身份证号码")
+      val idCard = trailArg[String](descr = "身份证号码")
 
-      class JfxxRecord(
-        val year: Int,
-        var grjf: Option[BigDecimal] = None,
-        var sjbt: Option[BigDecimal] = None,
-        var sqbt: Option[BigDecimal] = None,
-        var xjbt: Option[BigDecimal] = None,
-        var zfdj: Option[BigDecimal] = None,
-        var jtbz: Option[BigDecimal] = None,
-        val hbrq: mutable.Set[String] = mutable.Set(),
-        val sbjg: mutable.Set[String] = mutable.Set(),
+      class PayInfoRecord(
+        val year: Int, // 年度
+        var personal: Option[BigDecimal] = None, // 个人缴费
+        var provincial: Option[BigDecimal] = None, // 省级补贴
+        var civic: Option[BigDecimal] = None, // 市级补贴
+        var prefectural: Option[BigDecimal] = None, // 县级补贴
+        var governmentalPay: Option[BigDecimal] = None, // 政府代缴
+        var communalPay: Option[BigDecimal] = None, // 集体补助
+        var fishmanPay: Option[BigDecimal] = None, // 退捕渔民补助
+        val transferDates: mutable.Set[String] = mutable.Set(),
+        val agencies: mutable.Set[String] = mutable.Set(),
       )
 
-      class JfxxTotalRecord(
-        grjf: Option[BigDecimal] = None,
-        sjbt: Option[BigDecimal] = None,
-        sqbt: Option[BigDecimal] = None,
-        xjbt: Option[BigDecimal] = None,
-        zfdj: Option[BigDecimal] = None,
-        jtbz: Option[BigDecimal] = None,
+      class PayInfoTotalRecord(
         var total: Option[BigDecimal] = None
-      ) extends JfxxRecord(
-        0, grjf, sjbt, sqbt, xjbt, zfdj, jtbz
-      )
+      ) extends PayInfoRecord(0)
 
       private implicit class OptionBigDecimalOps(left: Option[BigDecimal]) {
-        def +(right: BigDecimal): Option[BigDecimal] = 
+        def +(right: BigDecimal): Option[BigDecimal] =
           if (left.isDefined) {
             Some(left.get + right)
           } else {
@@ -142,100 +136,108 @@ class Query(args: Seq[String]) extends Command(args) {
           }
 
         def mkString = left match {
-            case Some(value) => value.toString()
-            case None => "0"
-          }
+          case Some(value) => value.toString()
+          case None => "0"
+        }
 
         def padLeft(width: Int) = mkString.padLeft(width)
 
         def padRight(width: Int) = mkString.padRight(width)
       }
 
-      def getJfxxRecords(
-        jfxx: Result[PayingInfoInProvinceQuery#Item]
+      def getPayInfoRecords(
+        payInfo: Result[PayingInfoInProvinceQuery#Item]
       ) = {
-        val payedRecords = mutable.Map[Int, JfxxRecord]()
-        val unpayedRecords = mutable.Map[Int, JfxxRecord]()
+        val payedRecords = mutable.Map[Int, PayInfoRecord]()
+        val unpayedRecords = mutable.Map[Int, PayInfoRecord]()
 
-        for (data <- jfxx) {
+        for (data <- payInfo) {
           if (data.year != 0) {
             val records = if (data.isPayedOff) payedRecords else unpayedRecords
             if (!records.contains(data.year)) {
-              records(data.year) = new JfxxRecord(data.year)
+              records(data.year) = new PayInfoRecord(data.year)
             }
             val record = records(data.year)
             data.item.value match {
-              case "1" => record.grjf += data.amount
-              case "3" => record.sjbt += data.amount
-              case "4" => record.sqbt += data.amount
-              case "5" => record.xjbt += data.amount
-              case "6" => record.jtbz += data.amount
-              case "11" => record.zfdj += data.amount
+              case "1" => record.personal += data.amount
+              case "3" => record.provincial += data.amount
+              case "4" => record.civic += data.amount
+              case "5" => record.prefectural += data.amount
+              case "6" => record.communalPay += data.amount
+              case "11" => record.governmentalPay += data.amount
               case _ => println(s"未知缴费类型${data.item.value}, 金额${data.amount}")
             }
-            record.sbjg.add(data.agency ?: "")
-            record.hbrq.add(data.payedOffDay ?: "")
+            record.agencies.add(data.agency ?: "")
+            record.transferDates.add(data.payedOffDay ?: "")
           }
         }
 
         (payedRecords, unpayedRecords)
       }
 
-      def orderAndTotal(records: collection.Map[Int, JfxxRecord]) = {
+      def orderAndTotal(records: collection.Map[Int, PayInfoRecord]) = {
         var results = mutable.ListBuffer.from(records.values)
         results = results.sortWith((a, b) => a.year < b.year)
-        val total = new JfxxTotalRecord
+        val total = new PayInfoTotalRecord
         for (r <- results) {
-          total.grjf += r.grjf
-          total.sjbt += r.sjbt
-          total.sqbt += r.sqbt
-          total.xjbt += r.xjbt
-          total.zfdj += r.zfdj
-          total.jtbz += r.jtbz
+          total.personal += r.personal
+          total.provincial += r.provincial
+          total.civic += r.civic
+          total.prefectural += r.prefectural
+          total.governmentalPay += r.governmentalPay
+          total.communalPay += r.communalPay
+          total.fishmanPay += r.fishmanPay
         }
-        total.total = 
-          total.grjf + total.sjbt + total.sqbt +
-          total.xjbt + total.zfdj + total.jtbz
+        total.total =
+          total.personal + total.provincial + total.civic +
+            total.prefectural + total.governmentalPay + total.communalPay +
+            total.fishmanPay
         results.addOne(total)
       }
 
       def printInfo(info: PersonInfoInProvinceQuery#Item) = {
         println("个人信息:")
         println(
-            s"${info.name} ${info.idCard} ${info.jbState} " +
+          s"${info.name} ${info.idCard} ${info.jbState} " +
             s"${info.jbKind} ${info.agency} ${info.czName} " +
             s"${info.opTime}\n"
         )
       }
 
-      def printJfxxRecords(
-        records: collection.Seq[JfxxRecord],
+      def printPayInfoRecords(
+        records: collection.Seq[PayInfoRecord],
         message: String
-      ) {
+      ) = {
         println(message)
         println(
-          s"${"序号".padLeft(4)}${"年度".padLeft(5)}${"个人缴费".padLeft(10)}" +
-          s"${"省级补贴".padLeft(9)}${"市级补贴".padLeft(9)}${"县级补贴".padLeft(9)}" +
-          s"${"政府代缴".padLeft(9)}${"集体补助".padLeft(9)}  社保经办机构 划拨时间"
+          s"${"序号".padLeft(4)}${"年度".padLeft(5)}" +
+            s"${"个人缴费".padLeft(10)}${"省级补贴".padLeft(9)}" +
+            s"${"市级补贴".padLeft(9)}${"县级补贴".padLeft(9)}" +
+            s"${"政府代缴".padLeft(9)}${"集体补助".padLeft(9)}" +
+            s"${"退渔补助".padLeft(9)}  社保经办机构 划拨时间"
         )
 
-        def format(r: JfxxRecord) = {  
+        def format(r: PayInfoRecord) = {
           r match {
-            case t: JfxxTotalRecord =>
-              s"合计${r.grjf.padLeft(9)}${r.sjbt.padLeft(9)}${r.sqbt.padLeft(9)}" +
-              s"${r.xjbt.padLeft(9)}${r.zfdj.padLeft(9)}${r.jtbz.padLeft(9)}   " +
-              s"总计: ${t.total.getOrElse(0)}".padLeft(9)
+            case t: PayInfoTotalRecord =>
+              s"合计${r.personal.padLeft(9)}${r.provincial.padLeft(9)}" +
+                s"${r.civic.padLeft(9)}${r.prefectural.padLeft(9)}" +
+                s"${r.governmentalPay.padLeft(9)}${r.communalPay.padLeft(9)}" +
+                s"${r.fishmanPay.padLeft(9)}   " +
+                s"总计: ${t.total.getOrElse(0)}".padLeft(9)
             case _ =>
-              s"${r.year.toString.padLeft(4)}${r.grjf.padLeft(9)}${r.sjbt.padLeft(9)}" +
-              s"${r.sqbt.padLeft(9)}${r.xjbt.padLeft(9)}${r.zfdj.padLeft(9)}" +
-              s"${r.jtbz.padLeft(9)}   ${r.sbjg.mkString("|")} ${r.hbrq.mkString("|")}"
+              s"${r.year.toString.padLeft(4)}${r.personal.padLeft(9)}" +
+                s"${r.provincial.padLeft(9)}${r.civic.padLeft(9)}" +
+                s"${r.prefectural.padLeft(9)}${r.governmentalPay.padLeft(9)}" +
+                s"${r.communalPay.padLeft(9)}${r.fishmanPay.padLeft(9)}   " +
+                s"${r.agencies.mkString("|")} ${r.transferDates.mkString("|")}"
           }
         }
 
         var i = 1
         for (r <- records) {
           r match {
-            case _: JfxxTotalRecord =>
+            case _: PayInfoTotalRecord =>
               println(s"     ${format(r)}")
             case _ =>
               println(s"${i.toString.padLeft(3)}  ${format(r)}")
@@ -245,25 +247,18 @@ class Query(args: Seq[String]) extends Command(args) {
       }
 
       override def execute(): Unit = {
-        val (info, jfxx) = Session.use() { sess =>
-          sess.sendService(PersonInfoInProvinceQuery(idcard()))
-          val cbxxResult = sess.getResult[PersonInfoInProvinceQuery#Item]
-          val info = if (cbxxResult.isEmpty || cbxxResult(0).invalid) {
-            null
-          } else {
-            cbxxResult(0)
+        val (info, payInfoResult) = Session.use() { session =>
+          session.sendService(PersonInfoInProvinceQuery(idCard()))
+          val info = session.getResult[PersonInfoInProvinceQuery#Item].let { result =>
+            if (result.isEmpty || result(0).invalid) null else result(0)
           }
 
-          sess.sendService(PayingInfoInProvinceQuery(idcard()))
-          val jfxxResult = sess.getResult[PayingInfoInProvinceQuery#Item]
-          val jfxx = if (jfxxResult.isEmpty || 
-            (jfxxResult.size == 1 && jfxxResult(0).year == 0)) {
-            null
-          } else {
-            jfxxResult
+          session.sendService(PayingInfoInProvinceQuery(idCard()))
+          val payInfoResult = session.getResult[PayingInfoInProvinceQuery#Item].let { result =>
+            if (result.isEmpty || result.size == 1 && result(0).year == 0) null else result
           }
 
-          (info, jfxx)
+          (info, payInfoResult)
         }
 
         if (info == null) {
@@ -273,84 +268,84 @@ class Query(args: Seq[String]) extends Command(args) {
 
         printInfo(info)
 
-        val (records, unrecords) = if (jfxx == null) {
+        val (records, _) = if (payInfoResult == null) {
           println("未查询到缴费信息")
           (null, null)
         } else {
-          val (payedRecords, unpayedRecords) = getJfxxRecords(jfxx)
+          val (payedRecords, unpayedRecords) = getPayInfoRecords(payInfoResult)
 
           val records = orderAndTotal(payedRecords)
           val unrecords = orderAndTotal(unpayedRecords)
 
-          printJfxxRecords(records, "已拨付缴费历史记录:")
+          printPayInfoRecords(records, "已拨付缴费历史记录:")
           if (unpayedRecords.nonEmpty) {
-            printJfxxRecords(unrecords, "\n未拨付补录入记录:")
+            printPayInfoRecords(unrecords, "\n未拨付补录入记录:")
           }
 
           (records, unrecords)
         }
 
-        if (export()) {
+        if (export() && records != null && records.nonEmpty) {
           val path = """D:\征缴管理"""
           val xlsx = """雨湖区城乡居民基本养老保险缴费查询单模板.xlsx"""
 
           val workbook = Excel.load(path / xlsx)
           val sheet = workbook.getSheetAt(0)
-          sheet.getCell("A5").setCellValue(info.name)
-          sheet.getCell("C5").setCellValue(info.idCard)
-          sheet.getCell("E5").setCellValue(info.agency)
-          sheet.getCell("G5").setCellValue(info.czName)
-          sheet.getCell("K5").setCellValue(info.opTime)
+          sheet("A5").value = info.name
+          sheet("C5").value = info.idCard
+          sheet("E5").value = info.agency
+          sheet("G5").value = info.czName
+          sheet("L5").value = info.opTime
 
-          if (records != null) {
-            var startRow, currentRow = 8
-            for (r <- records) {
-              val row = sheet.getOrCopyRow(currentRow, startRow)
-              currentRow += 1
+          var startRow, currentRow = 8
+          for (r <- records) {
+            val row = sheet.getOrCopyRow(currentRow, startRow)
+            currentRow += 1
 
-              row.getCell("A").setCellValue(
-                r match {
-                  case _: JfxxTotalRecord => ""
-                  case _ => s"${currentRow - startRow}"
-                }
-              )
+            row("A").let { cell =>
+              r match {
+                case _: PayInfoTotalRecord => cell.setBlank()
+                case _ => cell.value = currentRow - startRow
+              }
+            }
 
-              row.getCell("B").setCellValue(
-                r match {
-                  case _: JfxxTotalRecord => "合计"
-                  case _ => s"${r.year}"
-                }
-              )
+            row("B").let { cell =>
+              r match {
+                case _: PayInfoTotalRecord => cell.value = "合计"
+                case _ => cell.value = r.year
+              }
+            }
 
-              row.getCell("C").setCellValue(r.grjf.mkString)
-              row.getCell("D").setCellValue(r.sjbt.mkString)
-              row.getCell("E").setCellValue(r.sqbt.mkString)
-              row.getCell("F").setCellValue(r.xjbt.mkString)
-              row.getCell("G").setCellValue(r.zfdj.mkString)
-              row.getCell("H").setCellValue(r.jtbz.mkString)
-              row.getCell("I").setCellValue(
-                r match {
-                  case _: JfxxTotalRecord => "总计"
-                  case _ => r.sbjg.mkString("|")
-                }
-              )
-              row.getCell("K").setCellValue(
-                r match {
-                  case t: JfxxTotalRecord => t.total.mkString
-                  case _ => r.hbrq.mkString("|")
-                }
-              )
-              workbook.save(path / s"${info.name}缴费查询单.xlsx")
+            row("C").value = r.personal.getOrElse(BigDecimal(0))
+            row("D").value = r.provincial.getOrElse(BigDecimal(0))
+            row("E").value = r.civic.getOrElse(BigDecimal(0))
+            row("F").value = r.prefectural.getOrElse(BigDecimal(0))
+            row("G").value = r.governmentalPay.getOrElse(BigDecimal(0))
+            row("H").value = r.communalPay.getOrElse(BigDecimal(0))
+            row("I").value = r.fishmanPay.getOrElse(BigDecimal(0))
+            row("J").value =
+              r match {
+                case _: PayInfoTotalRecord => "总计"
+                case _ => r.agencies.mkString("|")
+              }
+            row("L").let { cell =>
+              r match {
+                case t: PayInfoTotalRecord => cell.value = t.total
+                case _ => cell.value = r.transferDates.mkString("|")
+              }
             }
           }
+          (path / s"${info.name}缴费查询单.xlsx").let { path =>
+            println(s"\n保存: $path")
+            workbook.save(path)
+          }
         }
-
       }
     }
 
   addSubCommand(doc)
   addSubCommand(up)
-  addSubCommand(jfxx)
+  addSubCommand(payInfo)
 }
 
 object Main {

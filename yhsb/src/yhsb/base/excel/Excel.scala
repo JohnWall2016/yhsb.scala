@@ -278,6 +278,16 @@ object Excel {
       if (cell == null) return
       cell.setCellValue(v.toDouble)
     }
+
+    def value_=[T](v: Option[T]): Unit = {
+      if (v.isDefined) {
+        v.get match {
+          case d: Double => cell.value = d
+          case d: BigDecimal => cell.value = d
+          case i: Int => cell.value = i
+        }
+      }
+    }
   }
 
   object CellRef {

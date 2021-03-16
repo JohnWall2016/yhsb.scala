@@ -104,7 +104,7 @@ object Session {
   def use[T](user: String = "002", autoLogin: Boolean = true)(
       f: Session => T
   ): T = {
-    val config = Config.load("yhsb.cjb.session")
+    val config = Config.load("cjb.session")
     val usr = config.getConfig(s"users.$user")
     AutoClose.use(
       new Session(

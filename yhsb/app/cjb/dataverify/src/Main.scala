@@ -18,15 +18,15 @@ class Verify(args: Seq[String])
   val template = """D:\数据核查\20201125\湖南省城乡居民基本养老保险信息修改汇总表.xls"""
 
   object Type extends Enumeration {
-    val Jfry = Value("正常缴费人员")
-    val Dyry = Value("正常待遇人员")
+    val PayingPerson = Value("正常缴费人员")
+    val RetiredPerson = Value("正常待遇人员")
 
     def from(name: String): Option[Value] =
       values.find(name == _.toString)
   }
 
   case class Data(
-      idcard: String,
+      idCard: String,
       name: String,
       oldName: String,
       typ: Type.Value,
@@ -39,25 +39,30 @@ class Verify(args: Seq[String])
 
     println("生成信息修改数据")
     val data = mutable.Map[String, mutable.ListBuffer[Data]]()
-    Session.use() { sess =>
+    Session.use() { session =>
       for (r <- (startRow() - 1) until endRow()) {
         val row = sheet.getRow(r)
         val name = row.getCell("C").value.trim
-        val idcard = row.getCell("D").value.trim
-        println(s"  $name $idcard")
-        sess.sendService(PersonInfoInProvinceQuery(idcard))
-        val result = sess.getResult[PersonInfoInProvinceQuery#Item]
+        val idCard = row.getCell("D").value.trim
+        println(s"  $name $idCard")
+        session.sendService(PersonInfoInProvinceQuery(idCard))
+        val result = session.getResult[PersonInfoInProvinceQuery#Item]
         if (result.nonEmpty && result(0).name != name) {
-          val cbxx = result(0)
-          val typ = Type.from(cbxx.jbState)
+          val info = result(0)
+          val typ = Type.from(info.jbState)
           if (typ.isDefined) {
-            val dwcs = cbxx.dwAndCsName.get
-            if (!data.isDefinedAt(dwcs._1)) {
-              data(dwcs._1) = mutable.ListBuffer(
-                Data(idcard, name, cbxx.name, typ.get, dwcs._2)
+            val dwAndCsName = info.dwAndCsName.get
+            if (!data.isDefinedAt(dwAndCsName._1)) {
+              data(dwAndCsName._1) = mutable.ListBuffer(
+                Data(idCard, name, info.name, typ.get, dwAndCsName._2)
               )
             } else {
-              data(dwcs._1) += Data(idcard, name, cbxx.name, typ.get, dwcs._2)
+              data(dwAndCsName._1) += Data(
+                idCard,
+                name,
+                info.name,
+                typ.get,
+                dwAndCsName._2)
             }
           }
         }
@@ -80,7 +85,7 @@ class Verify(args: Seq[String])
       for (dt <- data(dw).sortBy(_.memo)) {
         val row = sheet.getOrCopyRow(currentRow, startRow)
         row.getCell("A").setCellValue(currentRow - startRow + 1)
-        row.getCell("B").setCellValue(dt.idcard)
+        row.getCell("B").setCellValue(dt.idCard)
         row.getCell("C").setCellValue(dt.name)
         row.getCell("D").setCellValue(dt.typ.toString)
         row.getCell("E").setCellValue("姓名")

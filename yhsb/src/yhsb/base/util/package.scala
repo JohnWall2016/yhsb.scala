@@ -4,7 +4,7 @@ package object util {
     def ?:(left: T) = if (left != null) left else right
   }
 
-  implicit class RichOps[T](t: T) {
+  implicit class UtilOps[T](t: T) {
     def let[R](f: T => R) = f(t)
   }
 }

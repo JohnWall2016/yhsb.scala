@@ -4,7 +4,7 @@ import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.base.io.PathOps._
 import yhsb.base.text.Strings.StringOps
-import yhsb.base.util.RichOps
+import yhsb.base.util.UtilOps
 import yhsb.cjb.db._
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.{JBKind, JoinAuditQuery}
@@ -32,9 +32,9 @@ class Audit(args: Seq[String])
     }
     println(timeSpan)
 
-    val result = Session.use() { sess =>
-      sess.sendService(JoinAuditQuery(startDate, endDate))
-      sess.getResult[JoinAuditQuery#Item]
+    val result = Session.use() { session =>
+      session.sendService(JoinAuditQuery(startDate, endDate))
+      session.getResult[JoinAuditQuery#Item]
     }
     println(s"共计 ${result.size} 条")
 
@@ -42,21 +42,21 @@ class Audit(args: Seq[String])
       case class Item(idCard: String, name: String, jbKind: String)
       val items = mutable.ListBuffer[Item]()
 
-      import FPData2021._
+      import AuthData2021._
 
       for (item <- result) {
         val message =
           s"${item.idCard} ${item.name.padRight(6)} ${item.birthDay}"
-        val data: List[FPData] = run(
-          fphistoryData.filter(_.idcard == lift(item.idCard))
+        val data: List[AuthItem] = run(
+          historyData.filter(_.idCard == lift(item.idCard))
         )
         data.headOption match {
           case Some(v) =>
             println(
-              s"$message ${v.jbrdsf.getOrElse("")} " +
+              s"$message ${v.jbKind.getOrElse("")} " +
                 s"${if (v.name != item.name) v.name else ""}"
             )
-            items.addOne(Item(item.idCard, item.name, v.jbrdsf.getOrElse("")))
+            items.addOne(Item(item.idCard, item.name, v.jbKind.getOrElse("")))
           case None => println(message)
         }
       }

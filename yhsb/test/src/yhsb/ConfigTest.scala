@@ -11,7 +11,7 @@ object ConfigTest extends TestSuite {
         println(config)
       }
       test("session") {
-        val config = Config.load("yhsb.cjb.session")
+        val config = Config.load("cjb.session")
         println(config)
         println(config.getString("host"))
         println(config.getInt("port"))

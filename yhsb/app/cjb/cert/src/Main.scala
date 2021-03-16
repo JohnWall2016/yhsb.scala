@@ -13,7 +13,7 @@ class Cert(args: Seq[String]) extends Command(args) {
   val split =
     new Subcommand("split") with InputFile with RowRange with OutputDir {
 
-      def xzqhRow() = "A"
+      def DivisionRow() = "A"
 
       val template = """D:\待遇认证\2020年\城乡居民基本养老保险待遇领取人员资格认证表（表二）.xls"""
 
@@ -29,7 +29,7 @@ class Cert(args: Seq[String]) extends Command(args) {
 
         println(s"生成数据分组")
         val groups = (for (index <- (startRow() - 1) until endRow())
-          yield (sheet.getRow(index)(xzqhRow()).value, index)).iterator
+          yield (sheet.getRow(index)(DivisionRow()).value, index)).iterator
           .groupByDwAndCsName()
 
         var total = 0

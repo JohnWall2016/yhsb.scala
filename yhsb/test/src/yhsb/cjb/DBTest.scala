@@ -16,11 +16,11 @@ object DBTest extends TestSuite {
       }
 
       test("fpdata2021") {
-        import yhsb.cjb.db.FPData2021._
+        import yhsb.cjb.db.AuthData2021._
 
-        println(fphistoryData.quoted.name)
+        println(historyData.quoted.name)
 
-        val result = run(fphistoryData.filter(_.idcard == "430321196409161690"))
+        val result = run(historyData.filter(_.idCard == "430321196409161690"))
         result.foreach(println)
       }
     }
