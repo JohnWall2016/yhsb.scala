@@ -14,7 +14,7 @@ object JsonTest extends TestSuite {
   def tests =
     Tests {
       test("syslogin") {
-        val user = Config.load("yhsb.cjb.session.users.002")
+        val user = Config.load("cjb.session.users.002")
         val login = SysLogin(user.getString("id"), user.getString("pwd"))
         println(login.toString())
 

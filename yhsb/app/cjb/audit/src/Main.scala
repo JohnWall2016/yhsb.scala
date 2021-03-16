@@ -1,5 +1,5 @@
 import yhsb.base.command._
-import yhsb.base.datetime.formater.toDashedDate
+import yhsb.base.datetime.Formatter.toDashedDate
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.base.io.PathOps._
