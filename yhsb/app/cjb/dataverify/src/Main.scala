@@ -44,9 +44,10 @@ class Verify(args: Seq[String])
         val row = sheet.getRow(r)
         val name = row.getCell("C").value.trim
         val idCard = row.getCell("D").value.trim
+
         println(s"  $name $idCard")
-        session.sendService(PersonInfoInProvinceQuery(idCard))
-        val result = session.getResult[PersonInfoInProvinceQuery#Item]
+        
+        val result = session.request(PersonInfoInProvinceQuery(idCard))
         if (result.nonEmpty && result(0).name != name) {
           val info = result(0)
           val typ = Type.from(info.jbState)

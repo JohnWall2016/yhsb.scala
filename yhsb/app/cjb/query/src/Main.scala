@@ -29,8 +29,7 @@ class Query(args: Seq[String]) extends Command(args) {
             val idCard = row.getCell("A").value
             val title = row.getCell("D").value
 
-            session.sendService(PersonInfoInProvinceQuery(idCard))
-            val result = session.getResult[PersonInfoInProvinceQuery#Item]
+            val result = session.request(PersonInfoInProvinceQuery(idCard))
             if (result.isEmpty || result(0).idCard == null) {
               System.err.println(s"Error: ${i + 1} $idCard")
               System.exit(-1)
@@ -73,10 +72,8 @@ class Query(args: Seq[String]) extends Command(args) {
             val idCard = row.getCell(idCardRow()).value.trim().toUpperCase()
 
             println(idCard)
-
-            session.sendService(PersonInfoInProvinceQuery(idCard))
-            //println(session.readBody())
-            val result = session.getResult[PersonInfoInProvinceQuery#Item]
+            
+            val result = session.request(PersonInfoInProvinceQuery(idCard))
             result.map(item => {
               row
                 .getOrCreateCell(updateRow())
@@ -148,7 +145,7 @@ class Query(args: Seq[String]) extends Command(args) {
       }
 
       def getPayInfoRecords(
-          payInfo: Result[PayingInfoInProvinceQuery#Item]
+          payInfo: Result[PayingInfoInProvinceQuery.Item]
       ) = {
         val payedRecords = mutable.Map[Int, PayInfoRecord]()
         val unpayedRecords = mutable.Map[Int, PayInfoRecord]()
@@ -196,7 +193,7 @@ class Query(args: Seq[String]) extends Command(args) {
         results.addOne(total)
       }
 
-      def printInfo(info: PersonInfoInProvinceQuery#Item) = {
+      def printInfo(info: PersonInfoInProvinceQuery.Item) = {
         println("个人信息:")
         println(
           s"${info.name} ${info.idCard} ${info.jbState} " +
@@ -249,15 +246,17 @@ class Query(args: Seq[String]) extends Command(args) {
 
       override def execute(): Unit = {
         val (info, payInfoResult) = Session.use() { session =>
-          session.sendService(PersonInfoInProvinceQuery(idCard()))
           val info =
-            session.getResult[PersonInfoInProvinceQuery#Item].let { result =>
+            session
+              .request(PersonInfoInProvinceQuery(idCard()))
+              .let { result =>
               if (result.isEmpty || result(0).invalid) null else result(0)
             }
 
-          session.sendService(PayingInfoInProvinceQuery(idCard()))
           val payInfoResult =
-            session.getResult[PayingInfoInProvinceQuery#Item].let { result =>
+            session
+              .request(PayingInfoInProvinceQuery(idCard()))
+              .let { result =>
               if (result.isEmpty || result.size == 1 && result(0).year == 0)
                 null
               else result
