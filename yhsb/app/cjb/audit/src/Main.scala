@@ -120,29 +120,31 @@ class OnlineAudit extends Subcommand("online") {
         }
 
       println(" 缴费人员终止查询 ".bar(60, '='))
-      session.sendService(PayingPersonStopAuditQuery(operator = operator_))
-      session.getResult[PayingPersonStopAuditQuery#Item].zipWithIndex.foreach {
+      session
+        .request(PayingPersonStopAuditQuery(operator = operator_))
+        .zipWithIndex
+        .foreach {
         case (item, i) =>
           println(s"${(i + 1).toString.padRight(3)} ${item.name
             .padRight(6)} ${item.idCard} ${item.opTime} ${item.operator}")
       }
 
       println(" 待遇人员终止查询 ".bar(60, '='))
-      session.sendService(RetiredPersonStopAuditQuery(operator = operator_))
-      session.getResult[RetiredPersonStopAuditQuery#Item].zipWithIndex.foreach {
+      session
+        .request(RetiredPersonStopAuditQuery(operator = operator_))
+        .zipWithIndex
+        .foreach {
         case (item, i) =>
           println(s"${(i + 1).toString.padRight(3)} ${item.name
             .padRight(6)} ${item.idCard} ${item.opTime} ${item.operator}")
       }
 
       println(" 缴费人员暂停查询 ".bar(60, '='))
-      session.sendService(PayingPersonPauseAuditQuery())
       session
-        .getResult[PayingPersonPauseAuditQuery#Item]
+        .request(PayingPersonPauseAuditQuery())
         .flatMap { item =>
-          session.sendService(PayingPersonPauseAuditDetailQuery(item))
           session
-            .getResult[PayingPersonPauseAuditDetailQuery#Item]
+            .request(PayingPersonPauseAuditDetailQuery(item))
             .headOption match {
             case Some(v) if operator_ == "" || operator_ == v.operator =>
               Some((v.operator, item))
@@ -157,13 +159,11 @@ class OnlineAudit extends Subcommand("online") {
         }
 
       println(" 待遇人员暂停查询 ".bar(60, '='))
-      session.sendService(RetiredPersonPauseAuditQuery())
       session
-        .getResult[RetiredPersonPauseAuditQuery#Item]
+        .request(RetiredPersonPauseAuditQuery())
         .flatMap { item =>
-          session.sendService(RetiredPersonPauseAuditDetailQuery(item))
           session
-            .getResult[RetiredPersonPauseAuditDetailQuery#Item]
+            .request(RetiredPersonPauseAuditDetailQuery(item))
             .headOption match {
             case Some(v) if operator_ == "" || operator_ == v.operator =>
               Some((v.operator, item))
