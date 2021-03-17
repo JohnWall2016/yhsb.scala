@@ -5,7 +5,9 @@ package yhsb.cjb.net.protocol
   */
 case class PersonInfoInProvinceQuery(
     @JsonName("aac002") idCard: String
-) extends Request("executeSncbxxConQ") {
+) extends Request[PersonInfoInProvinceQuery.Item]("executeSncbxxConQ")
+
+object PersonInfoInProvinceQuery {
   case class Item(
       @JsonName("aac001") pid: Int,
       @JsonName("aac002") idCard: String,

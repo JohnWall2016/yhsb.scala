@@ -4,8 +4,8 @@ package cjb.net.protocol
 import scala.jdk.CollectionConverters._
 
 /**
-  * 代发人员名单查询
-  */
+ * 代发人员名单查询
+ */
 class DelegatePersonQuery(
     dfType: String,
     /** 代发参保状态: 1 - 有效, 0 - 无效 */
@@ -14,7 +14,7 @@ class DelegatePersonQuery(
     dfState: String,
     page: Int = 1,
     pageSize: Int = 100
-) extends PageRequest(
+) extends PageRequest[DelegatePersonQuery.Item](
       "executeDfrymdQuery",
       page,
       pageSize,
@@ -40,6 +40,9 @@ class DelegatePersonQuery(
   @JsonName("aac066")
   val dfType_ = dfType
 
+}
+
+object DelegatePersonQuery {
   case class Item(
       /** 个人编号 */
       @JsonName("aac001")

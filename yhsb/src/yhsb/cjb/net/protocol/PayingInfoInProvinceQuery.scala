@@ -3,10 +3,12 @@ package yhsb.cjb.net.protocol
 /** 省内参保信息查询 - 缴费信息 */
 case class PayingInfoInProvinceQuery(
     @JsonName("aac002") idcard: String
-) extends PageRequest(
+) extends PageRequest[PayingInfoInProvinceQuery.Item](
       "executeSncbqkcxjfxxQ",
       pageSize = 500
-    ) {
+    )
+
+object PayingInfoInProvinceQuery {
   case class Item(
       @JsonName("aae003") year: Int, // 缴费年度
       @JsonName("aae013") memo: String, // 备注

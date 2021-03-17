@@ -5,7 +5,7 @@ package cjb.net.protocol
 class RetiredPersonPauseAuditQuery(
     idCard: String = "",
     auditState: String = "0"
-) extends PageRequest(
+) extends PageRequest[RetiredPersonPauseAuditQuery.Item](
       "queryAllPausePersonInfosForAuditService",
       pageSize = 500
     ) {
@@ -42,6 +42,14 @@ class RetiredPersonPauseAuditQuery(
 
   /** 待遇状态 */
   val aae116 = ""
+}
+
+object RetiredPersonPauseAuditQuery {
+  def apply(
+    idCard: String = "",
+    auditState: String = "0"
+  ): RetiredPersonPauseAuditQuery =
+    new RetiredPersonPauseAuditQuery(idCard, auditState)
 
   case class Item(
       @JsonName("aac002")
@@ -69,12 +77,4 @@ class RetiredPersonPauseAuditQuery(
       memo: String,
       aaz173: Int
   ) extends DivisionName
-}
-
-object RetiredPersonPauseAuditQuery {
-  def apply(
-    idCard: String = "",
-    auditState: String = "0"
-  ): RetiredPersonPauseAuditQuery =
-    new RetiredPersonPauseAuditQuery(idCard, auditState)
 }

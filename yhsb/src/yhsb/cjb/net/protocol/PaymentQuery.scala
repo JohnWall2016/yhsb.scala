@@ -7,7 +7,7 @@ import scala.jdk.CollectionConverters._
 class PaymentQuery(
     yearMonth: String,
     state: String = "0"
-) extends PageRequest(
+) extends PageRequest[PaymentQuery.Item](
       "cwzfglQuery",
       1,
       100,
@@ -33,7 +33,9 @@ class PaymentQuery(
   val state_ = state
 
   val bie013 = ""
+}
 
+object PaymentQuery {
   case class Item(
       /** 支付对象类型: "1" - 月度银行代发, "3" - 个人支付 */
       @JsonName("aaa079")

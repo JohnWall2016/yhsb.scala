@@ -34,7 +34,7 @@ class ListFieldAdapter extends JsonAdapter[ListField[_]] {
       src: ListField[_],
       typeOfSrc: Type,
       context: JsonSerializationContext
-  ): JsonElement = context.serialize(src.items)
+  ): JsonElement = context.serialize(src.items.toArray)
 
   def deserialize(
       json: JsonElement,

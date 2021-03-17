@@ -2,25 +2,19 @@ package yhsb
 package cjb.net.protocol
 
 /**
-  * 代发支付单个人明细查询
-  */
+ * 代发支付单个人明细查询
+ */
 class DelegatePaymentPersonalDetailQuery(
     pid: Int,
     payList: Int,
     personalPayList: Long,
     page: Int = 1,
     pageSize: Int = 500
-) extends PageRequest(
+) extends PageRequest[DelegatePaymentPersonalDetailQuery.Item](
       "dfpayffzfdjgrmxQuery",
       page,
       pageSize
     ) {
-  def this(item: DelegatePaymentDetailQuery#Item) =
-    this(
-      item.pid,
-      item.payList,
-      item.personalPayList
-    )
 
   /** 个人编号 */
   @JsonName("aac001")
@@ -33,6 +27,16 @@ class DelegatePaymentPersonalDetailQuery(
   /** 支付单号 */
   @JsonName("aaz220")
   val personalPayList_ = s"$personalPayList"
+
+}
+
+object DelegatePaymentPersonalDetailQuery {
+  def apply(item: DelegatePaymentDetailQuery.Item) =
+    new DelegatePaymentPersonalDetailQuery(
+      item.pid,
+      item.payList,
+      item.personalPayList
+    )
 
   case class Item(
       /** 待遇日期 */

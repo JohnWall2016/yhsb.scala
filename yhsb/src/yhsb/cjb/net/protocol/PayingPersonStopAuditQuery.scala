@@ -6,7 +6,7 @@ class PayingPersonStopAuditQuery(
     idCard: String = "",
     auditState: String = "0",
     operator: String = ""
-) extends PageRequest(
+) extends PageRequest[PayingPersonStopAuditQuery.Item](
       "cbzzfhPerInfoList",
       pageSize = 500
     ) {
@@ -31,6 +31,17 @@ class PayingPersonStopAuditQuery(
   val aac003 = ""
   val aac009 = ""
   val aae160 = ""
+}
+
+object PayingPersonStopAuditQuery {
+  def apply(
+    idCard: String = "",
+    auditState: String = "0",
+    operator: String = ""
+  ): PayingPersonStopAuditQuery =
+    new PayingPersonStopAuditQuery(
+      idCard, auditState, operator
+    )
 
   case class Item(
       @JsonName("aac002")
@@ -67,15 +78,4 @@ class PayingPersonStopAuditQuery(
       aaz038: Int,
       aac001: Int
   )
-}
-
-object PayingPersonStopAuditQuery {
-  def apply(
-    idCard: String = "",
-    auditState: String = "0",
-    operator: String = ""
-  ): PayingPersonStopAuditQuery =
-    new PayingPersonStopAuditQuery(
-      idCard, auditState, operator
-    )
 }

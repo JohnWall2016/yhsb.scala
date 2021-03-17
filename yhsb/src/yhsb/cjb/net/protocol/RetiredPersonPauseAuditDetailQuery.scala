@@ -3,10 +3,19 @@ package cjb.net.protocol
 
 /** 待遇人员暂停审核查询 查看 */
 class RetiredPersonPauseAuditDetailQuery(
-    item: RetiredPersonPauseAuditQuery#Item
-) extends Request("viewPayPauseInfoService") {
+    item: RetiredPersonPauseAuditQuery.Item
+) extends Request[RetiredPersonPauseAuditDetailQuery.Item](
+      "viewPayPauseInfoService"
+    ) {
   val aac002 = item.idCard
   val aaz173 = s"${item.aaz173}"
+}
+
+object RetiredPersonPauseAuditDetailQuery {
+  def apply(
+      item: RetiredPersonPauseAuditQuery.Item
+  ): RetiredPersonPauseAuditDetailQuery =
+    new RetiredPersonPauseAuditDetailQuery(item)
 
   case class Item(
       @JsonName("aae160")
@@ -17,11 +26,4 @@ class RetiredPersonPauseAuditDetailQuery(
       @JsonName("aae036")
       opTime: String
   )
-}
-
-object RetiredPersonPauseAuditDetailQuery {
-  def apply(
-    item: RetiredPersonPauseAuditQuery#Item
-  ): RetiredPersonPauseAuditDetailQuery =
-    new RetiredPersonPauseAuditDetailQuery(item)
 }

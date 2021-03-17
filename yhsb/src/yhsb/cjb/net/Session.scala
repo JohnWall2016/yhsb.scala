@@ -57,14 +57,14 @@ class Session(
     write(request.getBytes)
   }
 
-  def toService(req: Request): String = {
+  def toService(req: Request[_]): String = {
     val service = new JsonService(req, userID, password)
     service.toString()
   }
 
   def toService(id: String): String = toService(new Request(id))
 
-  def sendService(req: Request) = request(toService(req))
+  def sendService(req: Request[_]) = request(toService(req))
 
   def sendService(id: String) = request(toService(id))
 
@@ -75,6 +75,11 @@ class Session(
     val result = readBody()
     // println(s"getResult: $result")
     Result.fromJson(result)
+  }
+
+  def request[T : ClassTag](reqWithTag: Request[T]): Result[T] = {
+    sendService(reqWithTag)
+    getResult[T]
   }
 
   def login(): String = {

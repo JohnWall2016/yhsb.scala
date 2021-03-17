@@ -4,7 +4,9 @@ package cjb.net.protocol
 /** 待遇人员暂停查询 */
 class RetiredPersonPauseQuery(
     idCard: String
-) extends PageRequest("queryAllPausePersonInfosService") {
+) extends PageRequest[RetiredPersonPauseQuery.Item](
+      "queryAllPausePersonInfosService"
+    ) {
   val aaf013 = ""
   val aaf030 = ""
 
@@ -18,7 +20,9 @@ class RetiredPersonPauseQuery(
 
   val aae036 = ""
   val aae036s = ""
+}
 
+object RetiredPersonPauseQuery {
   case class Item(
       @JsonName("aac002")
       idCard: String,

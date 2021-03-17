@@ -9,7 +9,7 @@ class PaymentPersonalDetailQuery(
     yearMonth: String = "",
     state: String = "",
     payType: String = ""
-) extends PageRequest(
+) extends PageRequest[PaymentPersonalDetailQuery.Item](
       "cwzfgl_zfdryQuery",
       1,
       1000,
@@ -18,13 +18,6 @@ class PaymentPersonalDetailQuery(
         "aggregate" -> "sum"
       ).asJava
     ) {
-  def this(item: PaymentQuery#Item) =
-    this(
-      item.payList.toString,
-      item.yearMonth.toString,
-      item.state,
-      item.payType.value
-    )
 
   val aaf015 = ""
 
@@ -35,29 +28,39 @@ class PaymentPersonalDetailQuery(
   val name = ""
 
   /**
-    * 支付单号
-    */
+   * 支付单号
+   */
   @JsonName("aaz031")
   val payList_ = payList
 
   /**
-    * 支付状态
-    */
+   * 支付状态
+   */
   @JsonName("aae088")
   val state_ = state
 
   /**
-    * 业务类型: "F10004" - 重复缴费退费; "F10007" - 缴费调整退款;
-    * "F10006" - 享受终止退保
-    */
+   * 业务类型: "F10004" - 重复缴费退费; "F10007" - 缴费调整退款;
+   * "F10006" - 享受终止退保
+   */
   @JsonName("aaa121")
   val payType_ = payType
 
   /**
-    * 发放年月
-    */
+   * 发放年月
+   */
   @JsonName("aae002")
   val yearMonth_ = yearMonth
+}
+
+object PaymentPersonalDetailQuery {
+  def apply(item: PaymentQuery.Item) =
+    new PaymentPersonalDetailQuery(
+      item.payList.toString,
+      item.yearMonth.toString,
+      item.state,
+      item.payType.value
+    )
 
   case class Item(
       /** 身份证号码 */

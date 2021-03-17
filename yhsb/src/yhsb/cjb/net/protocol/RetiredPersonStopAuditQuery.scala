@@ -6,7 +6,7 @@ class RetiredPersonStopAuditQuery(
     idCard: String = "",
     auditState: String = "0",
     operator: String = ""
-) extends PageRequest(
+) extends PageRequest[RetiredPersonStopAuditQuery.Item](
       "dyzzfhPerInfoList",
       pageSize = 500
     ) {
@@ -33,6 +33,15 @@ class RetiredPersonStopAuditQuery(
   val aae160 = ""
 
   val aic301 = ""
+}
+
+object RetiredPersonStopAuditQuery {
+  def apply(
+      idCard: String = "",
+      auditState: String = "0",
+      operator: String = ""
+  ): RetiredPersonStopAuditQuery =
+    new RetiredPersonStopAuditQuery(idCard, auditState, operator)
 
   case class Item(
       @JsonName("aac002")
@@ -74,13 +83,4 @@ class RetiredPersonStopAuditQuery(
       opTime: String,
       aaz176: Int
   )
-}
-
-object RetiredPersonStopAuditQuery {
-  def apply(
-    idCard: String = "",
-    auditState: String = "0",
-    operator: String = ""
-  ): RetiredPersonStopAuditQuery =
-    new RetiredPersonStopAuditQuery(idCard, auditState, operator)
 }

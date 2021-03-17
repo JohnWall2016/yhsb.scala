@@ -46,8 +46,7 @@ class JoinAudit extends Subcommand("join") with DateRange with Export {
     println(timeSpan)
 
     val result = Session.use() { session =>
-      session.sendService(JoinAuditQuery(startDate, endDate, auditState = "1"))
-      session.getResult[JoinAuditQuery#Item]
+      session.request(JoinAuditQuery(startDate, endDate, auditState = "1"))
     }
     println(s"共计 ${result.size} 条")
 
@@ -112,12 +111,13 @@ class OnlineAudit extends Subcommand("online") {
       println(s"查询经办人: ${if (operator_.isEmpty) "所有" else operator_}")
 
       println(" 参保审核查询 ".bar(60, '='))
-      session.sendService(JoinAuditQuery(operator = operator_))
-      session.getResult[JoinAuditQuery#Item].zipWithIndex.foreach {
-        case (item, i) =>
+      session
+        .request(JoinAuditQuery(operator = operator_))
+        .zipWithIndex
+        .foreach { case (item, i) =>
           println(s"${(i + 1).toString.padRight(3)} ${item.name
             .padRight(6)} ${item.idCard} ${item.opTime} ${item.operator}")
-      }
+        }
 
       println(" 缴费人员终止查询 ".bar(60, '='))
       session.sendService(PayingPersonStopAuditQuery(operator = operator_))

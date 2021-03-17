@@ -2,13 +2,13 @@ package yhsb
 package cjb.net.protocol
 
 /**
-  * 代发支付单查询
-  */
+ * 代发支付单查询
+ */
 class DelegatePaymentQuery(
     dfType: String,
     yearMonth: String,
     state: String = "0"
-) extends PageRequest(
+) extends PageRequest[DelegatePaymentQuery.Item](
       "dfpayffzfdjQuery"
     ) {
 
@@ -26,7 +26,9 @@ class DelegatePaymentQuery(
 
   @JsonName("aae089")
   val state_ = state
+}
 
+object DelegatePaymentQuery {
   case class Item(
       /** 业务类型中文名 */
       @JsonName("aaa121")

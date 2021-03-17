@@ -8,7 +8,7 @@ class DelegatePaymentDetailQuery(
     payList: Int,
     page: Int = 1,
     pageSize: Int = 500
-) extends PageRequest(
+) extends PageRequest[DelegatePaymentDetailQuery.Item](
       "dfpayffzfdjmxQuery",
       page,
       pageSize
@@ -18,6 +18,9 @@ class DelegatePaymentDetailQuery(
   @JsonName("aaz031")
   val payList_ = s"$payList"
 
+}
+
+object DelegatePaymentDetailQuery {
   case class Item(
       /** 个人编号 */
       @JsonName("aac001")

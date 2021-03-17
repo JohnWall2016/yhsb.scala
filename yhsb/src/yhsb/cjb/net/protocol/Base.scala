@@ -7,9 +7,9 @@ import yhsb.base.struct.ListField
 import java.{util => ju}
 import scala.reflect.{ClassTag, classTag}
 
-class Request(@transient val id: String) extends Jsonable
+class Request[T : ClassTag](@transient val id: String) extends Jsonable
 
-class PageRequest(
+class PageRequest[T : ClassTag](
     id: String,
     val page: Int = 1,
     @JsonName("pagesize") val pageSize: Int = 15,
@@ -32,7 +32,7 @@ class PageRequest(
   }
 }
 
-class JsonService[T <: Request](
+class JsonService[T <: Request[_]](
     param: T,
     userID: String,
     password_ : String

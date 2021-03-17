@@ -36,13 +36,22 @@ object SessionTest extends TestSuite {
         }
       }
     }*/
-    test("jfcx") {
+    /*test("jfcx") {
       Session.use() { sess =>
         sess.sendService(PayingInfoInProvinceQuery("430302197604224525"))
         //sess.sendService(PayingInfoInProvinceQuery("110108196511289010"))
         val result = sess.getResult[PayingInfoInProvinceQuery#Item]
         result.foreach(println(_))
       }
+    }*/
+
+    Session.use() { sess =>
+      val result = sess.request(JoinAuditQuery())
+      println(result)
+      sess.sendService(JoinAuditQuery())
+      val result2 = sess.getResult[JoinAuditQuery.Item]
+      println(result2)
+      println(result2(0).dwName)
     }
   }
 }

@@ -5,7 +5,7 @@ package cjb.net.protocol
 class PersonInfoQuery(
     idCard: String,
     name: String
-) extends PageRequest("zhcxgrinfoQuery") {
+) extends PageRequest[PersonInfoQuery.Item]("zhcxgrinfoQuery") {
   val aaf013 = ""
   val aaz070 = ""
   val aaf101 = ""
@@ -39,7 +39,9 @@ class PersonInfoQuery(
 
   @JsonName("aac003")
   val name_ = name
+}
 
+object PersonInfoQuery {
   case class Item(
       @JsonName("aac001")
       pid: Int,

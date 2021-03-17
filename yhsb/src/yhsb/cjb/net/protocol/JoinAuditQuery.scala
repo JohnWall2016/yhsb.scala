@@ -6,7 +6,7 @@ class JoinAuditQuery(
     endDate: String = "",
     auditState: String = "0",
     operator: String = ""
-) extends PageRequest(
+) extends PageRequest[JoinAuditQuery.Item](
       "cbshQuery",
       pageSize = 500
     ) {
@@ -35,21 +35,6 @@ class JoinAuditQuery(
   val aac003 = ""
   val sfccb = ""
 
-  case class Item(
-      @JsonName("aac002")
-      idCard: String,
-      @JsonName("aac003")
-      name: String,
-      @JsonName("aac006")
-      birthDay: String,
-      @JsonName("aaf102")
-      czName: String,
-      @JsonName("aae011")
-      operator: String,
-      /** 经办时间 */
-      @JsonName("aae036")
-      opTime: String
-  ) extends DivisionName
 }
 
 object JoinAuditQuery {
@@ -65,4 +50,20 @@ object JoinAuditQuery {
       auditState,
       operator
     )
+  
+  case class Item(
+      @JsonName("aac002")
+      idCard: String,
+      @JsonName("aac003")
+      name: String,
+      @JsonName("aac006")
+      birthDay: String,
+      @JsonName("aaf102")
+      czName: String,
+      @JsonName("aae011")
+      operator: String,
+      /** 经办时间 */
+      @JsonName("aae036")
+      opTime: String
+  ) extends DivisionName
 }

@@ -4,7 +4,10 @@ package cjb.net.protocol
 /** 省内参保信息查询 - 银行信息 */
 case class BankInfoQuery(
     @JsonName("aac002") idCard: String
-) extends Request("executeSncbgrBankinfoConQ") {
+) extends Request[BankInfoQuery.Item]("executeSncbgrBankinfoConQ") {
+}
+
+object BankInfoQuery {
   case class Item(
       /** 银行类型 */
       @JsonName("bie013")
