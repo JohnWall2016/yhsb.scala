@@ -108,8 +108,7 @@ class LandAcq(args: Seq[String]) extends Command(args) {
                 (male && (birthMonth + 6000 <= retireTime()))
                 || (!male && (birthMonth + 5500 <= retireTime()))
               ) {
-                sess.sendService(PersonInfoInProvinceQuery(idcard))
-                val result = sess.getResult[PersonInfoInProvinceQuery#Item]
+                val result = sess.request(PersonInfoInProvinceQuery(idcard))
                 val jbState = {
                   val cbxx = result(0)
                   if (name == cbxx.name || cbxx.name == null) cbxx.jbState

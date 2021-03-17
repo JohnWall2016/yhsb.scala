@@ -1,6 +1,7 @@
 package yhsb.base.struct
 
 import scala.collection.mutable
+import scala.collection.immutable.AbstractSeq
 
 abstract class MapField {
   private[base] var _value: String = null
@@ -20,7 +21,7 @@ abstract class MapField {
   override def toString: String = name
 }
 
-sealed class ListField[T] extends Iterable[T] {
+sealed class ListField[T] extends AbstractSeq[T] {
   private[ListField] def this(items: T*) = {
     this()
     this.items.addAll(items)
@@ -30,11 +31,11 @@ sealed class ListField[T] extends Iterable[T] {
 
   override def iterator: Iterator[T] = items.iterator
 
+  override def length: Int = items.length
+
   def addOne(e: T) = items.addOne(e)
 
   def apply(index: Int) = items(index)
-
-  override def size = items.size
 }
 
 object ListField {

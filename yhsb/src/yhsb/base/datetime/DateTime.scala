@@ -9,18 +9,32 @@ import scala.collection.mutable
 object Formatter {
   def toDashedDate(
       date: String,
-      format: Regex = "^(\\d\\d\\d\\d)(\\d\\d)(\\d\\d)$".r
+      format: String = """^(\d\d\d\d)(\d\d)(\d\d)$"""
   ): String =
-    format.findFirstMatchIn(date) match {
+    format.r.findFirstMatchIn(date) match {
       case Some(m) => m.group(1) + "-" + m.group(2) + "-" + m.group(3)
       case None =>
-        throw new IllegalArgumentException(s"Invalid date format (YYYYMMDD): $date")
+        throw new IllegalArgumentException(
+          s"Invalid date format ($format): $date"
+        )
     }
 
   def formatDate(
-      date: Date = new Date(),
-      format: String = "yyyyMMdd"
+      format: String = "yyyyMMdd",
+      date: Date = new Date()
   ): String = new SimpleDateFormat(format).format(date)
+
+  def splitDate(
+      date: String,
+      format: String = """^(\d\d\d\d)(\d\d)(\d\d)?"""
+  ): (String, String, String) =
+    format.r.findFirstMatchIn(date) match {
+      case Some(m) => (m.group(1), m.group(2), m.group(3))
+      case None =>
+        throw new IllegalArgumentException(
+          s"Invalid date format ($format): $date"
+        )
+    }
 }
 
 case class Month(year: Int, month: Int) {

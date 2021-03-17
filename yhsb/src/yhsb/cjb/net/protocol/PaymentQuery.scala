@@ -4,18 +4,16 @@ package cjb.net.protocol
 import scala.jdk.CollectionConverters._
 
 /** 财务支付管理查询 */
-class PaymentQuery(
-    yearMonth: String,
-    state: String = "0"
-) extends PageRequest[PaymentQuery.Item](
-      "cwzfglQuery",
-      1,
-      100,
-      totalOpts = Map(
-        "dataKey" -> "aae169",
-        "aggregate" -> "sum"
-      ).asJava
-    ) {
+class PaymentQuery(yearMonth: String, state: String = "0")
+  extends PageRequest[PaymentQuery.Item](
+    "cwzfglQuery",
+    1,
+    100,
+    totalOpts = Map(
+      "dataKey" -> "aae169",
+      "aggregate" -> "sum"
+    ).asJava
+  ) {
 
   /** 支付类型 */
   @JsonName("aaa121")
@@ -36,6 +34,11 @@ class PaymentQuery(
 }
 
 object PaymentQuery {
+  def apply(
+      yearMonth: String,
+      state: String = "0"
+  ) = new PaymentQuery(yearMonth, state)
+
   case class Item(
       /** 支付对象类型: "1" - 月度银行代发, "3" - 个人支付 */
       @JsonName("aaa079")

@@ -12,6 +12,9 @@ class PayingPersonStopAuditDetailQuery(
 }
 
 object PayingPersonStopAuditDetailQuery {
+  def apply(item: PayingPersonStopAuditQuery.Item) =
+    new PayingPersonStopAuditDetailQuery(item)
+
   case class Item(
       @JsonName("aae160")
       reason: StopReason,

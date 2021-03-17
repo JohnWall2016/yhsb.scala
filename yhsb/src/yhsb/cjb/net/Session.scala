@@ -1,6 +1,5 @@
 package yhsb.cjb.net
 
-
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
@@ -52,7 +51,7 @@ class Session(
     request
   }
 
-  def request(content: String) = {
+  def writeRequest(content: String) = {
     val request = buildRequest(content)
     write(request.getBytes)
   }
@@ -64,20 +63,20 @@ class Session(
 
   def toService(id: String): String = toService(new Request(id))
 
-  def sendService(req: Request[_]) = request(toService(req))
+  def sendService(req: Request[_]) = writeRequest(toService(req))
 
-  def sendService(id: String) = request(toService(id))
+  def sendService(id: String) = writeRequest(toService(id))
 
-  def fromJson[T : ClassTag](json: String): Result[T] =
+  def fromJson[T: ClassTag](json: String): Result[T] =
     Result.fromJson(json)
 
-  def getResult[T : ClassTag]: Result[T] = {
+  def getResult[T: ClassTag]: Result[T] = {
     val result = readBody()
     // println(s"getResult: $result")
     Result.fromJson(result)
   }
 
-  def request[T : ClassTag](reqWithTag: Request[T]): Result[T] = {
+  def request[T: ClassTag](reqWithTag: Request[T]): Result[T] = {
     sendService(reqWithTag)
     getResult[T]
   }

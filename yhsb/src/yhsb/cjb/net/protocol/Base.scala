@@ -6,6 +6,7 @@ import yhsb.base.struct.ListField
 
 import java.{util => ju}
 import scala.reflect.{ClassTag, classTag}
+import scala.collection.immutable.AbstractSeq
 
 class Request[T : ClassTag](@transient val id: String) extends Jsonable
 
@@ -55,7 +56,7 @@ class JsonService[T <: Request[_]](
   private val datas = ju.List.of(param)
 }
 
-class Result[T] extends Iterable[T] with Jsonable {
+class Result[T] extends AbstractSeq[T] with Jsonable {
   val rowcount = 0
   val page = 0
   val pagesize = 0
@@ -73,7 +74,7 @@ class Result[T] extends Iterable[T] with Jsonable {
 
   def apply(index: Int) = data(index)
 
-  override def size = data.size
+  override def length = data.length
 
   override def iterator = data.iterator
 }

@@ -73,7 +73,7 @@ object PaymentPersonalDetailQuery {
       payList: Int,
       /** 支付总金额 */
       @JsonName("aae019")
-      amount: BigDecimal,
+      amount: JBigDecimal,
       @JsonName("aaa121")
       payType: PayType,
       @JsonName("aaf103")
