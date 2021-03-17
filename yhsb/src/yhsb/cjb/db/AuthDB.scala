@@ -35,7 +35,32 @@ trait HistoryData {
   this: MysqlJdbcContext[_] =>
   val historyData = quote {
     querySchema[AuthItem](
-      "fphistorydata"
+      "fphistorydata",
+      _.no -> "no",
+      _.neighborhood -> "xzj",
+      _.community -> "csq",
+      _.address -> "address",
+      _.name -> "name",
+      _.idCard -> "idcard",
+      _.birthDay -> "birthDay",
+      _.poverty -> "pkrk",
+      _.povertyDate -> "pkrkDate",
+      _.veryPoor -> "tkry",
+      _.veryPoorDate -> "tkryDate",
+      _.fullAllowance -> "qedb",
+      _.fullAllowanceDate -> "qedbDate",
+      _.shortAllowance -> "cedb",
+      _.shortAllowanceDate -> "cedbDate",
+      _.primaryDisability -> "yejc",
+      _.primaryDisabilityDate -> "yejcDate",
+      _.secondaryDisability -> "ssjc",
+      _.secondaryDisabilityDate -> "ssjcDate",
+      _.isDestitute -> "sypkry",
+      _.jbKind -> "jbrdsf",
+      _.jbKindFirstDate -> "jbrdsfFirstDate",
+      _.jbKindLastDate -> "jbrdsfLastDate",
+      _.jbState -> "jbcbqk",
+      _.jbStateDate -> "jbcbqkDate"
     )
   }
 }

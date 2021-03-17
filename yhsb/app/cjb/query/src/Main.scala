@@ -57,8 +57,10 @@ class Query(args: Seq[String]) extends Command(args) {
       val nameRow = trailArg[String](descr = "姓名列名称")
       val idCardRow = trailArg[String](descr = "身份证列名称")
       val updateRow = trailArg[String](descr = "更新列名称")
-      val neighborhoodRow = opt[String](name = "xzj", short = 'x', descr = "更新乡镇街列名称")
-      val nameComparedRow = opt[String](name = "mzbd", short = 'm', descr = "更新姓名比对列名称")
+      val neighborhoodRow =
+        opt[String](name = "xzj", short = 'x', descr = "更新乡镇街列名称")
+      val nameComparedRow =
+        opt[String](name = "mzbd", short = 'm', descr = "更新姓名比对列名称")
 
       def execute(): Unit = {
         val workbook = Excel.load(inputFile())
@@ -103,20 +105,20 @@ class Query(args: Seq[String]) extends Command(args) {
       val idCard = trailArg[String](descr = "身份证号码")
 
       class PayInfoRecord(
-        val year: Int, // 年度
-        var personal: Option[BigDecimal] = None, // 个人缴费
-        var provincial: Option[BigDecimal] = None, // 省级补贴
-        var civic: Option[BigDecimal] = None, // 市级补贴
-        var prefectural: Option[BigDecimal] = None, // 县级补贴
-        var governmentalPay: Option[BigDecimal] = None, // 政府代缴
-        var communalPay: Option[BigDecimal] = None, // 集体补助
-        var fishmanPay: Option[BigDecimal] = None, // 退捕渔民补助
-        val transferDates: mutable.Set[String] = mutable.Set(),
-        val agencies: mutable.Set[String] = mutable.Set(),
+          val year: Int, // 年度
+          var personal: Option[BigDecimal] = None, // 个人缴费
+          var provincial: Option[BigDecimal] = None, // 省级补贴
+          var civic: Option[BigDecimal] = None, // 市级补贴
+          var prefectural: Option[BigDecimal] = None, // 县级补贴
+          var governmentalPay: Option[BigDecimal] = None, // 政府代缴
+          var communalPay: Option[BigDecimal] = None, // 集体补助
+          var fishmanPay: Option[BigDecimal] = None, // 退捕渔民补助
+          val transferDates: mutable.Set[String] = mutable.Set(),
+          val agencies: mutable.Set[String] = mutable.Set()
       )
 
       class PayInfoTotalRecord(
-        var total: Option[BigDecimal] = None
+          var total: Option[BigDecimal] = None
       ) extends PayInfoRecord(0)
 
       private implicit class OptionBigDecimalOps(left: Option[BigDecimal]) {
@@ -137,7 +139,7 @@ class Query(args: Seq[String]) extends Command(args) {
 
         def mkString = left match {
           case Some(value) => value.toString()
-          case None => "0"
+          case None        => "0"
         }
 
         def padLeft(width: Int) = mkString.padLeft(width)
@@ -146,7 +148,7 @@ class Query(args: Seq[String]) extends Command(args) {
       }
 
       def getPayInfoRecords(
-        payInfo: Result[PayingInfoInProvinceQuery#Item]
+          payInfo: Result[PayingInfoInProvinceQuery#Item]
       ) = {
         val payedRecords = mutable.Map[Int, PayInfoRecord]()
         val unpayedRecords = mutable.Map[Int, PayInfoRecord]()
@@ -159,13 +161,13 @@ class Query(args: Seq[String]) extends Command(args) {
             }
             val record = records(data.year)
             data.item.value match {
-              case "1" => record.personal += data.amount
-              case "3" => record.provincial += data.amount
-              case "4" => record.civic += data.amount
-              case "5" => record.prefectural += data.amount
-              case "6" => record.communalPay += data.amount
+              case "1"  => record.personal += data.amount
+              case "3"  => record.provincial += data.amount
+              case "4"  => record.civic += data.amount
+              case "5"  => record.prefectural += data.amount
+              case "6"  => record.communalPay += data.amount
               case "11" => record.governmentalPay += data.amount
-              case _ => println(s"未知缴费类型${data.item.value}, 金额${data.amount}")
+              case _    => println(s"未知缴费类型${data.item.value}, 金额${data.amount}")
             }
             record.agencies.add(data.agency ?: "")
             record.transferDates.add(data.payedOffDay ?: "")
@@ -188,10 +190,9 @@ class Query(args: Seq[String]) extends Command(args) {
           total.communalPay += r.communalPay
           total.fishmanPay += r.fishmanPay
         }
-        total.total =
-          total.personal + total.provincial + total.civic +
-            total.prefectural + total.governmentalPay + total.communalPay +
-            total.fishmanPay
+        total.total = total.personal + total.provincial + total.civic +
+          total.prefectural + total.governmentalPay + total.communalPay +
+          total.fishmanPay
         results.addOne(total)
       }
 
@@ -205,8 +206,8 @@ class Query(args: Seq[String]) extends Command(args) {
       }
 
       def printPayInfoRecords(
-        records: collection.Seq[PayInfoRecord],
-        message: String
+          records: collection.Seq[PayInfoRecord],
+          message: String
       ) = {
         println(message)
         println(
@@ -249,14 +250,18 @@ class Query(args: Seq[String]) extends Command(args) {
       override def execute(): Unit = {
         val (info, payInfoResult) = Session.use() { session =>
           session.sendService(PersonInfoInProvinceQuery(idCard()))
-          val info = session.getResult[PersonInfoInProvinceQuery#Item].let { result =>
-            if (result.isEmpty || result(0).invalid) null else result(0)
-          }
+          val info =
+            session.getResult[PersonInfoInProvinceQuery#Item].let { result =>
+              if (result.isEmpty || result(0).invalid) null else result(0)
+            }
 
           session.sendService(PayingInfoInProvinceQuery(idCard()))
-          val payInfoResult = session.getResult[PayingInfoInProvinceQuery#Item].let { result =>
-            if (result.isEmpty || result.size == 1 && result(0).year == 0) null else result
-          }
+          val payInfoResult =
+            session.getResult[PayingInfoInProvinceQuery#Item].let { result =>
+              if (result.isEmpty || result.size == 1 && result(0).year == 0)
+                null
+              else result
+            }
 
           (info, payInfoResult)
         }
@@ -305,14 +310,14 @@ class Query(args: Seq[String]) extends Command(args) {
             row("A").let { cell =>
               r match {
                 case _: PayInfoTotalRecord => cell.setBlank()
-                case _ => cell.value = currentRow - startRow
+                case _                     => cell.value = currentRow - startRow
               }
             }
 
             row("B").let { cell =>
               r match {
                 case _: PayInfoTotalRecord => cell.value = "合计"
-                case _ => cell.value = r.year
+                case _                     => cell.value = r.year
               }
             }
 
@@ -323,15 +328,14 @@ class Query(args: Seq[String]) extends Command(args) {
             row("G").value = r.governmentalPay.getOrElse(BigDecimal(0))
             row("H").value = r.communalPay.getOrElse(BigDecimal(0))
             row("I").value = r.fishmanPay.getOrElse(BigDecimal(0))
-            row("J").value =
-              r match {
-                case _: PayInfoTotalRecord => "总计"
-                case _ => r.agencies.mkString("|")
-              }
+            row("J").value = r match {
+              case _: PayInfoTotalRecord => "总计"
+              case _                     => r.agencies.mkString("|")
+            }
             row("L").let { cell =>
               r match {
                 case t: PayInfoTotalRecord => cell.value = t.total
-                case _ => cell.value = r.transferDates.mkString("|")
+                case _                     => cell.value = r.transferDates.mkString("|")
               }
             }
           }

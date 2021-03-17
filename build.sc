@@ -49,6 +49,10 @@ object yhsb extends CustomModule {
       object cert extends CustomModule {
         override def moduleDeps = Seq(yhsb)
       }
+
+      object payment extends CustomModule {
+        override def moduleDeps = Seq(yhsb)
+      }
     }
 
     object qb extends CustomModule {

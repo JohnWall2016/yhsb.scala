@@ -46,7 +46,7 @@ class JoinAudit extends Subcommand("join") with DateRange with Export {
     println(timeSpan)
 
     val result = Session.use() { session =>
-      session.sendService(JoinAuditQuery(startDate, endDate))
+      session.sendService(JoinAuditQuery(startDate, endDate, auditState = "1"))
       session.getResult[JoinAuditQuery#Item]
     }
     println(s"共计 ${result.size} 条")
@@ -101,7 +101,8 @@ class OnlineAudit extends Subcommand("online") {
   val operator = trailArg[String](
     descr = "网络经办人名称, 默认: wsjb",
     required = false,
-    default = Option("wsjb"))
+    default = Option("wsjb")
+  )
 
   override def execute(): Unit = {
     Session.use() { session =>
@@ -140,7 +141,8 @@ class OnlineAudit extends Subcommand("online") {
         .getResult[PayingPersonPauseAuditQuery#Item]
         .flatMap { item =>
           session.sendService(PayingPersonPauseAuditDetailQuery(item))
-          session.getResult[PayingPersonPauseAuditDetailQuery#Item]
+          session
+            .getResult[PayingPersonPauseAuditDetailQuery#Item]
             .headOption match {
             case Some(v) if operator_ == "" || operator_ == v.operator =>
               Some((v.operator, item))
@@ -149,10 +151,9 @@ class OnlineAudit extends Subcommand("online") {
           }
         }
         .zipWithIndex
-        .foreach {
-          case ((oper, item), i) =>
-            println(s"${(i + 1).toString.padRight(3)} ${item.name
-              .padRight(6)} ${item.idCard} ${item.opTime} $oper")
+        .foreach { case ((oper, item), i) =>
+          println(s"${(i + 1).toString.padRight(3)} ${item.name
+            .padRight(6)} ${item.idCard} ${item.opTime} $oper")
         }
 
       println(" 待遇人员暂停查询 ".bar(60, '='))
@@ -161,7 +162,8 @@ class OnlineAudit extends Subcommand("online") {
         .getResult[RetiredPersonPauseAuditQuery#Item]
         .flatMap { item =>
           session.sendService(RetiredPersonPauseAuditDetailQuery(item))
-          session.getResult[RetiredPersonPauseAuditDetailQuery#Item]
+          session
+            .getResult[RetiredPersonPauseAuditDetailQuery#Item]
             .headOption match {
             case Some(v) if operator_ == "" || operator_ == v.operator =>
               Some((v.operator, item))
@@ -170,10 +172,9 @@ class OnlineAudit extends Subcommand("online") {
           }
         }
         .zipWithIndex
-        .foreach {
-          case ((oper, item), i) =>
-            println(s"${(i + 1).toString.padRight(3)} ${item.name
-              .padRight(6)} ${item.idCard} ${item.opTime} $oper")
+        .foreach { case ((oper, item), i) =>
+          println(s"${(i + 1).toString.padRight(3)} ${item.name
+            .padRight(6)} ${item.idCard} ${item.opTime} $oper")
         }
     }
   }
