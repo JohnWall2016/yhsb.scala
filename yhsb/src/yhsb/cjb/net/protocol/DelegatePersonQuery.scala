@@ -43,6 +43,16 @@ class DelegatePersonQuery(
 }
 
 object DelegatePersonQuery {
+  def apply(
+    dfType: String,
+    /** 代发参保状态: 1 - 有效, 0 - 无效 */
+    cbState: String,
+    /** 代发发放状态: 1 - 正常发放, 2 - 暂停发放, 3 - 终止发放 */
+    dfState: String,
+    page: Int = 1,
+    pageSize: Int = 100
+  ) = new DelegatePersonQuery(dfType, cbState, dfState, page, pageSize)
+
   case class Item(
       /** 个人编号 */
       @JsonName("aac001")
@@ -76,5 +86,5 @@ object DelegatePersonQuery {
       /** 代发截至成功发放金额 */
       @JsonName("aae019jz")
       totalPayed: JBigDecimal
-  )
+  ) extends IdCardValid
 }

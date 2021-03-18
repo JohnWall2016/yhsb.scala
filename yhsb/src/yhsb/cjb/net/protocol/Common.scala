@@ -5,6 +5,7 @@ import scala.collection.mutable
 
 import yhsb.base.struct.MapField
 import yhsb.base.collection.BiMap
+import yhsb.base.util.UtilOps
 import yhsb.cjb.net
 
 class CBState extends MapField {
@@ -49,23 +50,23 @@ class JFMethod extends MapField {
 }
 
 object JBKind
-    extends BiMap(
-      "011" -> "普通参保人员",
-      "021" -> "残一级",
-      "022" -> "残二级",
-      "023" -> "残三级",
-      "031" -> "特困一级",
-      "032" -> "特困二级",
-      "033" -> "特困三级",
-      "051" -> "贫困人口一级",
-      "052" -> "贫困人口二级",
-      "053" -> "贫困人口三级",
-      "061" -> "低保对象一级",
-      "062" -> "低保对象二级",
-      "063" -> "低保对象三级",
-      "071" -> "计生特扶人员",
-      "090" -> "其他"
-    )
+  extends BiMap(
+    "011" -> "普通参保人员",
+    "021" -> "残一级",
+    "022" -> "残二级",
+    "023" -> "残三级",
+    "031" -> "特困一级",
+    "032" -> "特困二级",
+    "033" -> "特困三级",
+    "051" -> "贫困人口一级",
+    "052" -> "贫困人口二级",
+    "053" -> "贫困人口三级",
+    "061" -> "低保对象一级",
+    "062" -> "低保对象二级",
+    "063" -> "低保对象三级",
+    "071" -> "计生特扶人员",
+    "090" -> "其他"
+  )
 
 class JBKind extends MapField {
   override def valueMap = JBKind
@@ -92,6 +93,14 @@ trait JBState {
       }
     }
   }
+}
+
+trait IdCardValid {
+  val idCard: String
+    
+  def valid = idCard != null && idCard.nonEmpty
+
+  def invalid = !valid
 }
 
 trait DivisionName {
@@ -169,14 +178,13 @@ object Division {
   implicit class GroupOps[T](iter: Iterator[(String, T)]) {
     def groupByDwName(): collection.Map[String, Iterable[T]] = {
       val map = mutable.LinkedHashMap[String, mutable.ListBuffer[T]]()
-      iter.foreach {
-        case (division, data) =>
-          val dw = getDwName(division) match {
-            case Some(value) => value
-            case None        => throw new Exception(s"未匹配行政区划: $division")
-          }
-          val list = map.getOrElseUpdate(dw, mutable.ListBuffer())
-          list.addOne(data)
+      iter.foreach { case (division, data) =>
+        val dw = getDwName(division) match {
+          case Some(value) => value
+          case None        => throw new Exception(s"未匹配行政区划: $division")
+        }
+        val list = map.getOrElseUpdate(dw, mutable.ListBuffer())
+        list.addOne(data)
       }
       map
     }
@@ -185,15 +193,14 @@ object Division {
         : collection.Map[String, collection.Map[String, Iterable[T]]] = {
       val map = mutable
         .LinkedHashMap[String, mutable.Map[String, mutable.ListBuffer[T]]]()
-      iter.foreach {
-        case (division, data) =>
-          val (dw, cs) = getDwAndCsName(division) match {
-            case Some(value) => value
-            case None        => throw new Exception(s"未匹配行政区划: $division")
-          }
-          val subMap = map.getOrElseUpdate(dw, mutable.LinkedHashMap())
-          val list = subMap.getOrElseUpdate(cs, mutable.ListBuffer())
-          list.addOne(data)
+      iter.foreach { case (division, data) =>
+        val (dw, cs) = getDwAndCsName(division) match {
+          case Some(value) => value
+          case None        => throw new Exception(s"未匹配行政区划: $division")
+        }
+        val subMap = map.getOrElseUpdate(dw, mutable.LinkedHashMap())
+        val list = subMap.getOrElseUpdate(cs, mutable.ListBuffer())
+        list.addOne(data)
       }
       map
     }
@@ -220,6 +227,26 @@ class DFType extends MapField {
     case "807" => "电影放映"
     case "808" => "核工业"
   }
+}
+
+object DFType {
+  def apply(dfType: String) =
+    (new DFType).set { _.value = dfType }
+}
+
+class DFPayType extends MapField {
+  override def valueMap = {
+    case "DF0001" => "独生子女"
+    case "DF0002" => "乡村教师"
+    case "DF0003" => "乡村医生"
+    case "DF0007" => "电影放映员"
+    case "DF0008" => "核工业"
+  }
+}
+
+object DFPayType {
+  def apply(dfPayType: String) =
+    (new DFPayType).set { _.value = dfPayType }
 }
 
 class DFState extends MapField {
@@ -270,29 +297,28 @@ class PayType extends MapField {
   }
 }
 
-object Session {
-  object CeaseType extends Enumeration {
-    type CeaseType = Value
+object SessionOps {
+  implicit class CeaseInfo(session: net.Session) {
+    object CeaseType extends Enumeration {
+      type CeaseType = Value
 
-    val PayingPause = Value("缴费暂停")
-    val RetirePause = Value("待遇暂停")
-    val PayingStop = Value("缴费终止")
-    val RetiredStop = Value("待遇终止")
-  }
+      val PayingPause = Value("缴费暂停")
+      val RetirePause = Value("待遇暂停")
+      val PayingStop = Value("缴费终止")
+      val RetiredStop = Value("待遇终止")
+    }
 
-  import CeaseType._
+    import CeaseType._
 
-  case class CeaseInfo(
-      ceaseType: CeaseType,
-      reason: String,
-      yearMonth: String,
-      auditState: AuditState,
-      memo: String,
-      auditDate: Option[String],
-      bankName: Option[String] = None
-  )
-
-  implicit class Extension(session: net.Session) {
+    case class CeaseInfo(
+        ceaseType: CeaseType,
+        reason: String,
+        yearMonth: String,
+        auditState: AuditState,
+        memo: String,
+        auditDate: Option[String],
+        bankName: Option[String] = None
+    )
     def getPauseInfoByIdCard(idCard: String): Option[CeaseInfo] = {
       val rpResult = session
         .request(RetiredPersonPauseAuditQuery(idCard, "1"))
@@ -336,14 +362,14 @@ object Session {
         .request(RetiredPersonStopAuditQuery(idCard, "1"))
       if (rpResult.nonEmpty) {
         val it = rpResult.head
-        val bankName = 
+        val bankName =
           if (additionalInfo) {
             session
               .request(RetiredPersonStopAuditDetailQuery(it))
               .headOption match {
-                case Some(item) => Option(item.bankType.name)
-                case _ => None
-              }
+              case Some(item) => Option(item.bankType.name)
+              case _          => None
+            }
           } else {
             None
           }
@@ -363,17 +389,17 @@ object Session {
           .request(PayingPersonStopAuditQuery(idCard, "1"))
         if (ppResult.nonEmpty) {
           val it = ppResult.head
-          val bankName = 
-          if (additionalInfo) {
-            session
-              .request(PayingPersonStopAuditDetailQuery(it))
-              .headOption match {
+          val bankName =
+            if (additionalInfo) {
+              session
+                .request(PayingPersonStopAuditDetailQuery(it))
+                .headOption match {
                 case Some(item) => Option(item.bankType.name)
-                case _ => None
+                case _          => None
               }
-          } else {
-            None
-          }
+            } else {
+              None
+            }
           return Some(
             CeaseInfo(
               PayingStop,

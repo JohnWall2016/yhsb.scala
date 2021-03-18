@@ -8,6 +8,8 @@ abstract class MapField {
 
   def value = _value
 
+  private[yhsb] def value_=(v: String) = _value = v
+
   def name = {
     if (valueMap.isDefinedAt(value)) {
       valueMap(value)

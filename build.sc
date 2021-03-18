@@ -53,6 +53,10 @@ object yhsb extends CustomModule {
       object payment extends CustomModule {
         override def moduleDeps = Seq(yhsb)
       }
+
+      object delegate extends CustomModule {
+        override def moduleDeps = Seq(yhsb)
+      }
     }
 
     object qb extends CustomModule {

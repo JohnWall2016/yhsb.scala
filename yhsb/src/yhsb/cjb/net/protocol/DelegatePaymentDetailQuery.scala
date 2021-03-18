@@ -17,10 +17,15 @@ class DelegatePaymentDetailQuery(
   /** 支付单号 */
   @JsonName("aaz031")
   val payList_ = s"$payList"
-
 }
 
 object DelegatePaymentDetailQuery {
+  def apply(
+    payList: Int,
+    page: Int = 1,
+    pageSize: Int = 500
+  ) = new DelegatePaymentDetailQuery(payList, page, pageSize)
+
   case class Item(
       /** 个人编号 */
       @JsonName("aac001")

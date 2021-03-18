@@ -27,7 +27,6 @@ class DelegatePaymentPersonalDetailQuery(
   /** 支付单号 */
   @JsonName("aaz220")
   val personalPayList_ = s"$personalPayList"
-
 }
 
 object DelegatePaymentPersonalDetailQuery {

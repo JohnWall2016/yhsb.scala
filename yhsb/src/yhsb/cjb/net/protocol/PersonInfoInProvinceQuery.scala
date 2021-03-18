@@ -1,8 +1,8 @@
 package yhsb.cjb.net.protocol
 
 /**
-  * 省内参保信息查询
-  */
+ * 省内参保信息查询
+ */
 case class PersonInfoInProvinceQuery(
     @JsonName("aac002") idCard: String
 ) extends Request[PersonInfoInProvinceQuery.Item]("executeSncbxxConQ")
@@ -23,12 +23,7 @@ object PersonInfoInProvinceQuery {
       @JsonName("aaf102") czName: String
       //@JsonName("aaf103") csName: String
   ) extends Jsonable
-      with JBState
-      with DivisionName {
-    
-    def valid = idCard != null && idCard.nonEmpty
-
-    def invalid = !valid
-  }
+       with JBState
+       with DivisionName
+       with IdCardValid
 }
-

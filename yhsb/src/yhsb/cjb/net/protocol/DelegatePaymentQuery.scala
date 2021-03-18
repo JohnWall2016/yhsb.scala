@@ -5,16 +5,16 @@ package cjb.net.protocol
  * 代发支付单查询
  */
 class DelegatePaymentQuery(
-    dfType: String,
+    dfPayType: String,
     yearMonth: String,
     state: String = "0"
 ) extends PageRequest[DelegatePaymentQuery.Item](
       "dfpayffzfdjQuery"
     ) {
 
-  /** 代发类型 */
+  /** 代发支付类型 */
   @JsonName("aaa121")
-  val dfType_ = dfType
+  val dfPayType_ = dfPayType
 
   /** 支付单号 */
   @JsonName("aaz031")
@@ -29,6 +29,12 @@ class DelegatePaymentQuery(
 }
 
 object DelegatePaymentQuery {
+  def apply(
+    dfPayType: String,
+    yearMonth: String,
+    state: String = "0"
+  ) = new DelegatePaymentQuery(dfPayType, yearMonth, state)
+
   case class Item(
       /** 业务类型中文名 */
       @JsonName("aaa121")

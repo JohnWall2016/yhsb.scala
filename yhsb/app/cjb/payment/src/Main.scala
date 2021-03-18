@@ -7,7 +7,7 @@ import yhsb.base.text.Strings.StringOps
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.PaymentQuery
 import yhsb.cjb.net.protocol.PaymentPersonalDetailQuery
-import yhsb.cjb.net.protocol.Session.Extension
+import yhsb.cjb.net.protocol.SessionOps.CeaseInfo
 
 class Payment(args: Seq[String]) extends Command(args) {
   banner("财务支付单生成程序")
