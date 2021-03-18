@@ -5,8 +5,8 @@ import yhsb.base.io.AutoClose.use
 
 class HttpRequest(
     val path: String,
-    val method: String = "GET",
-    val charset: String = "UTF-8"
+    val method: String,
+    val charset: String
 ) {
   private val header = new HttpHeader()
   private val body = new ByteArrayOutputStream(512)

@@ -8,16 +8,44 @@ import java.io.InputStream
 import java.io.OutputStream
 import yhsb.base.net.HttpRequest
 import java.io.Closeable
+import java.net.URL
+import java.net.InetAddress
+import yhsb.base.util._
+import java.util.zip.GZIPInputStream
+import java.io.ByteArrayInputStream
+import scala.io.Source
 
-class HttpSocket(
-    val host: String,
+class HttpSocket private (
+    val ip: String,
     val port: Int,
-    val charset: String = "UTF-8"
+    val host: String,
+    val charset: String
 ) extends Closeable {
 
-  val url = s"$host:$port"
+  def this(ip: String, port: Int, charset: String) =
+    this(ip, port, s"$ip:$port", charset)
 
-  private val socket = new Socket(host, port)
+  def this(url: URL, charset: String) = this(
+    InetAddress.getByName(url.getHost).getHostAddress(),
+    url.getPort.let {
+      _ match {
+        case -1   => url.getDefaultPort()
+        case port => port
+      }
+    },
+    url.getHost.let { host =>
+      url.getPort match {
+        case -1   => host
+        case port => s"$host:$port"
+      }
+    },
+    charset
+  )
+
+  def this(url: String, charset: String) =
+    this(new URL(url), charset)
+
+  private val socket = new Socket(ip, port)
   private val input = socket.getInputStream
   private val output = socket.getOutputStream
 
@@ -82,7 +110,7 @@ class HttpSocket(
   def readBody(header: HttpHeader = null): String = {
     val header_ = if (header == null) readHeader() else header
     use(new ByteArrayOutputStream(512)) { buf =>
-      if (header_.get("Transfer-Encoding").exists(_.exists(_ == "chunked"))) {
+      if ("chunked" in header_.get("Transfer-Encoding")) {
         var continue = true
         while (continue) {
           val len = Integer.parseInt(readLine(), 16)
@@ -102,14 +130,25 @@ class HttpSocket(
       } else {
         throw new NotImplementedError("unsupported transfer mode")
       }
-      buf.toString(charset)
+      if ("gzip" in header_.get("Content-Encoding")) {
+        Source
+          .fromInputStream(
+            new GZIPInputStream(
+              new ByteArrayInputStream(buf.toByteArray())
+            ),
+            charset
+          )
+          .mkString
+      } else {
+        buf.toString(charset)
+      }
     }
   }
 
   def getHttp(path: String): String = {
-    val request = new HttpRequest(path, "GET")
+    val request = new HttpRequest(path, "GET", "UTF-8")
     request
-      .addHeader("Host", url)
+      .addHeader("Host", host)
       .addHeader("Connection", "keep-alive")
       .addHeader("Cache-Control", "max-age=0")
       .addHeader("Upgrade-Insecure-Requests", "1")

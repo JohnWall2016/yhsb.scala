@@ -11,5 +11,9 @@ package object util {
       f(t)
       t
     }
+
+    def in(iter: Iterable[T]) = iter.exists(_ == t)
+
+    def in(iter: Option[Iterable[T]]) = iter.exists(_.exists(_ == t))
   }
 }

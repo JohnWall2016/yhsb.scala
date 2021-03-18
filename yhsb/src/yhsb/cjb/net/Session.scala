@@ -11,20 +11,20 @@ import yhsb.base.util.Config
 import yhsb.cjb.net.protocol._
 
 class Session(
-    host: String,
+    ip: String,
     port: Int,
     private val userID: String,
     private val password: String
-) extends HttpSocket(host, port) {
+) extends HttpSocket(ip, port, "UTF-8") {
   private val cookies = mutable.Map[String, String]()
 
   def createRequest: HttpRequest = {
-    val request = new HttpRequest("/hncjb/reports/crud", "POST")
+    val request = new HttpRequest("/hncjb/reports/crud", "POST", charset)
     request
-      .addHeader("Host", url)
+      .addHeader("Host", host)
       .addHeader("Connection", "keep-alive")
       .addHeader("Accept", "application/json, text/javascript, */*; q=0.01")
-      .addHeader("Origin", s"http://$url")
+      .addHeader("Origin", s"http://$host")
       .addHeader("X-Requested-With", "XMLHttpRequest")
       .addHeader(
         "User-Agent",
@@ -33,7 +33,7 @@ class Session(
           "Chrome/39.0.2171.95 Safari/537.36"
       )
       .addHeader("Content-Type", "multipart/form-data;charset=UTF-8")
-      .addHeader("Referer", s"http://$url/hncjb/pages/html/index.html")
+      .addHeader("Referer", s"http://$host/hncjb/pages/html/index.html")
       .addHeader("Accept-Encoding", "gzip, deflate")
       .addHeader("Accept-Language", "zh-CN,zh;q=0.8")
     if (cookies.nonEmpty) {
