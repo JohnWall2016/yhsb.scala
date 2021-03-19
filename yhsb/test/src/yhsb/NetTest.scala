@@ -34,7 +34,6 @@ object NetTest extends TestSuite {
             )
             .addHeader("Accept-Encoding", "gzip,deflate")
             .addHeader("Accept-Language", "zh-CN,zh;q=09")
-          request.addBody("loginUser=rz_xtyh&inputPwd=&password=%7Bmd5%7D47BE05807B3B68EB58B3CD07B5C65CDC&verifycode=3571")
           sock.write(request.getBytes)
           val header = sock.readHeader()
           println(header)
