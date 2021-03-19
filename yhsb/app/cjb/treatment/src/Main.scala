@@ -14,6 +14,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import yhsb.cjb.net.protocol.BankInfoQuery
 import yhsb.base.text.Strings.StringOps
+import yhsb.cjb.net.protocol.PaymentQuery
+import yhsb.cjb.net.protocol.PaymentPersonalDetailQuery
+import java.text.Collator
+import java.util.Locale
 
 object Main {
   def main(args: Array[String]): Unit = new Treatment(args).runCommand()
@@ -23,6 +27,7 @@ class Treatment(args: Seq[String]) extends Command(args) {
   banner("信息核对报告表和养老金计算表生成程序")
   addSubCommand(new Download)
   addSubCommand(new Split)
+  addSubCommand(new PayFailedList)
 }
 
 trait ReportDate { _: ScallopConf =>
@@ -231,6 +236,60 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
     }
     if (result.isEmpty || !success) {
       throw new Exception("未查到该人员核定数据")
+    }
+  }
+}
+
+class PayFailedList extends Subcommand("failList") {
+  descr("从业务系统下载支付失败人员名单")
+
+  val yearMonth = trailArg[String](
+    descr = "支付年月, 格式: YYYYMM, 例如: 202101"
+  )
+
+  val outputDir = """D:\待遇核定"""
+  val template = "待遇支付失败人员名单模板.xls"
+
+  override def execute(): Unit = {
+    val (year, month, _) = Formatter.splitDate(yearMonth())
+
+    val items = Session.use() { session =>
+      session
+        .request(PaymentQuery(yearMonth(), state = "0"))
+        .filter(_.objectType == "1")
+        .flatMap(it => session.request(PaymentPersonalDetailQuery(it)))
+        .filter(_.idCard.nonNullOrEmpty)
+        .sortWith( (e1, e2) =>
+          Collator
+            .getInstance(Locale.CHINESE)
+            .compare(e1.csName, e2.csName) < 0
+        )
+    }
+    if (items.nonEmpty) {
+      val workbook = Excel.load(outputDir / template)
+      val sheet = workbook.getSheetAt(0)
+      val startRow = 1
+      var currentRow = startRow
+      
+      println("开始导出数据")
+
+      items.zipWithIndex.foreach { case (item, index) =>
+        println(s"${index + 1} ${item.name.padRight(6)} ${item.idCard} ${item.csName}")
+        val row = sheet.getOrCopyRow(currentRow, startRow)
+        currentRow += 1
+        row("A").value = item.csName
+        row("B").value = item.name
+        row("C").value = item.idCard
+      }
+
+      val path = outputDir /
+        s"${year}年${month.stripPrefix("0")}月待遇支付失败人员名单${Formatter.formatDate()}.xls"
+
+      println(s"\n保存: $path")
+
+      workbook.save(path)
+
+      println("结束导出数据")
     }
   }
 }

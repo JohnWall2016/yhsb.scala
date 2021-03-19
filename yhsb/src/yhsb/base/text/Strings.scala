@@ -103,5 +103,9 @@ object Strings {
       for (_ <- 1 to t) b.append(s)
       b.toString
     }
+
+    def isNullOrEmpty = if (s == null || s.isEmpty()) true else false
+
+    def nonNullOrEmpty = !isNullOrEmpty
   }
 }
