@@ -15,7 +15,6 @@ trait CustomModule extends ScalaModule {
 }
 
 object yhsb extends CustomModule {
-
   override def ivyDeps =
     Agg(
       ivy"org.apache.poi:poi:4.1.2",
@@ -27,52 +26,28 @@ object yhsb extends CustomModule {
       ivy"com.google.code.gson:gson:2.8.6",
       ivy"com.typesafe:config:1.4.0"
     )
+    
+  trait YhsbModule extends CustomModule {
+    override def moduleDeps = Seq(yhsb)
+  }
 
   object app extends CustomModule {
     object cjb extends CustomModule {
-      object fullcover extends CustomModule {
-        override def moduleDeps = Seq(yhsb)
-      }
-
-      object audit extends CustomModule {
-        override def moduleDeps = Seq(yhsb)
-      }
-
-      object query extends CustomModule {
-        override def moduleDeps = Seq(yhsb)
-      }
-
-      object dataverify extends CustomModule {
-        override def moduleDeps = Seq(yhsb)
-      }
-
-      object cert extends CustomModule {
-        override def moduleDeps = Seq(yhsb)
-      }
-
-      object payment extends CustomModule {
-        override def moduleDeps = Seq(yhsb)
-      }
-
-      object delegate extends CustomModule {
-        override def moduleDeps = Seq(yhsb)
-      }
+      object fullcover extends YhsbModule
+      object audit extends YhsbModule
+      object query extends YhsbModule
+      object dataverify extends YhsbModule
+      object cert extends YhsbModule
+      object payment extends YhsbModule
+      object delegate extends YhsbModule
+      object treatment extends YhsbModule
     }
-
     object qb extends CustomModule {
-      object spancalc extends CustomModule {
-        override def moduleDeps = Seq(yhsb)
-      }
-
-      object landacq extends CustomModule {
-        override def moduleDeps = Seq(yhsb)
-      }
+      object spancalc extends YhsbModule
+      object landacq extends YhsbModule
     }
-
     object jgb extends CustomModule {
-      object clearpilot extends CustomModule {
-        override def moduleDeps = Seq(yhsb)
-      }
+      object clearpilot extends YhsbModule
     }
   }
 
