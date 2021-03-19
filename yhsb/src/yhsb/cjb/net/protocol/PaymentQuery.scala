@@ -9,10 +9,10 @@ class PaymentQuery(yearMonth: String, state: String = "0")
     "cwzfglQuery",
     1,
     100,
-    totalOpts = Map(
+    totalOptions = Map(
       "dataKey" -> "aae169",
       "aggregate" -> "sum"
-    ).asJava
+    )
   ) {
 
   /** 支付类型 */

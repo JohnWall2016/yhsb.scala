@@ -14,23 +14,24 @@ class PageRequest[T : ClassTag](
     id: String,
     val page: Int = 1,
     @JsonName("pagesize") val pageSize: Int = 15,
-    sortOpts : ju.Map[String, String] = null,
-    totalOpts: ju.Map[String, String] = null,
-    filterOpts: ju.Map[String, String] = null,
+    sortOptions : Map[String, String] = null,
+    totalOptions: Map[String, String] = null,
+    filterOptions: Map[String, String] = null,
 ) extends Request(id) {
-  val filtering = ju.List.of[AnyRef]()
-  
-  val sorting = if (sortOpts == null) {
-    ju.List.of[AnyRef]()
-  } else {
-    ju.List.of(sortOpts)
+  def initOptions(options: Map[String, String]) = {
+    import scala.jdk.CollectionConverters._
+    if (options == null) {
+      ju.List.of()
+    } else {
+      ju.List.of(options.asJava)
+    }
   }
+
+  val filtering = initOptions(filterOptions)
   
-  val totals = if (totalOpts == null) {
-    ju.List.of[AnyRef]()
-  } else {
-    ju.List.of(totalOpts)
-  }
+  val sorting = initOptions(sortOptions)
+  
+  val totals = initOptions(totalOptions)
 }
 
 class JsonService[T <: Request[_]](

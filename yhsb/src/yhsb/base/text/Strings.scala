@@ -1,6 +1,7 @@
 package yhsb.base.text
 
 import yhsb.base.text.Strings.PadMode.PadMode
+import scala.util.matching.Regex
 
 object Strings {
   case class CharRange(start: Char, end: Char) {
@@ -90,6 +91,17 @@ object Strings {
       } else {
         s + insert
       }
+    }
+
+    def replace(
+      re: Regex,
+      replacement: String
+    ) = re.replaceAllIn(s, replacement)
+
+    def times(t: Int) = {
+      val b = new StringBuilder()
+      for (_ <- 1 to t) b.append(s)
+      b.toString
     }
   }
 }

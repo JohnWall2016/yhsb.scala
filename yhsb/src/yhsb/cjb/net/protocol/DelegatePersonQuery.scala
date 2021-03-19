@@ -1,8 +1,6 @@
 package yhsb
 package cjb.net.protocol
 
-import scala.jdk.CollectionConverters._
-
 /**
  * 代发人员名单查询
  */
@@ -18,10 +16,10 @@ class DelegatePersonQuery(
       "executeDfrymdQuery",
       page,
       pageSize,
-      sortOpts = Map(
+      sortOptions = Map(
         "dataKey" -> "aaf103",
         "sortDirection" -> "ascending"
-      ).asJava
+      )
     ) {
   val aaf013 = ""
   val aaf030 = ""

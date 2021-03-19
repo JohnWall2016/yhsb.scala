@@ -29,8 +29,8 @@ class Cert(args: Seq[String]) extends Command(args) {
 
         println(s"生成数据分组")
         val groups = (for (index <- (startRow() - 1) until endRow())
-          yield (sheet.getRow(index)(DivisionRow()).value, index)).iterator
-          .groupByDwAndCsName()
+          yield (sheet.getRow(index)(DivisionRow()).value, index))
+            .groupByDwAndCsName()
 
         var total = 0
         println(s"导出数据到: ${outputDir()}")

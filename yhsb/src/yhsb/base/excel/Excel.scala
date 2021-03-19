@@ -50,14 +50,22 @@ object Excel {
   def load(path: Path): Workbook = load(path.toString, Auto)
 
   implicit class WorkbookOps(val book: Workbook) extends AnyVal {
-    def save(fileName: String) {
-      use(Files.newOutputStream(Paths.get(fileName))) { out =>
+    def save(fileName: String): Unit = save(Paths.get(fileName))
+
+    def save(file: Path): Unit = {
+      use(Files.newOutputStream(file)) { out =>
         book.write(out)
       }
     }
-    def save(file: Path) {
-      use(Files.newOutputStream(file)) { out =>
-        book.write(out)
+
+    def saveIf(condition: => Boolean)(
+      path: Path, ifTrue: String => Unit, ifFalse: String => Unit
+    ) = {
+      if (condition) {
+        book.save(path)
+        ifTrue(path.toString)
+      } else {
+        ifFalse(path.toString)
       }
     }
   }

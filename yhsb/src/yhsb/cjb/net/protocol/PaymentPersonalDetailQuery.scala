@@ -1,8 +1,6 @@
 package yhsb
 package cjb.net.protocol
 
-import scala.jdk.CollectionConverters._
-
 /** 财务支付管理查询_支付单人员明细 */
 class PaymentPersonalDetailQuery(
     payList: String = "",
@@ -13,10 +11,10 @@ class PaymentPersonalDetailQuery(
       "cwzfgl_zfdryQuery",
       1,
       1000,
-      totalOpts = Map(
+      totalOptions = Map(
         "dataKey" -> "aae019",
         "aggregate" -> "sum"
-      ).asJava
+      )
     ) {
 
   val aaf015 = ""

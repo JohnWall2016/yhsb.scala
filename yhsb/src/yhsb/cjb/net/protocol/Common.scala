@@ -175,7 +175,7 @@ object Division {
     None
   }
 
-  implicit class GroupOps[T](iter: Iterator[(String, T)]) {
+  implicit class GroupOps[T](iter: Iterable[(String, T)]) {
     def groupByDwName(): collection.Map[String, Iterable[T]] = {
       val map = mutable.LinkedHashMap[String, mutable.ListBuffer[T]]()
       iter.foreach { case (division, data) =>

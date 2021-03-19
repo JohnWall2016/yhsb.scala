@@ -45,4 +45,6 @@ object PathOps {
     def /(rest: String) = path.resolve(rest)
     def /(rest: Path) = path.resolve(rest)
   }
+
+  implicit def toPath(path: String) = Paths.get(path)
 }

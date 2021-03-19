@@ -7,8 +7,11 @@ import yhsb.base.io.AutoClose
 import yhsb.base.json.Jsonable
 import yhsb.base.net.HttpRequest
 import yhsb.base.net.HttpSocket
-import yhsb.base.util.Config
 import yhsb.cjb.net.protocol._
+
+object Config {
+  val cjbSession = yhsb.base.util.Config.load("cjb.session")
+}
 
 class Session(
     ip: String,
@@ -108,12 +111,11 @@ object Session {
   def use[T](user: String = "002", autoLogin: Boolean = true)(
       f: Session => T
   ): T = {
-    val config = Config.load("cjb.session")
-    val usr = config.getConfig(s"users.$user")
+    val usr = Config.cjbSession.getConfig(s"users.$user")
     AutoClose.use(
       new Session(
-        config.getString("host"),
-        config.getInt("port"),
+        Config.cjbSession.getString("host"),
+        Config.cjbSession.getInt("port"),
         usr.getString("id"),
         usr.getString("pwd")
       )

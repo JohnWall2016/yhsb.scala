@@ -29,7 +29,7 @@ object JsonTest extends TestSuite {
         val req = new PageRequest(
           "reqid",
           pageSize = 16,
-          sortOpts = ju.Map.of("abc001", "asc", "abc002", "dsc")
+          sortOptions = Map("abc001" -> "asc", "abc002" -> "dsc")
         )
         println(req.toString())
       }
