@@ -55,16 +55,12 @@ case class Month(year: Int, month: Int) {
   override def toString = f"$year%04d$month%02d"
 }
 
-object Month {
+object Month extends Ordering[Month] {
   def from(m: Int): Month = Month(m / 100, m % 100)
-}
 
-object MonthOrdering extends Ordering[Month] {
   override def compare(x: Month, y: Month): Int =
     (x.year * 12 + x.month) - (y.year * 12 + y.month)
 }
-
-import MonthOrdering.mkOrderingOps
 
 case class MonthRange(start: Month, end: Month) {
   if (start > end) throw new IllegalArgumentException("start must be <= end")
