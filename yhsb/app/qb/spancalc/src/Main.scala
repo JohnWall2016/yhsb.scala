@@ -4,8 +4,8 @@ import yhsb.base.command.InputFile
 import yhsb.base.excel.Excel
 import yhsb.base.command.SheetIndex
 import yhsb.base.excel.Excel._
-import yhsb.base.datetime.Month
-import yhsb.base.datetime.MonthRange
+import yhsb.base.datetime.YearMonth
+import yhsb.base.datetime.YearMonthRange
 import yhsb.base.text.Strings.StringOps
 
 class Conf(args: Seq[String])
@@ -31,7 +31,7 @@ object Main {
 
         println(s"${index + 1} $name $idCard")
 
-        val birthDay = Month.from(idCard.substring(6, 12).toInt)
+        val birthDay = YearMonth.from(idCard.substring(6, 12).toInt)
         val totalMonths = row.getCell("H").getNumericCellValue.toInt
         val bonusMonths = row.getCell("I").getNumericCellValue.toInt
 
@@ -43,23 +43,23 @@ object Main {
             case None => None
             case Some(m) =>
               Some(if (m.group(3) == null) {
-                MonthRange(
-                  Month.from(m.group(1).toInt),
-                  Month.from(m.group(1).toInt)
+                YearMonthRange(
+                  YearMonth.from(m.group(1).toInt),
+                  YearMonth.from(m.group(1).toInt)
                 )
               } else {
-                MonthRange(
-                  Month.from(m.group(1).toInt),
-                  Month.from(m.group(3).toInt)
+                YearMonthRange(
+                  YearMonth.from(m.group(1).toInt),
+                  YearMonth.from(m.group(3).toInt)
                 )
               })
           }
         }
 
-        val startMonth = birthDay.offset(16 * 12 + 1).max(Month(2005, 8))
-        val endMonth = Month(2020, 7)
+        val startMonth = birthDay.offset(16 * 12 + 1).max(YearMonth(2005, 8))
+        val endMonth = YearMonth(2020, 7)
 
-        val validBound = MonthRange(startMonth, endMonth)
+        val validBound = YearMonthRange(startMonth, endMonth)
         println(s"可以缴费年限: $validBound")
 
         println(s"已经缴费年限: ${boughtSpans.mkString(" | ")}")

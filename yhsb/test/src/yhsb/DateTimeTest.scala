@@ -1,26 +1,24 @@
 package yhsb
 
 import utest.{TestSuite, Tests, test}
-import yhsb.base.datetime.{Month, MonthRange}
+import yhsb.base.datetime.{YearMonth, YearMonthRange}
 
 object DateTimeTest extends TestSuite {
   def tests =
     Tests {
       test("month") {
-        import yhsb.base.datetime.MonthOrdering.mkOrderingOps
-
-        val birthDay = Month(1990, 12) //??
+        val birthDay = YearMonth(1990, 12) //??
         val boughtSpans = Seq( //??
-          MonthRange(Month(2008, 1), Month(2009, 9)),
-          MonthRange(Month(2010, 2), Month(2010, 4))
+          YearMonthRange(YearMonth(2008, 1), YearMonth(2009, 9)),
+          YearMonthRange(YearMonth(2010, 2), YearMonth(2010, 4))
         )
         val totalMonths = 180 //??
         val bonusMonths = 48 //??
 
-        val startMonth = birthDay.offset(16 * 12 + 1).max(Month(2005, 8)) //?
-        val endMonth = Month(2020, 7) //?
+        val startMonth = birthDay.offset(16 * 12 + 1).max(YearMonth(2005, 8)) //?
+        val endMonth = YearMonth(2020, 7) //?
 
-        val validBound = MonthRange(startMonth, endMonth)
+        val validBound = YearMonthRange(startMonth, endMonth)
         println(s"可以缴费年限: $validBound")
 
         println(s"已经缴费年限: ${boughtSpans.mkString(" | ")}")
