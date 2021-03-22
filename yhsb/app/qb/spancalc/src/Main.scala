@@ -6,7 +6,6 @@ import yhsb.base.command.SheetIndex
 import yhsb.base.excel.Excel._
 import yhsb.base.datetime.Month
 import yhsb.base.datetime.MonthRange
-import yhsb.base.datetime.MonthOrdering.mkOrderingOps
 import yhsb.base.text.Strings.StringOps
 
 class Conf(args: Seq[String])
