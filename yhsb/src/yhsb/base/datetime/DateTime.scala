@@ -37,11 +37,13 @@ object Formatter {
     }
 }
 
-case class Month(year: Int, month: Int) {
-  if (month < 1 || month > 12)
-    throw new IllegalArgumentException("month must be >= 1 and <= 12")
-
-  def offset(months: Int): Month = {
+case class YearMonth(year: Int, month: Int) {
+  require(
+    year > 0 && (month < 1 || month > 12),
+    "year must be greater than 0 and month must be between 1 and 12."
+  )
+  
+  def offset(months: Int): YearMonth = {
     val ms = month + months
     var y = ms / 12
     var m = ms % 12
@@ -49,50 +51,50 @@ case class Month(year: Int, month: Int) {
       y -= 1
       m += 12
     }
-    Month(year + y, m)
+    YearMonth(year + y, m)
   }
 
   override def toString = f"$year%04d$month%02d"
 }
 
-object Month extends Ordering[Month] {
-  def from(m: Int): Month = Month(m / 100, m % 100)
+object YearMonth extends Ordering[YearMonth] {
+  def from(m: Int): YearMonth = YearMonth(m / 100, m % 100)
 
-  override def compare(x: Month, y: Month): Int =
+  override def compare(x: YearMonth, y: YearMonth): Int =
     (x.year * 12 + x.month) - (y.year * 12 + y.month)
 }
 
-case class MonthRange(start: Month, end: Month) {
-  if (start > end) throw new IllegalArgumentException("start must be <= end")
+case class YearMonthRange(start: YearMonth, end: YearMonth) {
+  require(start > end, "start must be less than or equal to end")
 
-  def -(that: MonthRange): Seq[MonthRange] = {
+  def -(that: YearMonthRange): Seq[YearMonthRange] = {
     if (that.end < this.start || this.end < that.start) {
       Seq(this)
     } else if (that.start <= this.start) {
       if (that.end < this.end) {
-        Seq(MonthRange(that.end.offset(1), this.end))
+        Seq(YearMonthRange(that.end.offset(1), this.end))
       } else {
         Seq()
       }
     } else { // that.start > this.start
       if (that.end < this.end) {
         Seq(
-          MonthRange(this.start, that.start.offset(-1)),
-          MonthRange(that.end.offset(1), this.end)
+          YearMonthRange(this.start, that.start.offset(-1)),
+          YearMonthRange(that.end.offset(1), this.end)
         )
       } else {
-        Seq(MonthRange(this.start, that.start.offset(-1)))
+        Seq(YearMonthRange(this.start, that.start.offset(-1)))
       }
     }
   }
 
-  def --(those: Seq[MonthRange]): Seq[MonthRange] =
+  def --(those: Seq[YearMonthRange]): Seq[YearMonthRange] =
     sub(mutable.ListBuffer(this), those)
 
   private def sub(
-      these: mutable.ListBuffer[MonthRange],
-      those: Seq[MonthRange]
-  ): Seq[MonthRange] = {
+      these: mutable.ListBuffer[YearMonthRange],
+      those: Seq[YearMonthRange]
+  ): Seq[YearMonthRange] = {
     those.foreach { that =>
       these.flatMapInPlace(_ - that)
     }
@@ -106,17 +108,17 @@ case class MonthRange(start: Month, end: Month) {
   override def toString = s"$start-$end"
 }
 
-object MonthRange {
-  implicit class MonthRangeSeq(val seq: Seq[MonthRange]) extends AnyVal {
+object YearMonthRange {
+  implicit class MonthRangeSeq(val seq: Seq[YearMonthRange]) extends AnyVal {
     def months = seq.foldLeft(0)(_ + _.months)
 
-    def offset(months: Int): Seq[MonthRange] = {
+    def offset(months: Int): Seq[YearMonthRange] = {
       seq match {
         case Nil => Seq()
         case head :: next =>
           val mths = head.months
           if (mths > months) {
-            MonthRange(head.start.offset(months), head.end) :: next
+            YearMonthRange(head.start.offset(months), head.end) :: next
           } else if (mths == months) {
             next
           } else {
@@ -125,15 +127,15 @@ object MonthRange {
       }
     }
 
-    def split(months: Int): (Seq[MonthRange], Seq[MonthRange]) = {
+    def split(months: Int): (Seq[YearMonthRange], Seq[YearMonthRange]) = {
       seq match {
         case Nil => (Seq(), Seq())
         case head :: next =>
           val mths = head.months
           if (mths > months) {
             (
-              MonthRange(head.start, head.start.offset(months - 1)) :: Nil,
-              MonthRange(head.start.offset(months), head.end) :: next
+              YearMonthRange(head.start, head.start.offset(months - 1)) :: Nil,
+              YearMonthRange(head.start.offset(months), head.end) :: next
             )
           } else if (mths == months) {
             (head :: Nil, next)
