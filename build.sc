@@ -4,6 +4,8 @@ import coursier.maven.MavenRepository
 trait CustomModule extends ScalaModule {
   def scalaVersion = "2.13.3"
 
+  def scalacOptions = Seq("-deprecation")
+
   override def repositoriesTask =
     T.task {
       super.repositoriesTask() ++ Seq(

@@ -14,7 +14,7 @@ class HttpHeader extends Iterable[(String, String)] {
 
   def apply(key: String): Iterable[String] = header(key)
 
-  def add(key: String, value: String) {
+  def add(key: String, value: String) = {
     val k = key.toLowerCase()
     if (!header.contains(k)) {
       header(k) = mutable.ListBuffer()
@@ -24,7 +24,7 @@ class HttpHeader extends Iterable[(String, String)] {
 
   def get(key: String): Option[Iterable[String]] = header.get(key.toLowerCase())
 
-  def addAll(other: HttpHeader) {
+  def addAll(other: HttpHeader) = {
     for ((k, v) <- other) {
       add(k, v)
     }

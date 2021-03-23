@@ -103,7 +103,7 @@ class HttpSocket private (
     header
   }
 
-  private def transfer(to: OutputStream, len: Int) {
+  private def transfer(to: OutputStream, len: Int) = {
     to.write(input.readNBytes(len))
   }
 

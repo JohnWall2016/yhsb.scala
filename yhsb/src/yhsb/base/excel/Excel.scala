@@ -166,7 +166,7 @@ object Excel {
         count: Int,
         sourceRowIndex: Int,
         clearValue: Boolean = false
-    ) {
+    ) = {
       sheet.shiftRows(startRowIndex, sheet.getLastRowNum, count, true, false)
       for (i <- 0 until count) {
         createRow(startRowIndex + i, sourceRowIndex, clearValue)
@@ -267,24 +267,24 @@ object Excel {
       getString(cell.getCellType)
     }
 
-    def value_=(v: String) {
+    def value_=(v: String): Unit = {
       if (cell == null) return
       if (v != null) cell.setCellValue(v)
       else cell.setBlank()
     }
 
-    def value_=(v: Double) {
+    def value_=(v: Double): Unit = {
       if (cell == null) return
       cell.setCellValue(v)
     }
 
-    def value_=(v: BigDecimal) {
+    def value_=(v: BigDecimal): Unit = {
       if (cell == null) return
       if (v != null) cell.setCellValue(v.toDouble)
       else cell.setBlank()
     }
 
-    def value_=(v: Int) {
+    def value_=(v: Int): Unit = {
       if (cell == null) return
       cell.setCellValue(v.toDouble)
     }
