@@ -3,6 +3,7 @@ import scala.collection.mutable
 import yhsb.base.command._
 import yhsb.base.excel.Excel._
 import yhsb.base.io.File._
+import yhsb.base.io.Path._
 import yhsb.base.text.String.StringOps
 import java.nio.file.Files
 import java.nio.file.Path
@@ -39,7 +40,7 @@ class ClearPilot(args: collection.Seq[String]) extends Command(args) {
       }
 
       val outputDir = trimExtension(inputFile())
-      Files.createDirectory(Path.of(outputDir))
+      Files.createDirectory(outputDir)
 
       val code = sheet.getCell("C3").value
       val name = sheet.getCell("G3").value
@@ -100,7 +101,7 @@ class ClearPilot(args: collection.Seq[String]) extends Command(args) {
             s"""SUM(J5:J$index)"""
           )
 
-        outWorkbook.save(Path.of(outputDir, fileName))
+        outWorkbook.save(outputDir / fileName)
       }
     }
   }
@@ -110,7 +111,7 @@ class ClearPilot(args: collection.Seq[String]) extends Command(args) {
 
     def execute() = {
       val outputDir = inputDir().insertBeforeLast("(新表)")
-      Files.createDirectory(Path.of(outputDir))
+      Files.createDirectory(outputDir)
 
       val inputFiles = listFiles(new File(inputDir()), """.*确认表.*\.xls""")
 
@@ -184,7 +185,7 @@ class ClearPilot(args: collection.Seq[String]) extends Command(args) {
           }
         }
         outWorkbook.save(
-          Path.of(outputDir, s"试点期间参保人员缴费确认表_${code}_$name.xls")
+          outputDir / s"试点期间参保人员缴费确认表_${code}_$name.xls"
         )
       }
     }

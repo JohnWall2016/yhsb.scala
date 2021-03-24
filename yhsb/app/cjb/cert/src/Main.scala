@@ -33,11 +33,11 @@ class Cert(args: collection.Seq[String]) extends Command(args) {
 
         var total = 0
         println(s"导出数据到: ${outputDir()}")
-        createDir(Path.of(outputDir()))
+        createDir(outputDir())
         for ((dw, groups) <- groups) {
           println(s"\n${(dw + ":").padRight(11)}   ${groups.size}")
           total += groups.size
-          createDir(Path.of(outputDir(), dw))
+          createDir(outputDir() / dw)
 
           for ((cs, indexes) <- groups) {
             println(s"  ${(cs + ":").padRight(11)} ${indexes.size}")
