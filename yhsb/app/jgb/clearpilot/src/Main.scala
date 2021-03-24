@@ -6,7 +6,6 @@ import yhsb.base.io.File._
 import yhsb.base.io.Path._
 import yhsb.base.text.String.StringOps
 import java.nio.file.Files
-import java.nio.file.Path
 import java.io.File
 
 class ClearPilot(args: collection.Seq[String]) extends Command(args) {
