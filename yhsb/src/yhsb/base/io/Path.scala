@@ -4,37 +4,6 @@ import java.io.File
 import java.nio.file.{Path => JPath}
 import java.nio.file.Paths
 
-import scala.util.matching.Regex
-
-object Files {
-  def trimExtension(fileName: String) = {
-    val index = fileName.lastIndexOf(".")
-    if (index >= 0) {
-      fileName.substring(0, index)
-    } else {
-      fileName
-    }
-  }
-
-  def listFiles(dir: File, filter: String = ".*"): List[File] = {
-    val result = collection.mutable.ListBuffer[File]()
-
-    val files = dir.listFiles()
-
-    for (f <- files) {
-      if (f.isDirectory)
-        result.appendAll(
-          listFiles(f, filter)
-        )
-      else {
-        if (f.getName.matches(filter))
-          result.append(f)
-      }
-    }
-    result.toList
-  }
-}
-
 object Path {
 
   implicit class PathOps[T : PathConvertible](path: T) {

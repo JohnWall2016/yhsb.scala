@@ -14,6 +14,7 @@ import scala.annotation.tailrec
 import yhsb.base.io.Path._
 
 object Excel {
+  val Excel = yhsb.base.excel.Excel
 
   object ExcelType extends Enumeration {
     type ExcelType = Value

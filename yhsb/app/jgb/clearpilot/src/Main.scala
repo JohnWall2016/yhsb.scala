@@ -1,10 +1,9 @@
 import scala.collection.mutable
 
 import yhsb.base.command._
-import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
-import yhsb.base.io.Files._
-import yhsb.base.text.Strings.StringOps
+import yhsb.base.io.File._
+import yhsb.base.text.String.StringOps
 import java.nio.file.Files
 import java.nio.file.Path
 import java.io.File

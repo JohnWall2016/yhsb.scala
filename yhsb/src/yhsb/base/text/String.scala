@@ -1,9 +1,9 @@
 package yhsb.base.text
 
-import yhsb.base.text.Strings.PadMode.PadMode
+import yhsb.base.text.String.PadMode.PadMode
 import scala.util.matching.Regex
 
-object Strings {
+object String {
   case class CharRange(start: Char, end: Char) {
     if (start > end)
       throw new IllegalArgumentException("start must be <= end")

@@ -1,7 +1,7 @@
 package yhsb.cjb.net.protocol
 
 import java.net.URLEncoder
-import yhsb.base.text.Strings._
+import yhsb.base.text.String._
 import yhsb.base.net.HttpSocket
 import yhsb.base.io.AutoClose.use
 import yhsb.base.util.Config

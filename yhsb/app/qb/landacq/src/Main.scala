@@ -1,5 +1,4 @@
 import yhsb.base.command._
-import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.cjb.net.Session
 import java.nio.file.Paths
@@ -9,7 +8,7 @@ import org.apache.poi.xwpf.usermodel.XWPFDocument
 import java.io.FileInputStream
 import scala.jdk.CollectionConverters._
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
-import yhsb.base.text.Strings._
+import yhsb.base.text.String._
 
 class LandAcq(args: collection.Seq[String]) extends Command(args) {
 

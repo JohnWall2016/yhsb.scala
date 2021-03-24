@@ -1,8 +1,7 @@
 import yhsb.base.command._
-import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.base.io.Path._
-import yhsb.base.text.Strings._
+import yhsb.base.text.String._
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 

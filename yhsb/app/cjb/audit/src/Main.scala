@@ -1,9 +1,8 @@
 import yhsb.base.command._
 import yhsb.base.datetime.Formatter.toDashedDate
-import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.base.io.Path._
-import yhsb.base.text.Strings.StringOps
+import yhsb.base.text.String.StringOps
 import yhsb.base.util.UtilOps
 import yhsb.cjb.db._
 import yhsb.cjb.net.Session

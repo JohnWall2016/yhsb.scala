@@ -1,9 +1,8 @@
 import yhsb.base.command.Command
 import yhsb.base.command.Subcommand
-import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.base.datetime.Formatter
-import yhsb.base.text.Strings.StringOps
+import yhsb.base.text.String.StringOps
 import yhsb.base.util._
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.DelegatePersonQuery

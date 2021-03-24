@@ -1,7 +1,7 @@
 package yhsb
 
 import utest.{TestSuite, Tests, test}
-import yhsb.base.math.Numbers.BigDecimalOps
+import yhsb.base.math.Number.BigDecimalOps
 
 object NumberTest extends TestSuite {
   override def tests: Tests =

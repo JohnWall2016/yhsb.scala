@@ -2,7 +2,7 @@ package yhsb.base.math
 
 import scala.math.BigDecimal.RoundingMode
 
-object Numbers {
+object Number {
   val chineseNumbers = List(
     "零", "壹", "贰", "叁", "肆",
     "伍", "陆", "柒", "捌", "玖",

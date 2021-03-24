@@ -2,7 +2,6 @@ import yhsb.base.command.Command
 import yhsb.base.command.Subcommand
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.TreatmentReviewQuery
-import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.base.util._
 import yhsb.base.io.Path._
@@ -13,7 +12,7 @@ import yhsb.cjb.net.protocol.Division.GroupOps
 import java.nio.file.Files
 import java.nio.file.Path
 import yhsb.cjb.net.protocol.BankInfoQuery
-import yhsb.base.text.Strings.StringOps
+import yhsb.base.text.String.StringOps
 import yhsb.cjb.net.protocol.PaymentQuery
 import yhsb.cjb.net.protocol.PaymentPersonalDetailQuery
 import java.text.Collator

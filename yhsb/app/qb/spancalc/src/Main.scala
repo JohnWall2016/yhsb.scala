@@ -1,12 +1,11 @@
 import org.rogach.scallop._
 import yhsb.base.command.RowRange
 import yhsb.base.command.InputFile
-import yhsb.base.excel.Excel
 import yhsb.base.command.SheetIndex
 import yhsb.base.excel.Excel._
 import yhsb.base.datetime.YearMonth
 import yhsb.base.datetime.YearMonthRange
-import yhsb.base.text.Strings.StringOps
+import yhsb.base.text.String.StringOps
 
 class Conf(args: collection.Seq[String])
     extends ScallopConf(args)

@@ -2,8 +2,7 @@ package yhsb.base.db
 
 import io.getquill.ast.Entity
 import io.getquill.context.jdbc.JdbcContext
-import yhsb.base.excel.Excel
-import yhsb.base.excel.Excel.{CellOps, RowOps}
+import yhsb.base.excel.Excel._
 
 import java.nio.file.Files
 import scala.collection.mutable
