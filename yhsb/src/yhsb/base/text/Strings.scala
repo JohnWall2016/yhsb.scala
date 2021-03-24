@@ -87,7 +87,7 @@ object Strings {
     ) = {
       val index = s.lastIndexOf(pattern)
       if (index >= 0) {
-        s.substring(0, index) + index + s.substring(index)
+        s.substring(0, index) + insert + s.substring(index)
       } else {
         s + insert
       }

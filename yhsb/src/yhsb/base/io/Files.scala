@@ -1,7 +1,7 @@
 package yhsb.base.io
 
 import java.io.File
-import java.nio.file.Path
+import java.nio.file.{Path => JPath}
 import java.nio.file.Paths
 
 import scala.util.matching.Regex
@@ -35,16 +35,36 @@ object Files {
   }
 }
 
-object PathOps {
-  implicit class StringEx(path: String) {
-    def /(rest: String) = Paths.get(path, rest)
-    def /(rest: Path) = Paths.get(path, rest.toString)
+object Path {
+
+  implicit class PathOps[T : PathConvertible](path: T) {
+    def /[R : PathConvertible](rest: R) = {
+      implicitly[PathConvertible[T]].apply(path)
+        .resolve(
+          implicitly[PathConvertible[R]].apply(rest)
+        )
+    }
   }
 
-  implicit class PathEx(path: Path) {
-    def /(rest: String) = path.resolve(rest)
-    def /(rest: Path) = path.resolve(rest)
+  implicit def toPath[T : PathConvertible](path: T) = {
+    implicitly[PathConvertible[T]].apply(path)
   }
 
-  implicit def toPath(path: String) = Paths.get(path)
+  sealed trait PathConvertible[T] {
+    def apply(path: T): JPath
+  }
+
+  object PathConvertible {
+    implicit object StringConvertible extends PathConvertible[String] {
+      def apply(path: String): JPath = Paths.get(path)
+    }
+    
+    implicit object FileConvertible extends PathConvertible[File] {
+      def apply(path: File): JPath = Paths.get(path.getPath)
+    }
+
+    implicit object PathConvertible extends PathConvertible[JPath] {
+      def apply(path: JPath): JPath = path
+    }
+  }
 }

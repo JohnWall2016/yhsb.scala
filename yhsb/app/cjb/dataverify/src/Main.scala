@@ -1,14 +1,14 @@
 import yhsb.base.command._
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
-import yhsb.base.io.PathOps._
+import yhsb.base.io.Path._
 import yhsb.base.text.Strings._
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 
 import scala.collection.mutable
 
-class Verify(args: Seq[String])
+class Verify(args: collection.Seq[String])
     extends Command(args)
     with InputFile
     with RowRange

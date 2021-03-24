@@ -51,7 +51,7 @@ abstract class Subcommand(commandNameAndAliases: String*)
   def execute(): Unit
 }
 
-class Command(args: Seq[String]) extends ScallopConf(args) {
+class Command(args: collection.Seq[String]) extends ScallopConf(args) {
   shortSubcommandsHelp()
 
   def addSubCommand(cmd: Subcommand) = addSubcommand(cmd)

@@ -2,7 +2,7 @@ import yhsb.base.command._
 import yhsb.base.datetime.Formatter.toDashedDate
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
-import yhsb.base.io.PathOps._
+import yhsb.base.io.Path._
 import yhsb.base.text.Strings.StringOps
 import yhsb.base.util.UtilOps
 import yhsb.cjb.db._
@@ -20,7 +20,7 @@ import yhsb.cjb.net.protocol.{
 
 import scala.collection.mutable
 
-class Audit(args: Seq[String]) extends Command(args) {
+class Audit(args: collection.Seq[String]) extends Command(args) {
   banner("城居保数据审核程序")
 
   addSubCommand(new JoinAudit)

@@ -1,6 +1,6 @@
 import org.rogach.scallop._
 
-import yhsb.base.io.PathOps._
+import yhsb.base.io.Path._
 import yhsb.base.command.RowRange
 import yhsb.base.command.InputFile
 import yhsb.base.excel.Excel
@@ -13,7 +13,7 @@ import yhsb.base.db.Context.JdbcContextOps
 import yhsb.base.collection.BiMap
 import java.nio.file.Paths
 
-class Conf(args: Seq[String]) extends ScallopConf(args) {
+class Conf(args: collection.Seq[String]) extends ScallopConf(args) {
   shortSubcommandsHelp()
 
   banner("全覆盖数据处理程序")
@@ -104,7 +104,7 @@ class Conf(args: Seq[String]) extends ScallopConf(args) {
 }
 
 object Main {
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     val conf = new Conf(args)
 
     conf.subcommand match {

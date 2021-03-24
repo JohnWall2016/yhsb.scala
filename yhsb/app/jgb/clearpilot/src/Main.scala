@@ -9,7 +9,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.io.File
 
-class ClearPilot(args: Seq[String]) extends Command(args) {
+class ClearPilot(args: collection.Seq[String]) extends Command(args) {
   banner("原试点清理程序")
 
   val templateXlsx = """E:\机关养老保险\（模板）试点期间参保人员缴费确认表.xls"""
@@ -24,7 +24,7 @@ class ClearPilot(args: Seq[String]) extends Command(args) {
       default = Option("M")
     )
 
-    def execute() {
+    def execute() = {
       val workbook = Excel.load(inputFile())
       val sheet = workbook.getSheetAt(0)
 

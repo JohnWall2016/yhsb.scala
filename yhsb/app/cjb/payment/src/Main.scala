@@ -9,7 +9,7 @@ import yhsb.cjb.net.protocol.PaymentQuery
 import yhsb.cjb.net.protocol.PaymentPersonalDetailQuery
 import yhsb.cjb.net.protocol.SessionOps.CeaseInfo
 
-class Payment(args: Seq[String]) extends Command(args) {
+class Payment(args: collection.Seq[String]) extends Command(args) {
   banner("财务支付单生成程序")
 
   val yearMonth = trailArg[String](
@@ -77,7 +77,11 @@ class Payment(args: Seq[String]) extends Command(args) {
         row("A").value = "合计"
         row("F").value = sum
 
-        workbook.save(template.insertBeforeLast(date))
+        workbook.saveAfter(
+          template.insertBeforeLast(date)
+        ) { path =>
+          println(s"保存: $path")
+        }
       }
     }
   }

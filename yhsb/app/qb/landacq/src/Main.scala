@@ -11,7 +11,7 @@ import scala.jdk.CollectionConverters._
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.base.text.Strings._
 
-class LandAcq(args: Seq[String]) extends Command(args) {
+class LandAcq(args: collection.Seq[String]) extends Command(args) {
 
   banner("征地农民处理程序")
 

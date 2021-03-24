@@ -1,13 +1,13 @@
 import yhsb.base.command._
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
-import yhsb.base.io.PathOps._
+import yhsb.base.io.Path._
 import yhsb.base.text.Strings.StringOps
 import yhsb.cjb.net.protocol.Division._
 
 import java.nio.file.{Files, Path}
 
-class Cert(args: Seq[String]) extends Command(args) {
+class Cert(args: collection.Seq[String]) extends Command(args) {
   banner("待遇认证数据统计和表格生成程序")
 
   val split =

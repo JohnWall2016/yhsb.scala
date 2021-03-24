@@ -11,6 +11,7 @@ import yhsb.base.io.AutoClose.use
 import java.io.ByteArrayInputStream
 import java.nio.file.{Files, Path, Paths}
 import scala.annotation.tailrec
+import yhsb.base.io.Path._
 
 object Excel {
 
@@ -21,7 +22,9 @@ object Excel {
 
   import ExcelType._
 
-  def load(fileName: String, excelType: ExcelType = Auto): Workbook = {
+  def load[T : PathConvertible](file: T, excelType: ExcelType = Auto): Workbook = {
+    val path: Path = file
+    val fileName = path.toString()
     val ty = excelType match {
       case Auto =>
         val fn = fileName.toLowerCase()
@@ -37,7 +40,7 @@ object Excel {
 
     def loadFile = {
       new ByteArrayInputStream(
-        Files.readAllBytes(Paths.get(fileName))
+        Files.readAllBytes(path)
       )
     }
 
@@ -47,26 +50,29 @@ object Excel {
     }
   }
 
-  def load(path: Path): Workbook = load(path.toString, Auto)
-
   implicit class WorkbookOps(val book: Workbook) extends AnyVal {
-    def save(fileName: String): Unit = save(Paths.get(fileName))
-
-    def save(file: Path): Unit = {
+    def save[T : PathConvertible](file: T): Unit = {
       use(Files.newOutputStream(file)) { out =>
         book.write(out)
       }
     }
 
-    def saveIf(condition: => Boolean)(
-      path: Path, ifTrue: String => Unit, ifFalse: String => Unit
+    def saveIf[T : PathConvertible](condition: => Boolean)(
+      file: T, ifTrue: String => Unit, ifFalse: String => Unit
     ) = {
+      val path: Path = file
       if (condition) {
         book.save(path)
         ifTrue(path.toString)
       } else {
         ifFalse(path.toString)
       }
+    }
+
+    def saveAfter[T : PathConvertible](file: T)(afterAction: String => Unit): Unit = {
+      val path: Path = file
+      book.save(path)
+      afterAction(path.toString())
     }
   }
 
@@ -295,6 +301,7 @@ object Excel {
           case d: Double => cell.value = d
           case d: BigDecimal => cell.value = d
           case i: Int => cell.value = i
+          case s: String => cell.value = s
         }
       }
     }

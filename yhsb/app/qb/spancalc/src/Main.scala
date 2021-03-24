@@ -8,7 +8,7 @@ import yhsb.base.datetime.YearMonth
 import yhsb.base.datetime.YearMonthRange
 import yhsb.base.text.Strings.StringOps
 
-class Conf(args: Seq[String])
+class Conf(args: collection.Seq[String])
     extends ScallopConf(args)
     with InputFile
     with RowRange
@@ -18,7 +18,7 @@ class Conf(args: Seq[String])
 }
 
 object Main {
-  def main(args: Array[String]) {
+  def main(args: Array[String]) = {
     val conf = new Conf(args)
 
     val workbook = Excel.load(conf.inputFile())
@@ -35,7 +35,7 @@ object Main {
         val totalMonths = row.getCell("H").getNumericCellValue.toInt
         val bonusMonths = row.getCell("I").getNumericCellValue.toInt
 
-        val bought = row.getCell("N").value.split("\\|")
+        val bought = row.getCell("N").value.split("\\|").toSeq
         //println(s"|${bought.mkString(",")}|")
         val reSpan = "^(\\d\\d\\d\\d\\d\\d)(-(\\d\\d\\d\\d\\d\\d))?$".r
         val boughtSpans = bought.flatMap { b =>

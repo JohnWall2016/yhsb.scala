@@ -18,7 +18,7 @@ import java.text.Collator
 import java.util.Locale
 
 
-class Delegate(args: Seq[String]) extends Command(args) {
+class Delegate(args: collection.Seq[String]) extends Command(args) {
   banner("代发数据导出制表程序")
   addSubCommand(new PersonList)
   addSubCommand(new PaymentList)
@@ -201,7 +201,7 @@ class PaymentList extends Subcommand("paymentList") {
                           if (count > 2) {
                             Some(personDetail.apply(count - 2).date)
                           } else {
-                            None
+                            Some(personDetail.head.date)
                           }
                         )} else {
                           (None, None)
@@ -243,7 +243,7 @@ class PaymentList extends Subcommand("paymentList") {
       val date = Formatter.formatDate("yyyyMMdd")
       val dateCH = Formatter.formatDate("yyyy年M月d日")
 
-      sheet("G2").value = "制表时间：$dateCH"
+      sheet("G2").value = s"制表时间：$dateCH"
 
       items.foreach { item =>
         val row = sheet.getOrCopyRow(currentRow, startRow)

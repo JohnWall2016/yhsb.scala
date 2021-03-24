@@ -5,7 +5,7 @@ import yhsb.cjb.net.protocol.TreatmentReviewQuery
 import yhsb.base.excel.Excel
 import yhsb.base.excel.Excel._
 import yhsb.base.util._
-import yhsb.base.io.PathOps._
+import yhsb.base.io.Path._
 import yhsb.base.command.RowRange
 import org.rogach.scallop.ScallopConf
 import yhsb.base.datetime.Formatter
@@ -23,7 +23,7 @@ object Main {
   def main(args: Array[String]): Unit = new Treatment(args).runCommand()
 }
 
-class Treatment(args: Seq[String]) extends Command(args) {
+class Treatment(args: collection.Seq[String]) extends Command(args) {
   banner("信息核对报告表和养老金计算表生成程序")
   addSubCommand(new Download)
   addSubCommand(new Split)

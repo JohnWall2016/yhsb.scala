@@ -4,14 +4,14 @@ import yhsb.base.excel.Excel._
 import yhsb.cjb.net.Session
 import scala.collection.mutable
 import yhsb.base.text.Strings._
-import yhsb.base.io.PathOps._
+import yhsb.base.io.Path._
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.cjb.net.protocol.Result
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
 import yhsb.base.util.OptionalOps
 import yhsb.base.util.UtilOps
 
-class Query(args: Seq[String]) extends Command(args) {
+class Query(args: collection.Seq[String]) extends Command(args) {
 
   banner("数据查询处理程序")
 
