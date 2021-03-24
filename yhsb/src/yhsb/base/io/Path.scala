@@ -5,13 +5,9 @@ import java.nio.file.{Path => JPath}
 import java.nio.file.Paths
 
 object Path {
-
   implicit class PathOps[T : PathConvertible](path: T) {
     def /[R : PathConvertible](rest: R) = {
-      implicitly[PathConvertible[T]].apply(path)
-        .resolve(
-          implicitly[PathConvertible[R]].apply(rest)
-        )
+      toPath(path).resolve(toPath(rest))
     }
   }
 
