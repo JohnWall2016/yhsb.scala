@@ -106,6 +106,6 @@ object String {
 
     def isNullOrEmpty = if (s == null || s.isEmpty()) true else false
 
-    def nonNullOrEmpty = !isNullOrEmpty
+    def nonNullAndEmpty = !isNullOrEmpty
   }
 }

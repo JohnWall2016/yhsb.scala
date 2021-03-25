@@ -49,6 +49,7 @@ object yhsb extends CustomModule {
       object payment extends YhsbModule
       object delegate extends YhsbModule
       object treatment extends YhsbModule
+      object auth extends YhsbModule
     }
     object qb extends CustomModule {
       object spancalc extends YhsbModule

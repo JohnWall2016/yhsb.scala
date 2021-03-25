@@ -257,7 +257,7 @@ class PayFailedList extends Subcommand("failList") {
         .request(PaymentQuery(yearMonth(), state = "0"))
         .filter(_.objectType == "1")
         .flatMap(it => session.request(PaymentPersonalDetailQuery(it)))
-        .filter(_.idCard.nonNullOrEmpty)
+        .filter(_.idCard.nonNullAndEmpty)
         .sortWith( (e1, e2) =>
           Collator
             .getInstance(Locale.CHINESE)
