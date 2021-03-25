@@ -2,6 +2,7 @@ import yhsb.base.command.Command
 import yhsb.cjb.db.RawItem
 import yhsb.cjb.db.AuthData2021
 import yhsb.base.text.String._
+import yhsb.cjb.db.AuthItem
 
 object Main {
   def main(args: Array[String]): Unit = new Auth(args).runCommand()
@@ -50,5 +51,26 @@ object Auth {
     }
   }
 
-  
+  def mergeRawData(date: String, month: String = null) = {
+    import AuthData2021._
+    
+    transaction {
+      val list: List[RawItem] = run(
+        rawData.filter(_.date == lift(Option(date)))
+      )
+
+      val groups = list.groupBy(_.idCard)
+
+      if (month == null) {
+        groups.zipWithIndex.foreach { case ((idCard, items), index) =>
+          println(s"${index + 1} $idCard")
+          
+          val data: List[AuthItem] = run(historyData.filter(_.idCard == lift(idCard)))
+          if (data.nonEmpty) {
+            
+          }
+        }
+      }
+    }
+  }
 }
