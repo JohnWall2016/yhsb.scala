@@ -23,7 +23,7 @@ class Audit(args: collection.Seq[String]) extends Command(args) {
   banner("城居保数据审核程序")
 
   addSubCommand(new JoinAudit)
-  addSubCommand(new OnlineAudit)
+  addSubCommand(new QueryAudit)
 }
 
 class JoinAudit extends Subcommand("join") with DateRange with Export {
@@ -93,14 +93,34 @@ class JoinAudit extends Subcommand("join") with DateRange with Export {
   }
 }
 
-class OnlineAudit extends Subcommand("online") {
-  descr("网上居保审核查询程序")
+class QueryAudit extends Subcommand("query") {
+  descr("居保审核查询程序")
 
   val operator = trailArg[String](
-    descr = "网络经办人名称, 默认: wsjb",
+    descr = "经办人名称, 默认: wsjb, _: 为所有经办人",
     required = false,
     default = Option("wsjb")
   )
+
+  val startAuditDate = opt[String](
+    descr = "开始审核时间",
+    default = Some("")
+  )
+
+  val endAuditDate = opt[String](
+    descr = "结束审核时间",
+    default = Some("")
+  )
+
+  case class AuditData(state: String, startDate: String, endDate: String)
+
+  lazy val auditData = {
+    AuditData(
+      if (startAuditDate().isNullOrEmpty && endAuditDate().isNullOrEmpty) "0" else "1",
+      if (startAuditDate().isNullOrEmpty) "" else toDashedDate(startAuditDate()),
+      if (endAuditDate().isNullOrEmpty) "" else toDashedDate(endAuditDate())
+    )
+  }
 
   override def execute(): Unit = {
     Session.use() { session =>
@@ -109,9 +129,18 @@ class OnlineAudit extends Subcommand("online") {
       }
       println(s"查询经办人: ${if (operator_.isEmpty) "所有" else operator_}")
 
+      import auditData._
+
       println(" 参保审核查询 ".bar(60, '='))
       session
-        .request(JoinAuditQuery(operator = operator_))
+        .request(
+          JoinAuditQuery(
+            operator = operator_, 
+            auditState = state,
+            startAuditDate = startDate,
+            endAuditDate = endDate
+          )
+        )
         .zipWithIndex
         .foreach { case (item, i) =>
           println(s"${(i + 1).toString.padRight(3)} ${item.name
@@ -120,7 +149,14 @@ class OnlineAudit extends Subcommand("online") {
 
       println(" 缴费人员终止查询 ".bar(60, '='))
       session
-        .request(PayingPersonStopAuditQuery(operator = operator_))
+        .request(
+          PayingPersonStopAuditQuery(
+            operator = operator_,
+            auditState = state,
+            startAuditDate = startDate,
+            endAuditDate = endDate
+          )
+        )
         .zipWithIndex
         .foreach {
         case (item, i) =>
@@ -130,7 +166,14 @@ class OnlineAudit extends Subcommand("online") {
 
       println(" 待遇人员终止查询 ".bar(60, '='))
       session
-        .request(RetiredPersonStopAuditQuery(operator = operator_))
+        .request(
+          RetiredPersonStopAuditQuery(
+            operator = operator_,
+            auditState = state,
+            startAuditDate = startDate,
+            endAuditDate = endDate
+          )
+        )
         .zipWithIndex
         .foreach {
         case (item, i) =>
@@ -140,7 +183,13 @@ class OnlineAudit extends Subcommand("online") {
 
       println(" 缴费人员暂停查询 ".bar(60, '='))
       session
-        .request(PayingPersonPauseAuditQuery())
+        .request(
+          PayingPersonPauseAuditQuery(
+            auditState = state,
+            startAuditDate = startDate,
+            endAuditDate = endDate,
+          )
+        )
         .flatMap { item =>
           session
             .request(PayingPersonPauseAuditDetailQuery(item))
@@ -159,7 +208,13 @@ class OnlineAudit extends Subcommand("online") {
 
       println(" 待遇人员暂停查询 ".bar(60, '='))
       session
-        .request(RetiredPersonPauseAuditQuery())
+        .request(
+          RetiredPersonPauseAuditQuery(
+            auditState = state,
+            startAuditDate = startDate,
+            endAuditDate = endDate
+          )
+        )
         .flatMap { item =>
           session
             .request(RetiredPersonPauseAuditDetailQuery(item))

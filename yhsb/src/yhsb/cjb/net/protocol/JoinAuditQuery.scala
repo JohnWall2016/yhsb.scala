@@ -2,8 +2,8 @@ package yhsb.cjb.net.protocol
 
 /** 参保审核查询 */
 class JoinAuditQuery(
-    startDate: String = "",
-    endDate: String = "",
+    startAuditDate: String = "",
+    endAuditDate: String = "",
     auditState: String = "0",
     operator: String = ""
 ) extends PageRequest[JoinAuditQuery.Item](
@@ -25,10 +25,10 @@ class JoinAuditQuery(
   val aae014 = ""
 
   @JsonName("aae015")
-  val startDate_ = startDate
+  val startAuditDate_ = startAuditDate
 
   @JsonName("aae015s")
-  val endDate_ = endDate
+  val endAuditDate_ = endAuditDate
 
   val aac009 = ""
   val aac002 = ""
@@ -39,14 +39,14 @@ class JoinAuditQuery(
 
 object JoinAuditQuery {
   def apply(
-      startDate: String = "",
-      endDate: String = "",
+      startAuditDate: String = "",
+      endAuditDate: String = "",
       auditState: String = "0",
       operator: String = ""
   ) =
     new JoinAuditQuery(
-      startDate,
-      endDate,
+      startAuditDate,
+      endAuditDate,
       auditState,
       operator
     )

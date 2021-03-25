@@ -5,7 +5,9 @@ package cjb.net.protocol
 class RetiredPersonStopAuditQuery(
     idCard: String = "",
     auditState: String = "0",
-    operator: String = ""
+    operator: String = "",
+    startAuditDate: String = "",
+    endAuditDate: String = "",
 ) extends PageRequest[RetiredPersonStopAuditQuery.Item](
       "dyzzfhPerInfoList",
       pageSize = 500
@@ -22,8 +24,12 @@ class RetiredPersonStopAuditQuery(
   val aae036 = ""
   val aae036s = ""
   val aae014 = ""
-  val aae015 = ""
-  val aae015s = ""
+
+  @JsonName("aae015")
+  val startAuditDate_ = startAuditDate
+
+  @JsonName("aae015s")
+  val endAuditDate_ = endAuditDate
 
   @JsonName("aac002")
   val idCard_ = idCard
@@ -39,9 +45,11 @@ object RetiredPersonStopAuditQuery {
   def apply(
       idCard: String = "",
       auditState: String = "0",
-      operator: String = ""
+      operator: String = "",
+      startAuditDate: String = "",
+      endAuditDate: String = "",
   ): RetiredPersonStopAuditQuery =
-    new RetiredPersonStopAuditQuery(idCard, auditState, operator)
+    new RetiredPersonStopAuditQuery(idCard, auditState, operator, startAuditDate, endAuditDate)
 
   case class Item(
       @JsonName("aac002")

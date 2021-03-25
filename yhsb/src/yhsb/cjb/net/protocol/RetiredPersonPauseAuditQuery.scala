@@ -4,7 +4,9 @@ package cjb.net.protocol
 /** 待遇人员暂停审核查询 */
 class RetiredPersonPauseAuditQuery(
     idCard: String = "",
-    auditState: String = "0"
+    auditState: String = "0",
+    startAuditDate: String = "",
+    endAuditDate: String = "",
 ) extends PageRequest[RetiredPersonPauseAuditQuery.Item](
       "queryAllPausePersonInfosForAuditService",
       pageSize = 500
@@ -35,10 +37,12 @@ class RetiredPersonPauseAuditQuery(
   val aac009 = ""
 
   /** 起始审核时间 */
-  val aae015 = ""
+  @JsonName("aae015")
+  val startAuditDate_ = startAuditDate
 
   /** 截止审核时间 */
-  val aae015s = ""
+  @JsonName("aae015s")
+  val endAuditDate_ = endAuditDate
 
   /** 待遇状态 */
   val aae116 = ""
@@ -47,9 +51,11 @@ class RetiredPersonPauseAuditQuery(
 object RetiredPersonPauseAuditQuery {
   def apply(
     idCard: String = "",
-    auditState: String = "0"
+    auditState: String = "0",
+    startAuditDate: String = "",
+    endAuditDate: String = "",
   ): RetiredPersonPauseAuditQuery =
-    new RetiredPersonPauseAuditQuery(idCard, auditState)
+    new RetiredPersonPauseAuditQuery(idCard, auditState, startAuditDate, endAuditDate)
 
   case class Item(
       @JsonName("aac002")
