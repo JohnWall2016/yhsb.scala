@@ -73,8 +73,14 @@ case class AuthItem(
 
     item.personType match {
       case Some("贫困人口") =>
-        if (poverty.isEmpty) {
-
+        if (poverty.getOrElse("").isEmpty()) {
+          poverty = item.detail
+          povertyDate = item.date
+          changed = true
+        }
+        if (isDestitute.getOrElse("").isEmpty()) {
+          isDestitute = item.personType
+          changed = true
         }
       case Some(_) =>
       case None => 
