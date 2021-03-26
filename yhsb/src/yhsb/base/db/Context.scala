@@ -60,12 +60,18 @@ object Context {
         "CHARACTER SET utf8 FIELDS TERMINATED BY ',' OPTIONALLY " +
         "ENCLOSED BY '\\'' LINES TERMINATED BY '\\n';"
 
+      execute(sql, printSql, ident, afterExecute = Files.deleteIfExists(cvsFile))
+    }
+
+    def execute(
+      sql: String,
+      printSql: Boolean = false,
+      ident: String = "",
+      afterExecute: => Unit = {}
+    ): Long = {
       if (printSql) println(s"$ident$sql")
-
       val result = context.executeAction(sql)
-
-      Files.deleteIfExists(cvsFile)
-
+      afterExecute
       result
     }
   }

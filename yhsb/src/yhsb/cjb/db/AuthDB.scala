@@ -309,14 +309,54 @@ trait RawData { this: MysqlJdbcContext[_] =>
   }
 }
 
+case class JoinedPerson(
+    var idCard: String,
+    /** 行政区划 */
+    division: Option[String],
+    /** 户籍性质 */
+    familialType: Option[String],
+    name: Option[String],
+    /** 性别 */
+    sex: Option[String],
+    birthDay: Option[String],
+    /** 参保身份 */
+    jbKind: Option[String],
+    /** 参保状态 */
+    cbState: Option[String],
+    /** 缴费状态 */
+    jfState: Option[String],
+    /** 参保时间 */
+    joinedTime: Option[String],
+)
+
+trait JoinedPersonData { this: MysqlJdbcContext[_] =>
+  val joinedPersonData = quote {
+    querySchema[JoinedPerson](
+      "jbrymx",
+      _.idCard -> "idcard",
+      _.division -> "xzqh",
+      _.familialType -> "hjxz",
+      _.name -> "name",
+      _.sex -> "sex",
+      _.birthDay -> "birthDay",
+      _.jbKind -> "cbsf",
+      _.cbState -> "cbzt",
+      _.jfState -> "jfzt",
+      _.joinedTime -> "cbsj",
+    )
+  }
+}
+
 object AuthData2020
   extends MysqlJdbcContext(LowerCase, "jzfp2020")
      with HistoryData
      with RawData
      with MonthData
+     with JoinedPersonData
 
 object AuthData2021
   extends MysqlJdbcContext(LowerCase, "jzfp2021")
      with HistoryData
      with RawData
      with MonthData
+     with JoinedPersonData
