@@ -3,6 +3,8 @@ import yhsb.cjb.db.RawItem
 import yhsb.cjb.db.AuthData2021
 import yhsb.base.text.String._
 import yhsb.cjb.db.AuthItem
+import yhsb.cjb.db.HistoryItem
+import yhsb.cjb.db.MonthItem
 
 object Main {
   def main(args: Array[String]): Unit = new Auth(args).runCommand()
@@ -17,6 +19,7 @@ class Auth(args: collection.Seq[String]) extends Command(args) {
 object Auth {
   def importRawData(items: Iterable[RawItem]) = {
     import AuthData2021._
+
     transaction {
       items.zipWithIndex
         .foreach { case (item, index) =>
@@ -65,9 +68,95 @@ object Auth {
         groups.zipWithIndex.foreach { case ((idCard, items), index) =>
           println(s"${index + 1} $idCard")
           
-          val data: List[AuthItem] = run(historyData.filter(_.idCard == lift(idCard)))
+          val data: List[HistoryItem] =
+            run(historyData.filter(_.idCard == lift(idCard)))
           if (data.nonEmpty) {
-            
+            data.foreach { item =>
+              items.foreach(item.merge(_))
+              run(historyData.update(lift(item)))
+            }
+          } else {
+            val item = HistoryItem()
+            items.foreach(item.merge(_))
+            run(historyData.insert(lift(item)))
+          }
+        }
+      } else {
+        groups.zipWithIndex.foreach { case ((idCard, items), index) =>
+          println(s"${index + 1} $idCard")
+          
+          val data: List[MonthItem] =
+            run(monthData.filter(it => it.idCard == lift(idCard) && it.month == lift(Option(month))))
+          if (data.nonEmpty) {
+            data.foreach { item =>
+              items.foreach(item.merge(_))
+              run(monthData.update(lift(item)))
+            }
+          } else {
+            val item = MonthItem(month = Some(month))
+            items.foreach(item.merge(_))
+            run(monthData.insert(lift(item)))
+          }
+        }
+      }
+    }
+  }
+
+  def authenticate(date: String, monthOrAll: String) = {
+    import AuthData2021._
+    
+    transaction {
+      val data: List[AuthItem] =
+        if (monthOrAll.toUpperCase() == "ALL") {
+          run(historyData)
+        } else {
+          run(monthData.filter(_.month == lift(Option(monthOrAll))))
+        }
+
+      var index = 1
+      data.foreach { item =>
+        var jbKind: String = null
+        var isDestitute: String = null
+        if (item.poverty.getOrElse("").nonEmpty) {
+          jbKind = "贫困人口一级"
+          isDestitute = "贫困人口"
+        } else if (item.veryPoor.getOrElse("").nonEmpty) {
+          jbKind = "特困一级"
+          isDestitute = "特困人员"
+        } else if (item.fullAllowance.getOrElse("").nonEmpty) {
+          jbKind = "低保对象一级"
+          isDestitute = "低保对象"
+        } else if (item.primaryDisability.getOrElse("").nonEmpty) {
+          jbKind = "残一级"
+        } else if (item.shortAllowance.getOrElse("").nonEmpty) {
+          jbKind = "低保对象二级"
+          isDestitute = "低保对象"
+        } else if (item.secondaryDisability.getOrElse("").nonEmpty) {
+          jbKind = "残二级"
+        }
+
+        var update = false
+        if (jbKind != null && jbKind != item.jbKind.getOrElse("")) {
+          if (item.jbKind.getOrElse("").nonEmpty) {
+            println(s"$index ${item.idCard} ${item.name.getOrElse("").padRight(6)} $jbKind <- ${item.jbKind}")
+          } else {
+            println(s"$index ${item.idCard} ${item.name.getOrElse("").padRight(6)} $jbKind")
+          }
+          item.jbKind = Some(jbKind)
+          item.jbKindLastDate = Some(date)
+          update = true
+        }
+
+        if (isDestitute != null && isDestitute != item.isDestitute.getOrElse("")) {
+          item.isDestitute = Some(isDestitute)
+          update = true
+        }
+
+        if (update) {
+          if (monthOrAll.toUpperCase() == "ALL") {
+            run(historyData.update(lift(item.asInstanceOf[HistoryItem])))
+          } else {
+            run(monthData.update(lift(item.asInstanceOf[MonthItem])))
           }
         }
       }

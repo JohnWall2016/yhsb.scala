@@ -3,34 +3,59 @@ package yhsb.cjb.db
 import io.getquill._
 import yhsb.base.text.String._
 
-/** 认证数据表 */
-case class AuthItem(
-    var no: Option[Int], // 序号
-    var neighborhood: Option[String], // 乡镇街
-    var community: Option[String], // 村社区
-    var address: Option[String], // 地址
-    var name: Option[String], // 姓名
-    var idCard: String, // 身份证号码
-    var birthDay: Option[String], // 出生日期
-    var poverty: Option[String], // 贫困人口
-    var povertyDate: Option[String], // 贫困人口日期
-    var veryPoor: Option[String], // 特困人员
-    var veryPoorDate: Option[String], // 特困人员日期
-    var fullAllowance: Option[String], // 全额低保人员
-    var fullAllowanceDate: Option[String], // 全额低保人员日期
-    var shortAllowance: Option[String], // 差额低保人员
-    var shortAllowanceDate: Option[String], // 差额低保人员日期
-    var primaryDisability: Option[String], // 一二级残疾人员
-    var primaryDisabilityDate: Option[String], // 一二级残疾人员日期
-    var secondaryDisability: Option[String], // 三四级残疾人员
-    var secondaryDisabilityDate: Option[String], // 三四级残疾人员日期
-    var isDestitute: Option[String], // 属于贫困人员
-    var jbKind: Option[String], // 居保认定身份
-    var jbKindFirstDate: Option[String], // 居保认定身份最初日期
-    var jbKindLastDate: Option[String], // 居保认定身份最后日期
-    var jbState: Option[String], // 居保参保情况
-    var jbStateDate: Option[String] // 居保参保情况日期
-) {
+/** 认证数据项 */
+trait AuthItem {
+  /** 序号 */
+  var no: Option[Int]
+  /** 乡镇街 */
+  var neighborhood: Option[String]
+  /** 村社区 */
+  var community: Option[String]
+  /** 地址 */
+  var address: Option[String]
+  /** 姓名 */
+  var name: Option[String]
+  /** 身份证号码 */
+  var idCard: String
+  /** 出生日期 */
+  var birthDay: Option[String]
+  /** 贫困人口 */
+  var poverty: Option[String]
+  /** 贫困人口日期 */
+  var povertyDate: Option[String]
+  /** 特困人员 */
+  var veryPoor: Option[String]
+  /** 特困人员日期 */
+  var veryPoorDate: Option[String]
+  /** 全额低保人员 */
+  var fullAllowance: Option[String]
+  /** 全额低保人员日期 */
+  var fullAllowanceDate: Option[String]
+  /** 差额低保人员 */
+  var shortAllowance: Option[String]
+  /** 差额低保人员日期 */
+  var shortAllowanceDate: Option[String]
+  /** 一二级残疾人员 */
+  var primaryDisability: Option[String]
+  /** 一二级残疾人员日期 */
+  var primaryDisabilityDate: Option[String]
+  /** 三四级残疾人员 */
+  var secondaryDisability: Option[String]
+  /** 三四级残疾人员日期 */
+  var secondaryDisabilityDate: Option[String]
+  /** 属于贫困人员 */
+  var isDestitute: Option[String]
+  /** 居保认定身份 */
+  var jbKind: Option[String]
+  /** 居保认定身份最初日期 */
+  var jbKindFirstDate: Option[String]
+  /** 居保认定身份最后日期 */
+  var jbKindLastDate: Option[String]
+  /** 居保参保情况 */
+  var jbState: Option[String]
+  /** 居保参保情况日期   */
+  var jbStateDate: Option[String]
+    
   def merge(item: RawItem): Boolean = {
     var changed = false
 
@@ -71,16 +96,47 @@ case class AuthItem(
     setString(_.idCard)(_.idCard)(idCard = _)
     setOption(_.birthDay)(_.birthDay)(birthDay = _)
 
+    def setDestitute(
+      testField: Option[String]
+    )(
+      setFields: RawItem => Unit
+    ) = {
+      if (testField.getOrElse("").isEmpty()) {
+        setFields(item)
+        changed = true
+      }
+    }
+
     item.personType match {
       case Some("贫困人口") =>
-        if (poverty.getOrElse("").isEmpty()) {
-          poverty = item.detail
-          povertyDate = item.date
-          changed = true
+        setDestitute(poverty) { it =>
+          poverty = it.detail
+          povertyDate = it.date
         }
-        if (isDestitute.getOrElse("").isEmpty()) {
-          isDestitute = item.personType
-          changed = true
+      case Some("特困人员") =>
+        setDestitute(veryPoor) { it =>
+          veryPoor = it.detail
+          veryPoorDate = it.date
+        }
+      case Some("全额低保人员") =>
+        setDestitute(fullAllowance) { it =>
+          fullAllowance = it.detail
+          fullAllowanceDate = it.date
+        }
+      case Some("差额低保人员") =>
+        setDestitute(shortAllowance) { it =>
+          shortAllowance = it.detail
+          shortAllowanceDate = it.date
+        }
+      case Some("一二级残疾人员") =>
+        setDestitute(primaryDisability) { it =>
+          primaryDisability = it.detail
+          primaryDisabilityDate = it.date
+        }
+      case Some("三四级残疾人员") =>
+        setDestitute(secondaryDisability) { it =>
+          secondaryDisability = it.detail
+          secondaryDisabilityDate = it.date
         }
       case Some(_) =>
       case None => 
@@ -90,9 +146,37 @@ case class AuthItem(
   }
 }
 
+case class HistoryItem(
+    var no: Option[Int] = None,
+    var neighborhood: Option[String] = None,
+    var community: Option[String] = None,
+    var address: Option[String] = None,
+    var name: Option[String] = None,
+    var idCard: String = null,
+    var birthDay: Option[String] = None,
+    var poverty: Option[String] = None,
+    var povertyDate: Option[String] = None,
+    var veryPoor: Option[String] = None,
+    var veryPoorDate: Option[String] = None,
+    var fullAllowance: Option[String] = None,
+    var fullAllowanceDate: Option[String] = None,
+    var shortAllowance: Option[String] = None,
+    var shortAllowanceDate: Option[String] = None,
+    var primaryDisability: Option[String] = None,
+    var primaryDisabilityDate: Option[String] = None,
+    var secondaryDisability: Option[String] = None,
+    var secondaryDisabilityDate: Option[String] = None,
+    var isDestitute: Option[String] = None,
+    var jbKind: Option[String] = None,
+    var jbKindFirstDate: Option[String] = None,
+    var jbKindLastDate: Option[String] = None,
+    var jbState: Option[String] = None,
+    var jbStateDate: Option[String] = None,
+) extends AuthItem
+
 trait HistoryData { this: MysqlJdbcContext[_] =>
   val historyData = quote {
-    querySchema[AuthItem](
+    querySchema[HistoryItem](
       "fphistorydata",
       _.no -> "no",
       _.neighborhood -> "xzj",
@@ -124,33 +208,33 @@ trait HistoryData { this: MysqlJdbcContext[_] =>
 }
 
 case class MonthItem(
-    var no: Option[Int], // 序号
-    neighborhood: Option[String], // 乡镇街
-    community: Option[String], // 村社区
-    address: Option[String], // 地址
-    name: String, // 姓名
-    idCard: String, // 身份证号码
-    birthDay: Option[String], // 出生日期
-    poverty: Option[String], // 贫困人口
-    povertyDate: Option[String], // 贫困人口日期
-    veryPoor: Option[String], // 特困人员
-    veryPoorDate: Option[String], // 特困人员日期
-    fullAllowance: Option[String], // 全额低保人员
-    fullAllowanceDate: Option[String], // 全额低保人员日期
-    shortAllowance: Option[String], // 差额低保人员
-    shortAllowanceDate: Option[String], // 差额低保人员日期
-    primaryDisability: Option[String], // 一二级残疾人员
-    primaryDisabilityDate: Option[String], // 一二级残疾人员日期
-    secondaryDisability: Option[String], // 三四级残疾人员
-    secondaryDisabilityDate: Option[String], // 三四级残疾人员日期
-    isDestitute: Option[String], // 属于贫困人员
-    jbKind: Option[String], // 居保认定身份
-    jbKindFirstDate: Option[String], // 居保认定身份最初日期
-    jbKindLastDate: Option[String], // 居保认定身份最后日期
-    jbState: Option[String], // 居保参保情况
-    jbStateDate: Option[String], // 居保参保情况日期
-    month: Option[String]
-)
+    var no: Option[Int] = None,
+    var neighborhood: Option[String] = None,
+    var community: Option[String] = None,
+    var address: Option[String] = None,
+    var name: Option[String] = None,
+    var idCard: String = null,
+    var birthDay: Option[String] = None,
+    var poverty: Option[String] = None,
+    var povertyDate: Option[String] = None,
+    var veryPoor: Option[String] = None,
+    var veryPoorDate: Option[String] = None,
+    var fullAllowance: Option[String] = None,
+    var fullAllowanceDate: Option[String] = None,
+    var shortAllowance: Option[String] = None,
+    var shortAllowanceDate: Option[String] = None,
+    var primaryDisability: Option[String] = None,
+    var primaryDisabilityDate: Option[String] = None,
+    var secondaryDisability: Option[String] = None,
+    var secondaryDisabilityDate: Option[String] = None,
+    var isDestitute: Option[String] = None,
+    var jbKind: Option[String] = None,
+    var jbKindFirstDate: Option[String] = None,
+    var jbKindLastDate: Option[String] = None,
+    var jbState: Option[String] = None,
+    var jbStateDate: Option[String] = None,
+    var month: Option[String] = None,
+) extends AuthItem
 
 trait MonthData { this: MysqlJdbcContext[_] =>
   val monthData = quote {
