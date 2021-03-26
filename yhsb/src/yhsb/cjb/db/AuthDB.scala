@@ -273,9 +273,9 @@ trait MonthData { this: MysqlJdbcContext[_] =>
 /** 原始采集数据 */
 case class RawItem(
     /** 序号 */
-    var no: Option[Int],
+    var no: Option[Int] = None,
     /** 乡镇街 */
-    neighborhood: Option[String],
+    neighborhood: Option[String] = None,
     /** 村社区 */
     community: Option[String],
     /** 地址 */
@@ -284,9 +284,9 @@ case class RawItem(
     idCard: String,
     birthDay: Option[String],
     /** 人员类型 */
-    personType: Option[String],
+    var personType: Option[String] = None,
     /** 类型细节 */
-    detail: Option[String],
+    var detail: Option[String] = None,
     /** 数据月份 */
     date: Option[String]
 )

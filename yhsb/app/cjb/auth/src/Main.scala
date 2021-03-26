@@ -5,8 +5,10 @@ import yhsb.base.text.String._
 import yhsb.cjb.db.AuthItem
 import yhsb.cjb.db.HistoryItem
 import yhsb.cjb.db.MonthItem
-import yhsb.base.excel.Excel
 import io.getquill.Query
+import yhsb.base.excel.Excel._
+import org.rogach.scallop.ScallopConf
+import yhsb.base.command.Subcommand
 
 object Main {
   def main(args: Array[String]): Unit = new Auth(args).runCommand()
@@ -15,7 +17,7 @@ object Main {
 class Auth(args: collection.Seq[String]) extends Command(args) {
   banner("城居参保身份认证程序")
 
-
+  addSubCommand(new ImportVeryPoor)
 }
 
 object Auth {
@@ -187,5 +189,139 @@ object Auth {
             infix"$monthData where month='${lift(monthOrAll)}' ORDER BY CONVERT( xzj USING gbk ), CONVERT( csq USING gbk ), CONVERT( name USING gbk )".as[Query[MonthItem]])
         }
       }
+    
+    data.foreach { item =>
+      val index = currentRow - startRow + 1
+
+      println(s"$index ${item.idCard} ${item.name}")
+
+      val row = sheet.getOrCopyRow(currentRow, startRow)
+      currentRow += 1
+      row("A").value = index
+      row("B").value = item.no
+      row("C").value = item.neighborhood
+      row("D").value = item.community
+      row("E").value = item.address
+      row("F").value = item.name
+      row("G").value = item.idCard
+      row("H").value = item.birthDay
+      row("I").value = item.poverty
+      row("J").value = item.povertyDate
+      row("K").value = item.veryPoor
+      row("L").value = item.veryPoorDate
+      row("M").value = item.fullAllowance
+      row("N").value = item.fullAllowanceDate
+      row("O").value = item.shortAllowance
+      row("P").value = item.shortAllowanceDate
+      row("Q").value = item.primaryDisability
+      row("R").value = item.primaryDisabilityDate
+      row("S").value = item.secondaryDisability
+      row("T").value = item.secondaryDisabilityDate
+      row("U").value = item.isDestitute
+      row("V").value = item.jbKind
+      row("W").value = item.jbKindFirstDate
+      row("X").value = item.jbKindLastDate
+      row("Y").value = item.jbState
+      row("Z").value = item.jbStateDate
+      row("AA").setBlank()
+    }
+
+    workbook.save(file)
+    println(s"结束导出底册: $file")
   }
+}
+
+trait ImportCommand {  _: ScallopConf =>
+  val date = trailArg[String](descr = "数据月份, 例如: 201912")
+  val excel = trailArg[String](descr = "excel表格文件路径")
+  val startRow = trailArg[Int](descr = "开始行, 从1开始")
+  val endRow = trailArg[Int](descr = "结束行, 包含在内")
+  val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+  val clearOnly = opt[Boolean](descr = "只清除已有数据", default = Some(false))
+
+  def clearData(): Unit
+
+  case class FieldColumns(
+    nameAndIdCards: Seq[(String, String)],
+    neighborhood: String,
+    community: String,
+    address: Option[String] = None,
+    personType: Option[String] = None
+  )(
+    val init: RawItem => Unit
+  )
+
+  val fieldColumns: FieldColumns
+
+  private def fetchData(): Iterable[RawItem] = {
+    require(
+      startRow() > 0 && startRow() <= endRow(),
+      "开始行必须大于0, 且不能大于结束行"
+    )
+
+    val workbook = Excel.load(excel())
+    val sheet = workbook.getSheetAt(0)
+
+    for {
+      index <- (startRow() - 1) to endRow()
+      row = sheet.getRow(index)
+      neighborhood = row(fieldColumns.neighborhood).value
+      community = row(fieldColumns.community).value
+      personType = fieldColumns.personType.map(row(_).value).getOrElse("")
+      address = fieldColumns.address.map(row(_).value).getOrElse("")
+      (nameCol, idCardCol) <- fieldColumns.nameAndIdCards
+      name = row(nameCol).value.trim()
+      idCard = row(idCardCol).value.trim()
+      len = idCard.length()
+      if (name.nonEmpty && idCard.nonEmpty && len >= 18)
+    } yield {
+      val item = RawItem(
+        neighborhood = Some(neighborhood),
+        community = Some(community),
+        address = Some(address),
+        name = Some(name),
+        idCard = if (len > 18) idCard.substring(0, 18) else idCard,
+        birthDay = Some(idCard.substring(6, 14)),
+        date = Some(date()),
+        personType = Some(personType)
+      )
+      fieldColumns.init(item)
+      item
+    }
+  }
+
+  def execute(): Unit = {
+    if (clear() || clearOnly()) {
+      println("开始清除已有数据")
+      clearData()
+      println("结束清除已有数据")
+    }
+    if (!clearOnly()) {
+      Auth.importRawData(fetchData())
+    }
+  }
+}
+
+class ImportVeryPoor extends Subcommand("tkry") with ImportCommand {
+  descr("导入特困人员数据")
+
+  override def clearData(): Unit = {
+    import AuthData2021._
+    run(
+      rawData.filter(it => 
+        it.date == Option(lift(date())) && it.personType == Some("特困人员")
+      ).delete
+    )
+  }
+
+  override val fieldColumns: FieldColumns = 
+    FieldColumns(
+      nameAndIdCards = Seq("G" -> "H"),
+      neighborhood = "C",
+      community = "D",
+      address = Some("E"),
+    ) { item =>
+      item.personType = Some("特困人员")
+      item.detail = Some("是")
+    }
 }
