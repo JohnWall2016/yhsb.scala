@@ -5,6 +5,8 @@ import yhsb.base.text.String._
 import yhsb.cjb.db.AuthItem
 import yhsb.cjb.db.HistoryItem
 import yhsb.cjb.db.MonthItem
+import yhsb.base.excel.Excel
+import io.getquill.Query
 
 object Main {
   def main(args: Array[String]): Unit = new Auth(args).runCommand()
@@ -161,5 +163,29 @@ object Auth {
         }
       }
     }
+  }
+
+  def exportData(monthOrAll: String, template: String, file: String) = {
+    println(s"开始导出底册: $file")
+
+    val workbook = Excel.load(template)
+    val sheet = workbook.getSheetAt(0)
+    val startRow = 2
+    var currentRow = startRow
+
+    import AuthData2021._
+
+    val data: List[AuthItem] =
+      if (monthOrAll.toUpperCase() == "ALL") {
+        run {
+          quote(
+            infix"$historyData ORDER BY CONVERT( xzj USING gbk ), CONVERT( csq USING gbk ), CONVERT( name USING gbk )".as[Query[HistoryItem]])
+        }
+      } else {
+        run {
+          quote(
+            infix"$monthData where month='${lift(monthOrAll)}' ORDER BY CONVERT( xzj USING gbk ), CONVERT( csq USING gbk ), CONVERT( name USING gbk )".as[Query[MonthItem]])
+        }
+      }
   }
 }
