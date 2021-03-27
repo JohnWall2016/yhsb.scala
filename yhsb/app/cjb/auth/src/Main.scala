@@ -10,6 +10,13 @@ import yhsb.base.excel.Excel._
 import org.rogach.scallop.ScallopConf
 import yhsb.base.command.Subcommand
 import yhsb.base.db.Context.JdbcContextOps
+import yhsb.cjb.db.JoinedPersonData
+import yhsb.cjb.net.protocol._
+import yhsb.base.datetime.Formatter
+import java.nio.file.Files
+import yhsb.base.io.Path._
+import org.apache.poi.ss.usermodel.Workbook
+import org.apache.poi.ss.usermodel.Sheet
 
 object Main {
   def main(args: Array[String]): Unit = new Auth(args).runCommand()
@@ -26,6 +33,9 @@ class Auth(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(new GenerateBook)
   addSubCommand(new Authenticate)
   addSubCommand(new ImportJBData)
+  addSubCommand(new UpdateJBState)
+  addSubCommand(new ExportData)
+  addSubCommand(new ExportChangedData)
 }
 
 object Auth {
@@ -342,7 +352,7 @@ class ImportCityAllowance extends Subcommand("csdb") with ImportCommand {
     run(
       rawData.filter(it => 
         it.date == Option(lift(date())) && 
-        (infix"type like '%低保人员'".as[Boolean]) && 
+        (infix"${it.personType} like '%低保人员'".as[Boolean]) && 
         it.detail == Some("城市")
       ).delete
     )
@@ -379,7 +389,7 @@ class ImportCountryAllowance extends Subcommand("ncdb") with ImportCommand {
     run(
       rawData.filter(it => 
         it.date == Option(lift(date())) && 
-        (infix"type like '%低保人员'".as[Boolean]) && 
+        (infix"${it.personType} like '%低保人员'".as[Boolean]) && 
         it.detail == Some("农村")
       ).delete
     )
@@ -417,7 +427,7 @@ class ImportDisability extends Subcommand("cjry") with ImportCommand {
     run(
       rawData.filter(it => 
         it.date == Option(lift(date())) && 
-        (infix"type like '%残疾人员'".as[Boolean])
+        (infix"${it.personType} like '%残疾人员'".as[Boolean])
       ).delete
     )
   }
@@ -505,6 +515,7 @@ class ImportJBData extends Subcommand("drjb") {
     }
 
     println("开始导入居保参保人员明细表")
+
     AuthData2021.loadExcel(
       joinedPersonData.quoted,
       excel(),
@@ -513,6 +524,144 @@ class ImportJBData extends Subcommand("drjb") {
       Seq("E", "A", "B", "C", "F", "G", "I", "K", "L", "Q"),
       printSql = true
     )
+
     println("结束导入居保参保人员明细表")
+  }
+}
+
+class UpdateJBState extends Subcommand("jbzt") {
+  descr("更新居保参保状态")
+
+  val monthOrAll = trailArg[String](descr = "表格数据月份, 例如: 201912, ALL")
+  val date = trailArg[String](descr = "居保数据日期, 例如: 20191231")
+
+  override def execute(): Unit = {
+    import AuthData2021._
+
+    println(s"开始更新居保状态: ${monthOrAll()}特殊缴费类型数据底册")
+
+    transaction {
+      val peopleTable = "jbrymx"
+      if (monthOrAll().toUpperCase() == "ALL") {
+          val dataTable = "fphistorydata"
+          for (((cbState, jfState), jbState) <- JBState.jbStateMap) {
+              val sql = 
+                s"""update $dataTable, $peopleTable
+                   |   set ${dataTable}.jbcbqk='$jbState',
+                   |       ${dataTable}.jbcbqkDate='${date()}'
+                   | where ${dataTable}.idcard=${peopleTable}.idcard
+                   |   and ${peopleTable}.cbzt='$cbState'
+                   |   and ${peopleTable}.jfzt='$jfState'""".stripMargin
+              AuthData2021.execute(sql, true)
+          }
+      } else {
+          val dataTable = "fpmonthdata"
+          for (((cbState, jfState), jbState) <- JBState.jbStateMap) {
+              val sql = 
+                s"""update $dataTable, $peopleTable
+                   |   set ${dataTable}.jbcbqk='$jbState',
+                   |        ${dataTable}.jbcbqkDate='${date()}'
+                   | where ${dataTable}.month='${monthOrAll()}'
+                   |   and ${dataTable}.idcard=${peopleTable}.idcard
+                   |   and ${peopleTable}.cbzt='$cbState'
+                   |   and ${peopleTable}.jfzt='$jfState'""".stripMargin
+              AuthData2021.execute(sql, true)
+          }
+      }
+    }
+
+    println(s"结束更新居保状态: ${monthOrAll()}特殊缴费类型数据底册")
+  }
+}
+
+class ExportData extends Subcommand("dcsj") {
+  descr("导出表格数据底册")
+
+  val monthOrAll = trailArg[String](descr = "表格数据月份, 例如: 201912, ALL")
+  val outputDir = """D:\特殊缴费"""
+  val template = """D:\特殊缴费\特殊缴费类型数据底册模板.xlsx"""
+
+  override def execute(): Unit = {
+    val fileName = if (monthOrAll().toUpperCase() == "ALL") {
+      s"${Formatter.formatDate("yyyy")}年特殊缴费类型数据底册${Formatter.formatDate()}.xlsx"
+    } else {
+      s"${monthOrAll()}特殊缴费类型数据底册${Formatter.formatDate()}.xlsx"
+    }
+    Auth.exportData(monthOrAll(), template, s"$outputDir\\$fileName")
+  }
+}
+
+class ExportChangedData extends Subcommand("sfbg") {
+  descr("导出身份变更信息")
+
+  val outputDir = trailArg[String](descr = "导出目录")
+  val template = """D:\特殊缴费\批量信息变更模板.xls"""
+  val rowsPerExcel = 500
+
+  override def execute(): Unit = {
+    if (!Files.exists(outputDir())) {
+      Files.createDirectory(outputDir())
+    } else {
+      println(s"目录已存在: ${outputDir()}")
+      return
+    }
+
+    println("从 扶贫历史数据底册 和 居保参保人员明细表 导出信息变更表")
+
+    import AuthData2021._
+
+    for ((kind, code) <- JBKind.special.invert) {
+      val data: List[(String, String, String)] =
+        run(
+          historyData.join(joinedPersonData).on(_.idCard == _.idCard)
+            .filter { case (h, p) =>
+              h.jbKind == Some(lift(kind)) &&
+              p.jbKind != Some(lift(code)) &&
+              p.cbState == Some("1") &&
+              p.jfState == Some("1")
+            }
+            .map { case (_, p) =>
+              (p.idCard, p.name.getOrElse(""), lift(code))
+            }
+        )
+      
+      if (data.nonEmpty) {
+        println(s"开始导出 $kind 批量信息变更表")
+
+        var i = 0
+        var files = 0
+        var workbook: Workbook = null
+        var sheet: Sheet = null
+        val startRow = 1
+        var currentRow = startRow
+
+        data.foreach { it =>
+          if (i % rowsPerExcel == 0) {
+            if (workbook != null) {
+              files += 1
+              workbook.save(outputDir() / s"${kind}批量信息变更表${files}.xls")
+              workbook = null
+            }
+            if (workbook == null) {
+              workbook = Excel.load(template)
+              sheet = workbook.getSheetAt(0)
+              currentRow = 1
+            }
+          }
+          val row = sheet.getOrCopyRow(currentRow, startRow, false)
+          currentRow += 1
+          row("B").value = it._1
+          row("E").value = it._2
+          row("J").value = it._3
+
+          i += 1
+        }
+        if (workbook != null) {
+          files += 1
+          workbook.save(outputDir() / s"${kind}批量信息变更表${files}.xls")
+        }
+        println(s"结束导出 $kind 批量信息变更表: $i 条")
+      }
+    }
   }
 }

@@ -13,4 +13,9 @@ class BiMap[K, V](entries: (K, V)*) extends collection.immutable.Map[K, V] {
     map.updated(key, value)
 
   lazy val invert = map.map { case (k, v) => (v, k) }
+
+  def subBiMap(keys: Set[K]) = {
+    val m = filter { case (k, _) => keys.contains(k) }
+    new BiMap(m.toSeq: _*)
+  }
 }

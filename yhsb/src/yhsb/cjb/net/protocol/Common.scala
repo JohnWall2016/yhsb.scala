@@ -66,7 +66,11 @@ object JBKind
     "063" -> "低保对象三级",
     "071" -> "计生特扶人员",
     "090" -> "其他"
-  )
+  ) {
+    lazy val special = subBiMap(
+      Set("021", "022", "031", "051", "061", "062")
+    )
+  }
 
 class JBKind extends MapField {
   override def valueMap = JBKind
@@ -80,24 +84,27 @@ trait JBState {
     if (jfState == null || jfState.value == "0") {
       "未参保"
     } else {
-      (jfState.value, cbState.value) match {
-        case ("1", "1") => "正常缴费人员"
-        case ("1", cb)  => s"未知类型参保缴费人员: $cb"
-        case ("2", "2") => "暂停缴费人员"
-        case ("2", cb)  => s"未知类型暂停缴费人员: $cb"
-        case ("3", "1") => "正常待遇人员"
-        case ("3", "2") => "暂停待遇人员"
-        case ("3", "4") => "终止参保人员"
-        case ("3", cb)  => s"未知类型终止缴费人员: $cb"
-        case (jf, cb)   => s"未知类型人员: $jf, $cb"
-      }
+      JBState.jbStateMap.getOrElse(
+        (cbState.value, jfState.value),
+        s"未知类型: ${cbState.value}, ${jfState.value}"
+      )
     }
   }
 }
 
+object JBState {
+  val jbStateMap = Map(
+    ("1", "1") -> "正常缴费",
+    ("2", "2") -> "暂停缴费",
+    ("1", "3") -> "正常待遇",
+    ("2", "3") -> "暂停待遇",
+    ("4", "3") -> "终止参保"
+  )
+}
+
 trait IdCardValid {
   val idCard: String
-    
+
   def valid = idCard != null && idCard.nonEmpty
 
   def invalid = !valid
