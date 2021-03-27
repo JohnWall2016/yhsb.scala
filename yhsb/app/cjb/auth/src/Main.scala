@@ -45,7 +45,7 @@ object Auth {
     transaction {
       items.zipWithIndex
         .foreach { case (item, index) =>
-          println(s"${index + 1} ${item.idCard} ${item.name.getOrElse("").padRight(6)} ${item.personType.getOrElse("")} ")
+          print(s"${index + 1} ${item.idCard} ${item.name.getOrElse("").padRight(6)} ${item.personType.getOrElse("")} ")
           if (item.idCard.nonNullAndEmpty) {
             val result: List[RawItem] = 
               run(
