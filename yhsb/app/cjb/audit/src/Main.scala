@@ -65,7 +65,7 @@ class JoinAudit extends Subcommand("join") with DateRange with Export {
           case Some(v) =>
             println(
               s"$message ${v.jbKind.getOrElse("")} " +
-                s"${if (v.name != item.name) v.name else ""}"
+                s"${if (v.name.get != item.name) v.name.get else ""}"
             )
             items.addOne(Item(item.idCard, item.name, v.jbKind.getOrElse("")))
           case None => println(message)
