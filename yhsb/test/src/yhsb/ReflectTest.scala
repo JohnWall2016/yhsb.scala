@@ -7,7 +7,7 @@ import scala.annotation.StaticAnnotation
 import scala.annotation.meta._
 import scala.beans.BeanProperty
 
-class Human(val sex: String)
+class Human(@Description(value = "Sex") val sex: String)
 
 trait Age { var age: Int }
 
