@@ -16,6 +16,7 @@ case class Additional(occupation: String, education: String)
 @field @getter @setter
 case class Description(value: String) extends StaticAnnotation
 
+@Description("Person")
 class Person[T >: Null](@Description(value = "Name") var name: String, var age: Int, sex: String)
   extends Human(sex)
      with Age {
@@ -30,6 +31,8 @@ object ReflectiveTest extends TestSuite {
     Tests {
       test("reflect") {
         val p = new Person("John", 41, "male")
+
+        println(p.annotations)
 
         println("=" * 60)
         p.getSetters.foreach(p => println(s"${p._1} -> ${p._2}"))

@@ -18,6 +18,10 @@ object Extension {
   case class FieldInfo(annotations: List[Annotation], method: MethodMirror)
 
   implicit class RichInst[T : TypeTag : ClassTag](inst: T) {
+    def annotations: List[Annotation] = {
+      typeOf[T].typeSymbol.annotations
+    }
+
     def getGetters = {
       val instanceMirror = mirror.reflect(inst)
       typeOf[T].members.sorted.collect {
