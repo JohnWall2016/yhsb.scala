@@ -22,7 +22,7 @@ object Extension {
       typeOf[T].typeSymbol.annotations
     }
 
-    def getGetters = {
+    def getters = {
       val instanceMirror = mirror.reflect(inst)
       typeOf[T].members.sorted.collect {
         case m: MethodSymbol if m.isGetter && m.isPublic =>
@@ -33,7 +33,7 @@ object Extension {
       }.toMap
     }
 
-    def getSetters = {
+    def setters = {
       val instanceMirror = mirror.reflect(inst)
       typeOf[T].members.sorted.collect {
         case m: MethodSymbol if m.isSetter && m.isPublic =>

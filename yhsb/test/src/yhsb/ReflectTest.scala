@@ -35,14 +35,14 @@ object ReflectiveTest extends TestSuite {
         println(p.annotations)
 
         println("=" * 60)
-        p.getSetters.foreach(p => println(s"${p._1} -> ${p._2}"))
+        p.setters.foreach(p => println(s"${p._1} -> ${p._2}"))
         println("=" * 60)
-        p.getGetters.foreach(p => println(s"${p._1} -> ${p._2}"))
+        p.getters.foreach(p => println(s"${p._1} -> ${p._2}"))
 
         println("=" * 60)
         val p2 = newInstance[Person[Additional]]("Peter", 43, "male")
         println(p2)
-        p2.getGetters.foreach { case (name, info) =>
+        p2.getters.foreach { case (name, info) =>
           println(s"$name=${info.method()}")
         }
 
@@ -53,7 +53,7 @@ object ReflectiveTest extends TestSuite {
           "sex" -> "female",
           "additional" -> Additional("Software Engineer", "BA")
         )
-        val setters = p2.getSetters
+        val setters = p2.setters
         map.foreach { case (key, value) =>
           setters.get(key) match {
             case Some(info) => info.method(value)
