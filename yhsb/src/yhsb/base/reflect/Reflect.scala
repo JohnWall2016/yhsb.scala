@@ -1,17 +1,16 @@
 package yhsb.base.reflect
 
-import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe._
 import scala.reflect.ClassTag
 
 object Extension {
-  lazy val mirror = scala.reflect.runtime.currentMirror // ru.runtimeMirror(getClass.getClassLoader)
+  lazy val mirror = scala.reflect.runtime.currentMirror // runtimeMirror(getClass.getClassLoader)
 
   def newInstance[T : TypeTag](args: Any*): T = {
     val tpe = typeOf[T]
     val classSymbol = tpe.typeSymbol.asClass
     val classMirror = mirror.reflectClass(classSymbol)
-    val ctorSymbol = tpe.decl(ru.termNames.CONSTRUCTOR).asMethod
+    val ctorSymbol = tpe.decl(termNames.CONSTRUCTOR).asMethod
     val ctorMethod = classMirror.reflectConstructor(ctorSymbol)
     ctorMethod(args: _*).asInstanceOf[T]
   }
