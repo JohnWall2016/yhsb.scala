@@ -1,4 +1,4 @@
-package yhsb.base.reflective
+package yhsb.base.reflect
 
 import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe._

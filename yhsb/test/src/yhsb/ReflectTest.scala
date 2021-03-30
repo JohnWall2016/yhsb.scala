@@ -1,7 +1,7 @@
 package yhsb
 
 import utest.{TestSuite, Tests, test}
-import yhsb.base.reflective.Extension._
+import yhsb.base.reflect.Extension._
 import scala.reflect.runtime.universe._
 import scala.annotation.StaticAnnotation
 import scala.annotation.meta._
