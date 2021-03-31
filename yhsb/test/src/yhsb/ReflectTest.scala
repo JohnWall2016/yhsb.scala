@@ -26,7 +26,7 @@ class Person[T >: Null](@Description(value = "Name") var name: String, var age: 
   override def toString(): String = s"Person($name, $age, $sex, $additional)"
 }
 
-object ReflectiveTest extends TestSuite {
+object ReflectTest extends TestSuite {
   override def tests: Tests =
     Tests {
       test("reflect") {
@@ -35,14 +35,14 @@ object ReflectiveTest extends TestSuite {
         println(p.annotations)
 
         println("=" * 60)
-        p.setters.foreach(p => println(s"${p._1} -> ${p._2}"))
+        p.setters().foreach(p => println(s"${p._1} -> ${p._2}"))
         println("=" * 60)
-        p.getters.foreach(p => println(s"${p._1} -> ${p._2}"))
+        p.getters().foreach(p => println(s"${p._1} -> ${p._2}"))
 
         println("=" * 60)
         val p2 = newInstance[Person[Additional]]("Peter", 43, "male")
         println(p2)
-        p2.getters.foreach { case (name, info) =>
+        p2.getters().foreach { case (name, info) =>
           println(s"$name=${info.method()}")
         }
 
@@ -53,10 +53,14 @@ object ReflectiveTest extends TestSuite {
           "sex" -> "female",
           "additional" -> Additional("Software Engineer", "BA")
         )
-        val setters = p2.setters
+        val setters = p2.setters()
         map.foreach { case (key, value) =>
           setters.get(key) match {
-            case Some(info) => info.method(value)
+            case Some(info) => 
+              println(
+                s"${info.paramList} ${info.paramList.get(0) <:< typeOf[AnyRef]}"
+              )
+              info.method(value)
             case None       =>
           }
         }

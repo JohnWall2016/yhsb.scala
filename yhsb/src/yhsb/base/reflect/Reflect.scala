@@ -4,9 +4,10 @@ import scala.reflect.runtime.universe._
 import scala.reflect.ClassTag
 
 object Extension {
-  lazy val mirror = scala.reflect.runtime.currentMirror // runtimeMirror(getClass.getClassLoader)
+  lazy val mirror =
+    scala.reflect.runtime.currentMirror // runtimeMirror(getClass.getClassLoader)
 
-  def newInstance[T : TypeTag](args: Any*): T = {
+  def newInstance[T: TypeTag](args: Any*): T = {
     val tpe = typeOf[T]
     val classSymbol = tpe.typeSymbol.asClass
     val classMirror = mirror.reflectClass(classSymbol)
@@ -15,32 +16,70 @@ object Extension {
     ctorMethod(args: _*).asInstanceOf[T]
   }
 
-  case class FieldInfo(annotations: List[Annotation], method: MethodMirror)
+  implicit class RichType(tpe: Type) {
+    def newInstance[T](args: Any*): T = {
+      val classSymbol = tpe.typeSymbol.asClass
+      val classMirror = mirror.reflectClass(classSymbol)
+      val ctorSymbol = tpe.decl(termNames.CONSTRUCTOR).asMethod
+      val ctorMethod = classMirror.reflectConstructor(ctorSymbol)
+      ctorMethod(args: _*).asInstanceOf[T]
+    }
+  }
 
-  implicit class RichInst[T : TypeTag : ClassTag](inst: T) {
+  case class MethodInfo(
+      symbol: MethodSymbol,
+      method: MethodMirror,
+      paramList: Option[List[Type]]
+  )
+
+  implicit class RichInst[T: TypeTag: ClassTag](inst: T) {
+    lazy val instanceMirror = mirror.reflect(inst)
+    lazy val thisType = typeOf[T]
+
     def annotations: List[Annotation] = {
-      typeOf[T].typeSymbol.annotations
+      thisType.typeSymbol.annotations
     }
 
-    def getters = {
-      val instanceMirror = mirror.reflect(inst)
-      typeOf[T].members.sorted.collect {
-        case m: MethodSymbol if m.isGetter && m.isPublic =>
-          (
-            m.getter.name.toString, 
-            FieldInfo(m.annotations, instanceMirror.reflectMethod(m))
+    def methods(filter: MethodSymbol => Boolean) = {
+      thisType.members.sorted.view.collect {
+        case m: MethodSymbol if filter(m) => m
+      }
+    }
+
+    def getParamList(list: List[List[Symbol]]) = {
+      if (list.isEmpty) None
+      else {
+        Some(
+          list(0).map(
+            _.info.asSeenFrom(thisType, thisType.typeSymbol.asClass)
           )
+        )
+      }
+    }
+
+    def getters(filter: MethodSymbol => Boolean = { _ => true }) = {
+      methods(m => m.isGetter && m.isPublic && filter(m)).map { m =>
+        (
+          m.getter.name.toString,
+          MethodInfo(
+            m,
+            instanceMirror.reflectMethod(m),
+            getParamList(m.paramLists)
+          )
+        )
       }.toMap
     }
 
-    def setters = {
-      val instanceMirror = mirror.reflect(inst)
-      typeOf[T].members.sorted.collect {
-        case m: MethodSymbol if m.isSetter && m.isPublic =>
-          (
-            m.setter.name.toString.stripSuffix("_$eq"), 
-            FieldInfo(m.annotations, instanceMirror.reflectMethod(m))
+    def setters(filter: MethodSymbol => Boolean = { _ => true }) = {
+      methods(m => m.isSetter && m.isPublic && filter(m)).map { m =>
+        (
+          m.setter.name.toString.stripSuffix("_$eq"),
+          MethodInfo(
+            m,
+            instanceMirror.reflectMethod(m),
+            getParamList(m.paramLists)
           )
+        )
       }.toMap
     }
   }
