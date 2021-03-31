@@ -47,13 +47,14 @@ object ReflectTest extends TestSuite {
         }
 
         println("=" * 60)
+        val p3 = newInstance[Person[Additional]]
         val map = Map(
           "name" -> "Berry",
           "age" -> 20,
           "sex" -> "female",
           "additional" -> Additional("Software Engineer", "BA")
         )
-        val setters = p2.setters()
+        val setters = p3.setters()
         map.foreach { case (key, value) =>
           setters.get(key) match {
             case Some(info) => 
@@ -64,7 +65,7 @@ object ReflectTest extends TestSuite {
             case None       =>
           }
         }
-        println(p2)
+        println(p3)
       }
     }
 }

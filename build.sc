@@ -32,7 +32,8 @@ object yhsb extends CustomModule {
       ivy"org.apache.logging.log4j:log4j-slf4j-impl:2.13.3",
       ivy"org.rogach:scallop_2.13:3.5.0",
       ivy"com.google.code.gson:gson:2.8.6",
-      ivy"com.typesafe:config:1.4.0"
+      ivy"com.typesafe:config:1.4.0",
+      ivy"org.scala-lang:scala-compiler:2.13.3",
     )
     
   trait YhsbModule extends CustomModule {
