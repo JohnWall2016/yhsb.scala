@@ -19,11 +19,16 @@ import scala.tools.reflect.ToolBox
 import yhsb.base.text.String._
 import yhsb.base.reflect.Extension._
 import yhsb.base.struct.MapField
+import yhsb.base.collection.BiMap
 
-sealed abstract class XmlAnnotation extends StaticAnnotation
+sealed abstract trait XmlAnnotation extends StaticAnnotation
 
 @field @getter @setter
-case class Namespaces(namespaces: Map[String, String]) extends XmlAnnotation
+case class Namespaces(namespaces: (String, String)*) extends XmlAnnotation {
+  val bimap = new BiMap(namespaces: _*)
+
+  def apply(name: String) = bimap.get(name)
+}
 
 @field @getter @setter
 case class Node(name: String = null, filter: Element => Boolean = { _ => true })
@@ -44,7 +49,28 @@ sealed trait TreeConvertible[T] {
 
 object TreeConvertible {
   implicit object NamespacesConvertible extends TreeConvertible[Namespaces] {
-    def apply(tree: ru.Tree): Namespaces = ???
+    def apply(tree: ru.Tree): Namespaces = {
+      import ru._
+      val list = tree.children.tail.collect {
+        case Apply(
+              TypeApply(
+                Select(Apply(_, Literal(Constant(name: String)) :: Nil), _),
+                _
+              ),
+              Literal(Constant(value: String)) :: Nil
+            ) =>
+          (name, value)
+        case Apply(
+              _,
+              Literal(Constant(name: String)) :: Literal(
+                Constant(value: String)
+              ) :: Nil
+            ) =>
+          (name, value)
+      }
+
+      Namespaces(list: _*)
+    }
   }
 
   implicit object TextConvertible extends TreeConvertible[Text] {
@@ -77,7 +103,7 @@ object TreeConvertible {
       import ru._
       val Apply(
         _,
-        Literal(Constant(name: String)) :: Function(_, func) :: Nil
+        Literal(Constant(name: String)) :: func :: Nil
       ) = tree
       val tb = yhsb.base.reflect.Extension.mirror.mkToolBox()
       Node(name, tb.eval(tb.untypecheck(func)).asInstanceOf[Element => Boolean])
@@ -129,13 +155,11 @@ object Extension {
 
       inst.setters().foreach { case (name, info) =>
         val annos = info.symbol.annotations
-        println(s"$name $annos")
         annos.get[Text] match {
           case Some(_) => invoke(info, element.getTextContent())
           case None =>
             annos.get[Attribute] match {
               case Some(attr) =>
-                println(attr)
                 invoke(
                   info,
                   element.getAttribute(Option(attr.name).getOrElse(name))
@@ -160,7 +184,6 @@ object Extension {
             }
         }
       }
-
       inst
     }
 
@@ -191,9 +214,9 @@ object Extension {
     ) = {
       if (info.paramList.isDefined) {
         val paramType = info.paramList.get(0)
-        if (paramType =:= typeOf[List[_]]) {
+        if (paramType.erasure =:= typeOf[List[Any]]) {
           val list = mutable.ListBuffer[Any]()
-          val ttag = inst.getTypeTag[Any](paramType.typeParams(0))
+          val ttag = toTypeTag[T](paramType.typeArgs(0))
           if (ttag != null) {
             nodeList.filter(filter).foreach { e =>
               val v = e.toObject(ttag)
@@ -203,8 +226,9 @@ object Extension {
           info.method(list.toList)
         } else {
           nodeList.find(filter) match {
-            case Some(e) => e.toObject(toTypeTag[Any](paramType))
-            case None    =>
+            case Some(e) =>
+              info.method(e.toObject(toTypeTag[Any](paramType)))
+            case None =>
           }
         }
       }

@@ -12,7 +12,7 @@ object Test {
       <para usr="abc"/>
       <para pwd="YLZ_A2ASSDFDFDSS"/>
       <para funid="F00.01.03"/>
-    </in:system>
+    </in:system> 
   </soap:Header>
   <soap:Body>
     <in:business xmlns:in="http://www.molss.gov.cn/">
@@ -37,15 +37,13 @@ class Parameters(
 )
 
 @Namespaces(
-  Map(
-    "soap" -> "http://schemas.xmlsoap.org/soap/envelope/"
-  )
+  "soap" -> "http://schemas.xmlsoap.org/soap/envelope/"
 )
 @Node("soap:Envelope")
 case class InEnvelope[T](
     @Attribute("soap:encodingStyle")
     var encodingStyle: String,
-    @Attribute("soap:Header")
+    @Node("soap:Header")
     var header: InHeader,
     @Node("soap:Body")
     var body: InBody[T]
@@ -63,9 +61,7 @@ case class System(
 case class InHeader(
     @Node("in:system")
     @Namespaces(
-      Map(
-        "in" -> "http://www.molss.gov.cn"
-      )
+      "in" -> "http://www.molss.gov.cn",
     )
     var system: System
 )
@@ -73,9 +69,7 @@ case class InHeader(
 case class InBody[T](
     @Node("in:business")
     @Namespaces(
-      Map(
-        "in" -> "http://www.molss.gov.cn/"
-      )
+      "in" -> "http://www.molss.gov.cn/"
     )
     var business: T
 )
