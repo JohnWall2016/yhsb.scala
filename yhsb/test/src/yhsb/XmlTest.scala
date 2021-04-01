@@ -5,6 +5,7 @@ import yhsb.base.xml._
 import yhsb.base.xml.Extension._
 import yhsb.base.reflect.Extension._
 import org.w3c.dom.Element
+import scala.collection.mutable.LinkedHashMap
 
 object Test {
   val xml = """<?xml version="1.0" encoding="GBK"?>
@@ -131,7 +132,16 @@ object XmlTest extends TestSuite {
         val inst = Test.xml.toElement.toObject[InEnvelope[Business]]
         println(inst)
 
-        println(inst.toXml(true, """<?xml version="1.0" encoding="GBK"?>"""))
+        println(inst.toXml(true, """<?xml version="1.0" encoding="GBK"?>""" + "\n"))
+      }
+      test("paraList") {
+        import yhsb.qb.net.protocol._
+        val paraList = new ParamList(
+          "1001",
+          LinkedHashMap("name" -> "ac01"),
+          LinkedHashMap("aac001" -> "43030003", "aac002" -> "peter")
+        )
+        println(paraList.toXml(true, """<?xml version="1.0" encoding="GBK"?>""" + "\n"))
       }
     }
 }

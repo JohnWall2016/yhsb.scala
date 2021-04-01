@@ -1,11 +1,19 @@
 package yhsb.base.xml
 
+import org.w3c.dom.Document
 import org.w3c.dom.Element
 import org.w3c.dom.NodeList
+
 import org.xml.sax.InputSource
 
-import javax.xml.parsers.DocumentBuilderFactory
 import java.io.StringReader
+import java.io.StringWriter
+
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.OutputKeys
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
 
 import scala.annotation.StaticAnnotation
 import scala.reflect.runtime.{universe => ru}
@@ -15,18 +23,12 @@ import scala.annotation.meta._
 import scala.annotation.Annotation
 import scala.collection.mutable
 import scala.tools.reflect.ToolBox
+import scala.collection.mutable.LinkedHashMap
 
 import yhsb.base.text.String._
 import yhsb.base.reflect.Extension._
 import yhsb.base.struct.MapField
 import yhsb.base.collection.BiMap
-import org.w3c.dom.Document
-import java.io.StringWriter
-import javax.xml.transform.TransformerFactory
-import javax.xml.transform.OutputKeys
-import javax.xml.transform.dom.DOMSource
-import javax.xml.transform.stream.StreamResult
-import scala.collection.mutable.LinkedHashMap
 
 sealed abstract trait XmlAnnotation extends StaticAnnotation
 
@@ -300,27 +302,45 @@ object Extension {
                           val ttag = inst.getTypeTag[Any](
                             info.method.symbol.returnType.typeArgs(0)
                           )
-
-                          nodes.addAll(list.map { it =>
-                            val toXml = new RichToXml[Any](it)(ttag)
-                            toXml.toElement(
-                              doc,
-                              name_,
-                              annos.get[Namespaces].map(_.bimap).getOrElse(null)
-                            )
-                          })
+                          if (ttag.tpe <:< typeOf[CustomElement]) {
+                            nodes.addAll(list.map { it =>
+                              it.asInstanceOf[CustomElement].toElement(
+                                doc,
+                                name_,
+                                annos.get[Namespaces].map(_.bimap).getOrElse(null)
+                              )
+                            })
+                          } else {
+                            nodes.addAll(list.map { it =>
+                              val toXml = new RichToXml[Any](it)(ttag)
+                              toXml.toElement(
+                                doc,
+                                name_,
+                                annos.get[Namespaces].map(_.bimap).getOrElse(null)
+                              )
+                            })
+                          }
                         case it =>
                           val ttag =
                             inst.getTypeTag[Any](info.method.symbol.returnType)
-
-                          val toXml = new RichToXml[Any](it)(ttag)
-                          nodes.addOne(
-                            toXml.toElement(
-                              doc,
-                              name_,
-                              annos.get[Namespaces].map(_.bimap).getOrElse(null)
+                          if (ttag.tpe <:< typeOf[CustomElement]) {
+                            nodes.addOne(
+                              it.asInstanceOf[CustomElement].toElement(
+                                doc,
+                                name_,
+                                annos.get[Namespaces].map(_.bimap).getOrElse(null)
+                              )
                             )
-                          )
+                          } else {
+                            val toXml = new RichToXml[Any](it)(ttag)
+                            nodes.addOne(
+                              toXml.toElement(
+                                doc,
+                                name_,
+                                annos.get[Namespaces].map(_.bimap).getOrElse(null)
+                              )
+                            )
+                          }
                       }
                     case None =>
                       annos.get[AttrNode] match {
@@ -417,4 +437,8 @@ object Extension {
       doc.toElement(any, nodeName, namespaces)
     }
   }
+}
+
+trait CustomElement {
+  def toElement(doc: Document, nodeName: String, namespaces: collection.Map[String, String]): Element
 }
