@@ -4,6 +4,7 @@ import utest.{TestSuite, Tests, test}
 import yhsb.base.xml._
 import yhsb.base.xml.Extension._
 import yhsb.base.reflect.Extension._
+import org.w3c.dom.Element
 
 object Test {
   val xml = """<?xml version="1.0" encoding="GBK"?>
@@ -27,6 +28,12 @@ object Test {
         <row aac003="徐B" rown="2" />
         <row aac003="徐C" rown="3" />
         <row aac003="徐D" rown="4" />
+      </paraset>
+      <paraset name="cxjg">
+        <row aac003="张A" rown="1" />
+        <row aac003="张B" rown="2" />
+        <row aac003="张C" rown="3" />
+        <row aac003="张D" rown="4" />
       </paraset>
     </in:business>
   </soap:Body>
@@ -86,9 +93,22 @@ case class Business(
     var clientSql: String,
     @AttrNode("para", "functionid")
     var functionId: String,
-    @Node("paraset")
-    var paraSet: ParaSet
+    @Node("paraset", Business.filter)
+    var paraSet: ParaSet,
+
+    @Node("paraset", Business.nofilter)
+    var otherParaSets: List[ParaSet]
 )
+
+object Business {
+  val filter: Element => Boolean = { e =>
+    "^querylist|cxjg$".r.matches(e.getAttribute("name"))
+  }
+
+  val nofilter: Element => Boolean = { e =>
+    !"^querylist|cxjg$".r.matches(e.getAttribute("name"))
+  }
+}
 
 case class ParaSet(
     @Attribute("name")
