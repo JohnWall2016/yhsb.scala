@@ -1,7 +1,6 @@
 package yhsb.qb.net
 
 import scala.collection.mutable
-import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 
 import yhsb.base.io.AutoClose
