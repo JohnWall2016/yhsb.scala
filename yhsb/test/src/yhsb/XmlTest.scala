@@ -3,6 +3,7 @@ package yhsb
 import utest.{TestSuite, Tests, test}
 import yhsb.base.xml._
 import yhsb.base.xml.Extension._
+import yhsb.base.reflect.Extension._
 
 object Test {
   val xml = """<?xml version="1.0" encoding="GBK"?>
@@ -33,7 +34,7 @@ object Test {
 }
 
 class Parameters(
-    val funId: String
+    @transient val funId: String
 )
 
 @Namespaces(
@@ -61,7 +62,7 @@ case class System(
 case class InHeader(
     @Node("in:system")
     @Namespaces(
-      "in" -> "http://www.molss.gov.cn",
+      "in" -> "http://www.molss.gov.cn"
     )
     var system: System
 )
@@ -76,20 +77,15 @@ case class InBody[T](
 
 case class Business(
     @AttrNode("para", "startrow")
-    var startRow: String,
-
+    var startRow: Int,
     @AttrNode("para", "row_count")
-    var rowCount: String,
-
+    var rowCount: Int,
     @AttrNode("para", "pagesize")
-    var pageSize: String,
-
+    var pageSize: Int,
     @AttrNode("para", "clientsql")
     var clientSql: String,
-
     @AttrNode("para", "functionid")
     var functionId: String,
-
     @Node("paraset")
     var paraSet: ParaSet
 )
@@ -97,7 +93,6 @@ case class Business(
 case class ParaSet(
     @Attribute("name")
     var name: String,
-
     @Node("row")
     var rowList: List[Row]
 )
@@ -105,9 +100,8 @@ case class ParaSet(
 case class Row(
     @Attribute("aac003")
     var name: String,
-
     @Attribute("rown")
-    var number: String
+    var number: Int
 )
 
 object XmlTest extends TestSuite {
@@ -116,6 +110,8 @@ object XmlTest extends TestSuite {
       test("toObject") {
         val inst = Test.xml.toElement.toObject[InEnvelope[Business]]
         println(inst)
+
+        println(inst.toXml(true, """<?xml version="1.0" encoding="GBK"?>"""))
       }
     }
 }

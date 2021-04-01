@@ -3,6 +3,7 @@ package yhsb.base.reflect
 import scala.reflect.runtime.universe._
 import scala.reflect.ClassTag
 import scala.reflect.api
+import scala.collection.mutable.LinkedHashMap
 
 object Extension {
   lazy val mirror =
@@ -60,13 +61,14 @@ object Extension {
       }
     }
 
-    def getType(symbol: Symbol) = {
-      symbol.info.asSeenFrom(thisType, thisType.typeSymbol.asClass)
-    }
+    def getType(tpe: Type): Type =
+      tpe.asSeenFrom(thisType, thisType.typeSymbol.asClass)
 
-    def getTypeTag[T](symbol: Symbol) = {
-      toTypeTag[T](getType(symbol))
-    }
+    def getTypeTag[T](tpe: Type) = toTypeTag[T](getType(tpe))
+
+    def getType(symbol: Symbol): Type = getType(symbol.info)
+
+    def getTypeTag[T](symbol: Symbol) = toTypeTag[T](getType(symbol))
 
     private def getParamList(list: List[List[Symbol]]) = {
       if (list.isEmpty) None
@@ -74,7 +76,7 @@ object Extension {
     }
 
     def getters(filter: MethodSymbol => Boolean = { _ => true }) = {
-      methods(m => m.isGetter && m.isPublic && filter(m)).map { m =>
+      LinkedHashMap(methods(m => m.isGetter && m.isPublic && filter(m)).map { m =>
         (
           m.getter.name.toString,
           MethodInfo(
@@ -83,11 +85,11 @@ object Extension {
             getParamList(m.paramLists)
           )
         )
-      }.toMap
+      }.toSeq :_*)
     }
 
     def setters(filter: MethodSymbol => Boolean = { _ => true }) = {
-      methods(m => m.isSetter && m.isPublic && filter(m)).map { m =>
+      LinkedHashMap(methods(m => m.isSetter && m.isPublic && filter(m)).map { m =>
         (
           m.setter.name.toString.stripSuffix("_$eq"),
           MethodInfo(
@@ -96,7 +98,7 @@ object Extension {
             getParamList(m.paramLists)
           )
         )
-      }.toMap
+      }.toSeq :_*)
     }
   }
 }
