@@ -3,15 +3,18 @@ package yhsb.qb.net.protocol
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 
+import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 import scala.collection.mutable.LinkedHashMap
 
 import yhsb.base.xml._
 import yhsb.base.text.String._
 
-class Request[T: TypeTag](
-    @transient val funID: String
-)
+class Request[T: TypeTag: ClassTag] (
+  @transient val funID: String
+) {
+  type Item = T
+}
 
 class System(funID: String) {
   @AttrNode("para", "usr")
@@ -25,7 +28,7 @@ class System(funID: String) {
 }
 
 class InHeader(funID: String) {
-  @Namespaces("in" -> "http://www.molss.gov.cn")
+  @Namespaces("in" -> "http://www.molss.gov.cn/")
   @Node("in:system")
   var system = new System(funID)
 }
@@ -65,26 +68,26 @@ case class InEnvelope[T <: Request[_]](
 
 case class OutResult(
     @Attribute("sessionID")
-    sessionID: String,
+    var sessionID: String,
     @Attribute("message")
-    message: String
+    var message: String
 )
 
 case class OutHeader(
-    result: OutResult
+    var result: OutResult
 )
 
 case class OutBusiness[T](
     @AttrNode("result", "result")
-    val result: String,
+    var result: String,
     @AttrNode("result", "row_count")
-    val rowCount: Int,
+    var rowCount: Int,
     @AttrNode("result", "querysql")
-    val querySql: String,
+    var querySql: String,
     @Node("resultset", OutBusiness.filter)
-    val resultSet: ResultSet[T],
+    var resultSet: ResultSet[T],
     @Node("resultset", OutBusiness.nofilter)
-    val otherResultSets: List[ResultSet[T]]
+    var otherResultSets: List[ResultSet[T]]
 )
 
 object OutBusiness {
@@ -100,25 +103,25 @@ object OutBusiness {
 case class OutBody[T](
     @Namespaces("out" -> "http://www.molss.gov.cn/")
     @Node("out:business")
-    result: OutBusiness[T]
+    var result: OutBusiness[T]
 )
 
 @Namespaces("soap" -> "http://schemas.xmlsoap.org/soap/envelope/")
 @Node("soap:Envelope")
 case class OutEnvelope[T](
     @Attribute("soap:encodingStyle")
-    encodingStyle: String,
+    var encodingStyle: String,
     @Node("soap:Header")
-    header: OutHeader,
+    var header: OutHeader,
     @Node("soap:Body")
-    body: OutBody[T]
+    var body: OutBody[T]
 )
 
 case class ResultSet[T](
     @Attribute("name")
-    name: String,
+    var name: String,
     @Node("row")
-    rowList: List[T]
+    var rowList: List[T]
 ) extends Iterable[T] {
   override def iterator: Iterator[T] = {
     rowList.iterator
@@ -127,14 +130,15 @@ case class ResultSet[T](
 
 case class Result(
     @Attribute("result")
-    result: String,
+    var result: String,
     @Attribute("row_count")
-    rowCount: Int,
+    var rowCount: Int,
     @Attribute("querysql")
-    querySql: String
+    var querySql: String
 )
 
-class FunctionID(funID: String, functionID: String) extends Request(funID) {
+class FunctionID[T: TypeTag: ClassTag](funID: String, functionID: String)
+  extends Request[T](funID) {
   @AttrNode("para", "functionid")
   val functionID_ = functionID
 }

@@ -161,7 +161,6 @@ object Extension {
 
     def toObject[T: TypeTag]: T = {
       val inst = newInstance[T]
-
       inst.setters().foreach { case (name, info) =>
         val annos = info.symbol.annotations
         if (!annos.defined[transient]) {
@@ -205,14 +204,16 @@ object Extension {
           val field = paramType.newInstance[MapField]
           field.value = value
           info.method(field)
-        } else if (paramType <:< typeOf[Int] || paramType <:< typeOf[Integer]) {
-          info.method(value.toInt)
-        } else if (paramType <:< typeOf[BigDecimal]) {
-          info.method(BigDecimal(value))
-        } else if (paramType <:< typeOf[java.math.BigDecimal]) {
-          info.method(BigDecimal(value).bigDecimal)
         } else if (paramType <:< typeOf[String]) {
           info.method(value)
+        } else if (value != null) {
+          if (paramType <:< typeOf[Int] || paramType <:< typeOf[Integer]) {
+            info.method(value.toInt)
+          } else if (paramType <:< typeOf[BigDecimal]) {
+            info.method(BigDecimal(value))
+          } else if (paramType <:< typeOf[java.math.BigDecimal]) {
+            info.method(BigDecimal(value).bigDecimal)
+          }
         }
       }
     }

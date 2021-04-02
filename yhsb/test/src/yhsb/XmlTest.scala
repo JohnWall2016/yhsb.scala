@@ -70,7 +70,7 @@ case class System(
 case class InHeader(
     @Node("in:system")
     @Namespaces(
-      "in" -> "http://www.molss.gov.cn"
+      "in" -> "http://www.molss.gov.cn/"
     )
     var system: System
 )

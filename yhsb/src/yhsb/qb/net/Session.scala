@@ -2,6 +2,7 @@ package yhsb.qb.net
 
 import scala.collection.mutable
 import scala.reflect.runtime.universe._
+import scala.reflect.ClassTag
 
 import yhsb.base.io.AutoClose
 import yhsb.base.json.Jsonable
@@ -53,7 +54,10 @@ class Session(
   }
 
   def toService[T: TypeTag](req: T): String = {
-    req.toXml(declare = """<?xml version="1.0" encoding="GBK"?>""")
+    val request =
+      req.toXml(declare = """<?xml version="1.0" encoding="GBK"?>""")
+    println(s"toService: $request")
+    request
   }
 
   def sendService[T <: Request[_]: TypeTag](req: T) = {
@@ -66,18 +70,19 @@ class Session(
   def fromXml[T: TypeTag](xml: String): T =
     xml.toElement.toObject[T]
 
-  def getResult[T: TypeTag]: OutBusiness[T] = {
+  def getResult[T: TypeTag: ClassTag]: OutBusiness[T] = {
     val result = readBody()
-    // println(s"getResult: $result")
-    val outEnv = fromXml[OutEnvelope[T]](result)
+    println(s"getResult: $result")
+    val outEnv = result.toElement.toObject[OutEnvelope[T]]
+    println(s"getResult2: $outEnv")
     outEnv.body.result
   }
 
-  def request[T <: Request[_]: TypeTag](
-      reqWithTag: Request[T]
-  ): OutBusiness[T] = {
+  def request[T <: Request[_]: TypeTag : ClassTag](
+      reqWithTag: T
+  ): OutBusiness[reqWithTag.Item] = {
     sendService(reqWithTag)
-    getResult[T]
+    getResult[reqWithTag.Item]
   }
 
   def login(): String = {
