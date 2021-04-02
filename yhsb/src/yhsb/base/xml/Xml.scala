@@ -211,11 +211,13 @@ object Extension {
         } else if (value != null) {
           if (paramType <:< typeOf[Int] || paramType <:< typeOf[Integer]) {
             info.method(value.toInt)
+          } else if (paramType <:< typeOf[Double]) {
+            info.method(value.toDouble)
           } else if (paramType <:< typeOf[BigDecimal]) {
             info.method(BigDecimal(value))
           } else if (paramType <:< typeOf[java.math.BigDecimal]) {
             info.method(BigDecimal(value).bigDecimal)
-          }
+          } 
         }
       }
     }
