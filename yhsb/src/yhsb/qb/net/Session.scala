@@ -56,7 +56,7 @@ class Session(
   def toService[T: TypeTag](req: T): String = {
     val request =
       req.toXml(declare = """<?xml version="1.0" encoding="GBK"?>""")
-    println(s"toService: $request")
+    //println(s"toService: $request")
     request
   }
 
@@ -72,13 +72,13 @@ class Session(
 
   def getResult[T: TypeTag: ClassTag]: OutBusiness[T] = {
     val result = readBody()
-    println(s"getResult: $result")
+    //println(s"getResult: $result")
     val outEnv = result.toElement.toObject[OutEnvelope[T]]
-    println(s"getResult2: $outEnv")
+    //println(s"getResult2: $outEnv")
     outEnv.body.result
   }
 
-  def request[T <: Request[_]: TypeTag : ClassTag](
+  def request[T <: Request[_]: TypeTag: ClassTag](
       reqWithTag: T
   ): OutBusiness[reqWithTag.Item] = {
     sendService(reqWithTag)

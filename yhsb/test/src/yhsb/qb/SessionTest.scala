@@ -10,7 +10,21 @@ object SessionTest extends TestSuite {
     test("agencyCode") {
       Session.use() { session =>
         val result = session.request(AgencyCodeQuery())
-        println(result)
+
+        def getAgencyCode(name: String) = 
+          result.resultSet.find(_.name == name).get.code
+
+        session.request(
+          JoinedPersonInProvinceQuery("430302195806251012")
+        )
+        .resultSet.foreach { it =>
+          println(it)
+
+          session.request(RetiredPersonQuery(
+            it.idCard, getAgencyCode(it.agencyName)
+          ))
+          .resultSet.foreach(println)
+        }
       }
     }
   }

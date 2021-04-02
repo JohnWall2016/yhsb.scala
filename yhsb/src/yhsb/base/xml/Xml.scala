@@ -180,14 +180,16 @@ object Extension {
                       val attr = Option(attrNode.attr).getOrElse(name)
                       invoke(info, element.getElementAttribute(name_, attr))
                     case None =>
-                      annos.get[Node] match {
-                        case Some(node) =>
-                          val name_ = Option(node.name).getOrElse(name)
-                          val elems = element.getElementsByTagName(name_)
-                          if (elems != null) {
-                            invoke(info, elems, inst, node.filter)
-                          }
-                        case None =>
+                      val (name_, fitler) = 
+                        annos.get[Node] match {
+                          case Some(node) => 
+                            (Option(node.name).getOrElse(name), node.filter)
+                          case None =>
+                            (name, {_: Element => true})
+                        }
+                      val elems = element.getElementsByTagName(name_)
+                      if (elems != null) {
+                        invoke(info, elems, inst, fitler)
                       }
                   }
               }

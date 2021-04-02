@@ -10,8 +10,8 @@ import scala.collection.mutable.LinkedHashMap
 import yhsb.base.xml._
 import yhsb.base.text.String._
 
-class Request[T: TypeTag: ClassTag] (
-  @transient val funID: String
+class Request[T: TypeTag: ClassTag](
+    @transient val funID: String
 ) {
   type Item = T
 }
@@ -166,8 +166,11 @@ class SimpleClientSql(funID: String, functionID: String, sql: String = "")
   val functionID_ = functionID
 }
 
-class ClientSql(funID: String, functionID: String, sql: String = "")
-  extends Request(funID) {
+class ClientSql[T: TypeTag: ClassTag](
+    funID: String,
+    functionID: String,
+    sql: String = ""
+) extends Request[T](funID) {
   @AttrNode("para", "startrow")
   val startRow = "1"
 
