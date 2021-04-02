@@ -16,6 +16,8 @@ class Request[T: TypeTag: ClassTag](
   type Item = T
 }
 
+sealed case class EmptyItem()
+
 class System(funID: String) {
   @AttrNode("para", "usr")
   var user: String = ""

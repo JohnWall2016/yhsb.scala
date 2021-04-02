@@ -7,7 +7,7 @@ import yhsb.qb.net.protocol._
 
 object SessionTest extends TestSuite {
   def tests = Tests {
-    test("agencyCode") {
+    test("retire") {
       Session.use() { session =>
         val result = session.request(AgencyCodeQuery())
 
