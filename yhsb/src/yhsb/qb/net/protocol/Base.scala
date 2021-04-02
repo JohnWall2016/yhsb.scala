@@ -16,7 +16,7 @@ class Request[T: TypeTag: ClassTag](
   type Item = T
 }
 
-sealed case class EmptyItem()
+case class EmptyItem()
 
 class System(funID: String) {
   @AttrNode("para", "usr")
