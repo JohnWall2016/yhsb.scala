@@ -9,17 +9,11 @@ object Extension {
   lazy val mirror =
     scala.reflect.runtime.currentMirror // runtimeMirror(getClass.getClassLoader)
 
-  def toClassTag[T : TypeTag] =
+  def toClassTag[T: TypeTag] =
     ClassTag[T](mirror.runtimeClass(typeTag[T].tpe))
 
-  def toTypeTag[T](tpe: Type): TypeTag[T] =
-    TypeTag(mirror, new api.TypeCreator {
-      def apply[U <: api.Universe with Singleton](m: api.Mirror[U]) =
-        if (m eq mirror) tpe.asInstanceOf[U # Type]
-        else throw new IllegalArgumentException(
-          s"Type tag defined in $mirror cannot be migrated to other mirrors."
-        )
-    })
+  def toClassTag[T](tpe: Type) =
+    ClassTag[T](mirror.runtimeClass(tpe))
 
   def newInstance[T: TypeTag](args: Any*): T = typeOf[T].newInstance(args: _*)
 
@@ -39,7 +33,17 @@ object Extension {
         mirror.runtimeClass(tpe.typeSymbol.asClass).asInstanceOf[Class[T]]
       )
     }
+
+    def instanceType[T](inst: T) = {
+      if (mirror.runtimeClass(tpe).isAssignableFrom(inst.getClass)) {
+        new InstanceType(inst, tpe)
+      } else {
+        throw new Exception(s"$inst is not an instance of $tpe")
+      }
+    }
   }
+
+  //implicit def ToInstanceType[T: TypeTag](inst: T) = typeOf[T].instanceType(inst)
 
   case class MethodInfo(
       symbol: MethodSymbol,
@@ -47,9 +51,9 @@ object Extension {
       paramList: Option[List[Type]]
   )
 
-  implicit class RichInst[T: TypeTag](inst: T) {
-    lazy val instanceMirror = mirror.reflect(inst)(toClassTag[T])
-    lazy val thisType = typeOf[T]
+  class InstanceType[T] private[reflect] (inst: T, tpe: Type) {
+    lazy val instanceMirror = mirror.reflect(inst)(toClassTag[T](tpe))
+    lazy val thisType = tpe
 
     def annotations: List[Annotation] = {
       thisType.typeSymbol.annotations
@@ -64,11 +68,7 @@ object Extension {
     def getType(tpe: Type): Type =
       tpe.asSeenFrom(thisType, thisType.typeSymbol.asClass)
 
-    def getTypeTag[T](tpe: Type) = toTypeTag[T](getType(tpe))
-
     def getType(symbol: Symbol): Type = getType(symbol.info)
-
-    def getTypeTag[T](symbol: Symbol) = toTypeTag[T](getType(symbol))
 
     private def getParamList(list: List[List[Symbol]]) = {
       if (list.isEmpty) None
@@ -76,29 +76,33 @@ object Extension {
     }
 
     def getters(filter: MethodSymbol => Boolean = { _ => true }) = {
-      LinkedHashMap(methods(m => m.isGetter && m.isPublic && filter(m)).map { m =>
-        (
-          m.getter.name.toString,
-          MethodInfo(
-            m,
-            instanceMirror.reflectMethod(m),
-            getParamList(m.paramLists)
+      LinkedHashMap(
+        methods(m => m.isGetter && m.isPublic && filter(m)).map { m =>
+          (
+            m.getter.name.toString,
+            MethodInfo(
+              m,
+              instanceMirror.reflectMethod(m),
+              getParamList(m.paramLists)
+            )
           )
-        )
-      }.toSeq :_*)
+        }.toSeq: _*
+      )
     }
 
     def setters(filter: MethodSymbol => Boolean = { _ => true }) = {
-      LinkedHashMap(methods(m => m.isSetter && m.isPublic && filter(m)).map { m =>
-        (
-          m.setter.name.toString.stripSuffix("_$eq"),
-          MethodInfo(
-            m,
-            instanceMirror.reflectMethod(m),
-            getParamList(m.paramLists)
+      LinkedHashMap(
+        methods(m => m.isSetter && m.isPublic && filter(m)).map { m =>
+          (
+            m.setter.name.toString.stripSuffix("_$eq"),
+            MethodInfo(
+              m,
+              instanceMirror.reflectMethod(m),
+              getParamList(m.paramLists)
+            )
           )
-        )
-      }.toSeq :_*)
+        }.toSeq: _*
+      )
     }
   }
 }

@@ -17,8 +17,7 @@ import javax.xml.transform.stream.StreamResult
 
 import scala.annotation.StaticAnnotation
 import scala.reflect.runtime.{universe => ru}
-import scala.reflect.runtime.universe.{typeOf, TypeTag, typeTag}
-import scala.reflect.{ClassTag, classTag}
+import scala.reflect.runtime.universe.{typeOf, TypeTag, Type}
 import scala.annotation.meta._
 import scala.annotation.Annotation
 import scala.collection.mutable
@@ -151,7 +150,9 @@ object Extension {
   }
 
   implicit class RichElement(element: Element) {
-    def getElementAttribute(tagName: String, attrName: String): String = {
+    def toObject[T: TypeTag]: T = toObject(typeOf[T])
+
+    private def getElementAttribute(tagName: String, attrName: String): String = {
       element.getElementsByTagName(tagName).foreach { element =>
         val attr = element.getAttribute(attrName)
         if (attr.nonNullAndEmpty) return attr
@@ -159,9 +160,10 @@ object Extension {
       return null
     }
 
-    def toObject[T: TypeTag]: T = {
-      val inst = newInstance[T]
-      inst.setters().foreach { case (name, info) =>
+    private def toObject[T](tpe: Type): T = {
+      val inst = tpe.newInstance[T]
+      val instType = tpe.instanceType(inst)
+      instType.setters().foreach { case (name, info) =>
         val annos = info.symbol.annotations
         if (!annos.defined[transient]) {
           annos.defined[Text] match {
@@ -178,18 +180,18 @@ object Extension {
                     case Some(attrNode) =>
                       val name_ = attrNode.name
                       val attr = Option(attrNode.attr).getOrElse(name)
-                      invoke(info, element.getElementAttribute(name_, attr))
+                      invoke(info, getElementAttribute(name_, attr))
                     case None =>
-                      val (name_, fitler) = 
+                      val (name_, fitler) =
                         annos.get[Node] match {
-                          case Some(node) => 
+                          case Some(node) =>
                             (Option(node.name).getOrElse(name), node.filter)
                           case None =>
-                            (name, {_: Element => true})
+                            (name, { _: Element => true })
                         }
                       val elems = element.getElementsByTagName(name_)
                       if (elems != null) {
-                        invoke(info, elems, inst, fitler)
+                        invoke(info, elems, fitler)
                       }
                   }
               }
@@ -199,7 +201,7 @@ object Extension {
       inst
     }
 
-    def invoke(info: MethodInfo, value: String) = {
+    private def invoke(info: MethodInfo, value: String) = {
       if (info.paramList.isDefined) {
         val paramType = info.paramList.get(0)
         if (paramType <:< typeOf[MapField]) {
@@ -217,33 +219,30 @@ object Extension {
             info.method(BigDecimal(value))
           } else if (paramType <:< typeOf[java.math.BigDecimal]) {
             info.method(BigDecimal(value).bigDecimal)
-          } 
+          }
         }
       }
     }
 
-    def invoke[T: TypeTag](
+    private def invoke(
         info: MethodInfo,
         nodeList: NodeList,
-        inst: T,
         filter: Element => Boolean
     ) = {
       if (info.paramList.isDefined) {
         val paramType = info.paramList.get(0)
         if (paramType.erasure =:= typeOf[List[Any]]) {
           val list = mutable.ListBuffer[Any]()
-          val ttag = toTypeTag[T](paramType.typeArgs(0))
-          if (ttag != null) {
-            nodeList.filter(filter).foreach { e =>
-              val v = e.toObject(ttag)
-              list.addOne(v)
-            }
+          val argType = paramType.typeArgs.head
+          nodeList.filter(filter).foreach { e =>
+            val v = e.toObject[Any](argType)
+            list.addOne(v)
           }
           info.method(list.toList)
         } else {
           nodeList.find(filter) match {
             case Some(e) =>
-              info.method(e.toObject(toTypeTag[Any](paramType)))
+              info.method(e.toObject[Any](paramType))
             case None =>
           }
         }
@@ -252,133 +251,6 @@ object Extension {
   }
 
   implicit class RichDocument(doc: Document) {
-    def toElement[T: TypeTag](
-        inst: T,
-        nodeName: String = null,
-        namespaces: collection.Map[String, String] = null
-    ): Element = {
-      val nodeName_ = if (nodeName != null) {
-        nodeName
-      } else {
-        inst.annotations
-          .get[Node]
-          .map(_.name)
-          .getOrElse(inst.getClass.getSimpleName())
-      }
-      val namespaces_ = if (namespaces != null) {
-        namespaces
-      } else {
-        inst.annotations
-          .get[Namespaces]
-          .map(_.bimap)
-          .getOrElse(Map[String, String]())
-      }
-      val attributes = LinkedHashMap(
-        namespaces_.map { case (key, value) =>
-          (
-            if (key.isNullOrEmpty) "xmlns" else s"xmlns:$key",
-            value
-          )
-        }.toSeq: _*
-      )
-      var text: String = null
-
-      val nodes = mutable.ListBuffer[Element]()
-
-      inst.getters().foreach { case (name, info) =>
-        val annos = info.symbol.annotations
-        if (!annos.defined[transient]) {
-          annos.defined[Text] match {
-            case true =>
-              text = info.method().toString
-            case false =>
-              annos.get[Attribute] match {
-                case Some(attr) =>
-                  val name_ = if (attr.name.nonNullAndEmpty) attr.name else name
-                  attributes(name_) = info.method().toString
-                case None =>
-                  annos.get[Node] match {
-                    case Some(node) =>
-                      val name_ =
-                        if (node.name.nonNullAndEmpty) node.name else name
-
-                      info.method() match {
-                        case list: List[Any] =>
-                          val ttag = inst.getTypeTag[Any](
-                            info.method.symbol.returnType.typeArgs(0)
-                          )
-                          if (ttag.tpe <:< typeOf[CustomElement]) {
-                            nodes.addAll(list.map { it =>
-                              it.asInstanceOf[CustomElement].toElement(
-                                doc,
-                                name_,
-                                annos.get[Namespaces].map(_.bimap).getOrElse(null)
-                              )
-                            })
-                          } else {
-                            nodes.addAll(list.map { it =>
-                              val toXml = new RichToXml[Any](it)(ttag)
-                              toXml.toElement(
-                                doc,
-                                name_,
-                                annos.get[Namespaces].map(_.bimap).getOrElse(null)
-                              )
-                            })
-                          }
-                        case it =>
-                          val ttag =
-                            inst.getTypeTag[Any](info.method.symbol.returnType)
-                          if (ttag.tpe <:< typeOf[CustomElement]) {
-                            nodes.addOne(
-                              it.asInstanceOf[CustomElement].toElement(
-                                doc,
-                                name_,
-                                annos.get[Namespaces].map(_.bimap).getOrElse(null)
-                              )
-                            )
-                          } else {
-                            val toXml = new RichToXml[Any](it)(ttag)
-                            nodes.addOne(
-                              toXml.toElement(
-                                doc,
-                                name_,
-                                annos.get[Namespaces].map(_.bimap).getOrElse(null)
-                              )
-                            )
-                          }
-                      }
-                    case None =>
-                      annos.get[AttrNode] match {
-                        case Some(attrNode) =>
-                          val name_ = attrNode.name
-                          val attr =
-                            if (attrNode.attr.nonNullAndEmpty) attrNode.attr
-                            else name
-                          nodes.addOne(
-                            doc.createElement(
-                              name_,
-                              Map(attr -> info.method().toString())
-                            )
-                          )
-                        case None =>
-                      }
-                  }
-              }
-          }
-        }
-      }
-
-      if (attributes.nonEmpty || text != null || nodes.nonEmpty) {
-        val elem = createElement(nodeName_, attributes, text)
-        nodes.foreach { it =>
-          elem.appendChild(it)
-        }
-        elem
-      } else {
-        createElement(nodeName_)
-      }
-    }
-
     def transformToString(
         declare: String = null,
         indent: Boolean = false
@@ -421,15 +293,143 @@ object Extension {
       }
       element
     }
+
+    def toElement[T: TypeTag](
+        inst: T,
+        nodeName: String = null,
+        namespaces: collection.Map[String, String] = null
+    ): Element = toElement(inst, typeOf[T], nodeName, namespaces)
+
+    private[xml] def toElement[T](
+        inst: T,
+        tpe: Type,
+        nodeName: String,
+        namespaces: collection.Map[String, String]
+    ): Element = {
+      val instType = tpe.instanceType(inst)
+      val nodeName_ = if (nodeName != null) {
+        nodeName
+      } else {
+        instType.annotations
+          .get[Node]
+          .map(_.name)
+          .getOrElse(inst.getClass.getSimpleName())
+      }
+      val namespaces_ = if (namespaces != null) {
+        namespaces
+      } else {
+        instType.annotations
+          .get[Namespaces]
+          .map(_.bimap)
+          .getOrElse(Map[String, String]())
+      }
+      val attributes = LinkedHashMap(
+        namespaces_.map { case (key, value) =>
+          (
+            if (key.isNullOrEmpty) "xmlns" else s"xmlns:$key",
+            value
+          )
+        }.toSeq: _*
+      )
+      var text: String = null
+
+      val nodes = mutable.ListBuffer[Element]()
+
+      instType.getters().foreach { case (name, info) =>
+        val annos = info.symbol.annotations
+        if (!annos.defined[transient]) {
+          annos.defined[Text] match {
+            case true =>
+              text = info.method().toString
+            case false =>
+              annos.get[Attribute] match {
+                case Some(attr) =>
+                  val name_ = if (attr.name.nonNullAndEmpty) attr.name else name
+                  attributes(name_) = info.method().toString
+                case None =>
+                  annos.get[Node] match {
+                    case Some(node) =>
+                      val name_ =
+                        if (node.name.nonNullAndEmpty) node.name else name
+
+                      val toElemChoose = { tpe: Type =>
+                        if (tpe <:< typeOf[CustomElement]) {
+                          { it: Any =>
+                            it.asInstanceOf[CustomElement]
+                              .toElement(
+                                doc,
+                                name_,
+                                annos
+                                  .get[Namespaces]
+                                  .map(_.bimap)
+                                  .getOrElse(null)
+                              )
+                          }
+                        } else {
+                          { it: Any =>
+                            new ToXml[Any](it, tpe).toElement(
+                              doc,
+                              name_,
+                              annos
+                                .get[Namespaces]
+                                .map(_.bimap)
+                                .getOrElse(null)
+                            )
+                          }
+                        }
+                      }
+                      info.method() match {
+                        case list: List[Any] =>
+                          val retType = instType.getType(
+                            info.method.symbol.returnType.typeArgs(0)
+                          )
+                          val toElem = toElemChoose(retType)
+                          nodes.addAll(list.map(toElem(_)))
+                        case it =>
+                          val retType =
+                            instType.getType(info.method.symbol.returnType)
+                          nodes.addOne(toElemChoose(retType)(it))
+                      }
+                    case None =>
+                      annos.get[AttrNode] match {
+                        case Some(attrNode) =>
+                          val name_ = attrNode.name
+                          val attr =
+                            if (attrNode.attr.nonNullAndEmpty) attrNode.attr
+                            else name
+                          nodes.addOne(
+                            doc.createElement(
+                              name_,
+                              Map(attr -> info.method().toString())
+                            )
+                          )
+                        case None =>
+                      }
+                  }
+              }
+          }
+        }
+      }
+
+      if (attributes.nonEmpty || text != null || nodes.nonEmpty) {
+        val elem = createElement(nodeName_, attributes, text)
+        nodes.foreach { it =>
+          elem.appendChild(it)
+        }
+        elem
+      } else {
+        createElement(nodeName_)
+      }
+    }
   }
 
-  implicit class RichToXml[T: TypeTag](any: T) {
+  class ToXml[T] private[xml] (any: T, tpe: Type) {
     def toXml(indent: Boolean = false, declare: String = null): String = {
       val inst = DocumentBuilderFactory.newInstance()
       inst.setNamespaceAware(true)
 
       val doc = inst.newDocumentBuilder().newDocument()
-      doc.appendChild(doc.toElement(any))
+      doc.appendChild(doc.toElement(any, tpe, null, null))
 
       doc.transformToString(declare, indent)
     }
@@ -439,11 +439,17 @@ object Extension {
         nodeName: String,
         namespaces: collection.Map[String, String] = null
     ): Element = {
-      doc.toElement(any, nodeName, namespaces)
+      doc.toElement(any, tpe, nodeName, namespaces)
     }
   }
+
+  implicit def RichToXml[T: TypeTag](any: T) = new ToXml[T](any, typeOf[T])
 }
 
 trait CustomElement {
-  def toElement(doc: Document, nodeName: String, namespaces: collection.Map[String, String]): Element
+  def toElement(
+      doc: Document,
+      nodeName: String,
+      namespaces: collection.Map[String, String]
+  ): Element
 }

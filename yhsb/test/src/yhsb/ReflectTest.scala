@@ -32,6 +32,8 @@ object ReflectTest extends TestSuite {
       test("reflect") {
         val p = new Person("John", 41, "male")
 
+        implicit def ToInstanceType[T: TypeTag](inst: T) = typeOf[T].instanceType(inst)
+        
         println(p.annotations)
 
         println("=" * 60)
