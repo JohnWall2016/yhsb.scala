@@ -152,14 +152,6 @@ object Extension {
   implicit class RichElement(element: Element) {
     def toObject[T: TypeTag]: T = toObject(typeOf[T])
 
-    private def getElementAttribute(tagName: String, attrName: String): String = {
-      element.getElementsByTagName(tagName).foreach { element =>
-        val attr = element.getAttribute(attrName)
-        if (attr.nonNullAndEmpty) return attr
-      }
-      return null
-    }
-
     private def toObject[T](tpe: Type): T = {
       val inst = tpe.newInstance[T]
       val instType = tpe.instanceType(inst)
@@ -199,6 +191,17 @@ object Extension {
         }
       }
       inst
+    }
+
+    private def getElementAttribute(
+        tagName: String,
+        attrName: String
+    ): String = {
+      element.getElementsByTagName(tagName).foreach { element =>
+        val attr = element.getAttribute(attrName)
+        if (attr.nonNullAndEmpty) return attr
+      }
+      return null
     }
 
     private def invoke(info: MethodInfo, value: String) = {
