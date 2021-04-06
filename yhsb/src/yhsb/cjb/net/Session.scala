@@ -8,6 +8,7 @@ import yhsb.base.json.Jsonable
 import yhsb.base.net.HttpRequest
 import yhsb.base.net.HttpSocket
 import yhsb.cjb.net.protocol._
+import scala.collection.mutable.LinkedHashMap
 
 object Config {
   val cjbSession = yhsb.base.util.Config.load("cjb.session")
@@ -104,6 +105,64 @@ class Session(
   def logout(): String = {
     sendService("syslogout")
     readBody()
+  }
+
+  private def urlEncode(s: String) = java.net.URLEncoder.encode(s, charset)
+
+  def exportTo(
+      req: Request[_],
+      columnHeaders: collection.SeqMap[String, String],
+      filePath: String
+  ) = {
+    val args = LinkedHashMap[String, String]()
+    args("serviceid") = "exportexecl"
+    args("queryserviceid") = req.id
+    args("params") = urlEncode(req.toJsonNoNulls)
+    args("columns") = urlEncode(
+      columnHeaders
+        .map { case (key, value) =>
+          s"""{"dataKey":"$key","headerText":"$value"}"""
+        }
+        .toSeq
+        .mkString("[", ",", "]")
+    )
+
+    val url = "/hncjb/reports/crud?" + args
+      .map { case (key, value) =>
+        s"$key=$value"
+      }
+      .mkString("&")
+
+    val request =
+      new HttpRequest(url, "GET", charset)
+    request
+      .addHeader("Host", host)
+      .addHeader("Connection", "keep-alive")
+      .addHeader("Upgrade-Insecure-Requests", "1")
+      .addHeader(
+        "User-Agent",
+        "Mozilla/5.0 (Windows NT 5.1) " +
+          "AppleWebKit/537.36 (KHTML, like Gecko) " +
+          "Chrome/39.0.2171.95 Safari/537.36"
+      )
+      .addHeader(
+        "Accept",
+        "text/html,application/xhtml+xml," +
+          "application/xml;q=0.9,image/avif,image/webp," +
+          "image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
+      )
+      .addHeader("Referer", s"http://$host/hncjb/pages/html/index.html")
+      .addHeader("Accept-Encoding", "gzip, deflate")
+      .addHeader("Accept-Language", "zh-CN,zh;q=0.8")
+
+    if (cookies.nonEmpty) {
+      request.addHeader(
+        "Cookie",
+        cookies.map(e => s"${e._1}=${e._2}").mkString("; ")
+      )
+    }
+    write(request.getBytes)
+    exportToFile(filePath)
   }
 }
 

@@ -3,9 +3,14 @@ package cjb.net.protocol
 
 /** 待遇人员暂停查询 */
 class RetiredPersonPauseQuery(
-    idCard: String
+    idCard: String,
+    sortOptions: Map[String, String] = Map(
+      "dataKey" -> "aaf102",
+      "sortDirection" -> "ascending"
+    )
 ) extends PageRequest[RetiredPersonPauseQuery.Item](
-      "queryAllPausePersonInfosService"
+      "queryAllPausePersonInfosService",
+      sortOptions = sortOptions
     ) {
   val aaf013 = ""
   val aaf030 = ""
@@ -23,6 +28,8 @@ class RetiredPersonPauseQuery(
 }
 
 object RetiredPersonPauseQuery {
+  def apply(idCard: String = "") = new RetiredPersonPauseQuery(idCard)
+
   case class Item(
       @JsonName("aac002")
       idCard: String,

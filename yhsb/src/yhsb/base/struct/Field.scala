@@ -23,7 +23,7 @@ abstract class MapField {
   override def toString: String = name
 }
 
-sealed class ListField[T] extends AbstractSeq[T] {
+final class ListField[T] extends AbstractSeq[T] {
   private[ListField] def this(items: T*) = {
     this()
     this.items.addAll(items)

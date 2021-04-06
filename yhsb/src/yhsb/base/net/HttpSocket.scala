@@ -14,6 +14,8 @@ import yhsb.base.util._
 import java.util.zip.GZIPInputStream
 import java.io.ByteArrayInputStream
 import scala.io.Source
+import java.nio.file.Files
+import java.io.FileOutputStream
 
 class HttpSocket private (
     val ip: String,
@@ -141,6 +143,43 @@ class HttpSocket private (
           .mkString
       } else {
         buf.toString(charset)
+      }
+    }
+  }
+
+  def exportToFile(fileName: String, header: HttpHeader = null) = {
+    val header_ = if (header == null) readHeader() else header
+    //println(s"header: $header_")
+    use(new ByteArrayOutputStream(512)) { buf =>
+      if ("chunked" in header_.get("Transfer-Encoding")) {
+        var continue = true
+        while (continue) {
+          val len = Integer.parseInt(readLine(), 16)
+          //println(s"len: $len")
+          if (len <= 0) {
+            readLine()
+            continue = false
+          } else {
+            transfer(buf, len)
+            readLine()
+          }
+        }
+      } else if (header_.contains("Content-Length")) {
+        val len = Integer.parseInt(header_.get("Content-Length").get.head, 10)
+        if (len > 0) {
+          transfer(buf, len)
+        }
+      } else {
+        throw new NotImplementedError("unsupported transfer mode")
+      }
+      use(new FileOutputStream(fileName)) { out =>
+        if ("gzip" in header_.get("Content-Encoding")) {
+          new GZIPInputStream(
+            new ByteArrayInputStream(buf.toByteArray())
+          ).transferTo(out)
+        } else {
+          buf.writeTo(out)
+        }
       }
     }
   }

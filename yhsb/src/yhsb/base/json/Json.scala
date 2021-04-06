@@ -63,8 +63,13 @@ class ListFieldAdapter extends JsonAdapter[ListField[_]] {
 }
 
 object Json {
-  private[json] val gson = new GsonBuilder()
+  private[json] lazy val gson = new GsonBuilder()
     .serializeNulls()
+    .registerTypeHierarchyAdapter(classOf[MapField], new MapFieldAdapter)
+    .registerTypeHierarchyAdapter(classOf[ListField[_]], new ListFieldAdapter)
+    .create()
+
+  private[json] lazy val gsonNoNulls = new GsonBuilder()
     .registerTypeHierarchyAdapter(classOf[MapField], new MapFieldAdapter)
     .registerTypeHierarchyAdapter(classOf[ListField[_]], new ListFieldAdapter)
     .create()
@@ -78,11 +83,15 @@ object Json {
 
   def toJson[T](obj: T): String = gson.toJson(obj)
 
+  def toJsonNoNulls[T](obj: T): String = gsonNoNulls.toJson(obj)
+
   type JsonName = SerializedName @scala.annotation.meta.field
 }
 
 trait Jsonable {
   def toJson: String = Json.toJson(this)
+
+  def toJsonNoNulls: String = Json.toJsonNoNulls(this)
 
   override def toString: String = toJson
 }
