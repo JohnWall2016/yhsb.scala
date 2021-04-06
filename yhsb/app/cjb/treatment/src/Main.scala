@@ -1,32 +1,38 @@
+import java.nio.file.Files
+import java.nio.file.Path
+import java.text.Collator
+import java.util.Locale
+
+import org.rogach.scallop.ScallopConf
+
+import scala.collection.mutable.LinkedHashMap
+
 import yhsb.base.command.Command
 import yhsb.base.command.Subcommand
-import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol.TreatmentReviewQuery
 import yhsb.base.excel.Excel._
 import yhsb.base.util._
 import yhsb.base.io.Path._
 import yhsb.base.command.RowRange
-import org.rogach.scallop.ScallopConf
 import yhsb.base.datetime.Formatter
-import yhsb.cjb.net.protocol.Division.GroupOps
-import java.nio.file.Files
-import java.nio.file.Path
-import yhsb.cjb.net.protocol.BankInfoQuery
 import yhsb.base.text.String.StringOps
+import yhsb.cjb.net.Session
+import yhsb.cjb.net.protocol._
+import yhsb.cjb.net.protocol.Division.GroupOps
+import yhsb.cjb.net.protocol.BankInfoQuery
 import yhsb.cjb.net.protocol.PaymentQuery
 import yhsb.cjb.net.protocol.PaymentPersonalDetailQuery
-import java.text.Collator
-import java.util.Locale
 
 object Main {
   def main(args: Array[String]): Unit = new Treatment(args).runCommand()
 }
 
 class Treatment(args: collection.Seq[String]) extends Command(args) {
-  banner("信息核对报告表和养老金计算表生成程序")
+  banner("信息核对报告表、养老金计算表生成、待遇认证表格相关程序")
   addSubCommand(new Download)
   addSubCommand(new Split)
   addSubCommand(new PayFailedList)
+  addSubCommand(new UncertPauseList)
+  addSubCommand(new UncertList)
 }
 
 trait ReportDate { _: ScallopConf =>
@@ -46,7 +52,7 @@ class Download extends Subcommand("download") with ReportDate {
     val result = Session.use() { session =>
       session.request(TreatmentReviewQuery(reviewState = "0"))
     }
-    
+
     val workbook = Excel.load(outputDir / template)
     val sheet = workbook.getSheetAt(0)
     val startRow = 3
@@ -146,7 +152,10 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
 
             try {
               downloadPaymentInfoReport(
-                session, name, idCard, destDir / dw / cs
+                session,
+                name,
+                idCard,
+                destDir / dw / cs
               )
             } catch {
               case e: Exception =>
@@ -220,7 +229,10 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
                 var card = it.cardNumber
                 val len = card.length
                 if (len > 7) {
-                  card = card.substring(0, 3) + "*".times(len - 7) + card.substring(len - 4)
+                  card =
+                    card.substring(0, 3) + "*".times(len - 7) + card.substring(
+                      len - 4
+                    )
                 } else if (len > 4) {
                   card = "*".times(len - 4) + card.substring(len - 4)
                 }
@@ -258,7 +270,7 @@ class PayFailedList extends Subcommand("failList") {
         .filter(_.objectType == "1")
         .flatMap(it => session.request(PaymentPersonalDetailQuery(it)))
         .filter(_.idCard.nonNullAndEmpty)
-        .sortWith( (e1, e2) =>
+        .sortWith((e1, e2) =>
           Collator
             .getInstance(Locale.CHINESE)
             .compare(e1.csName, e2.csName) < 0
@@ -269,11 +281,13 @@ class PayFailedList extends Subcommand("failList") {
       val sheet = workbook.getSheetAt(0)
       val startRow = 1
       var currentRow = startRow
-      
+
       println("开始导出数据")
 
       items.zipWithIndex.foreach { case (item, index) =>
-        println(s"${index + 1} ${item.name.padRight(6)} ${item.idCard} ${item.csName}")
+        println(
+          s"${index + 1} ${item.name.padRight(6)} ${item.idCard} ${item.csName}"
+        )
         val row = sheet.getOrCopyRow(currentRow, startRow)
         currentRow += 1
         row("A").value = item.csName
@@ -290,5 +304,99 @@ class PayFailedList extends Subcommand("failList") {
 
       println("结束导出数据")
     }
+  }
+}
+
+class UncertPauseList extends Subcommand("pauseList") {
+  descr("从业务系统导出未认证已停保人员名单")
+
+  val outputDir = """D:\待遇核定"""
+
+  override def execute(): Unit = {
+    println("开始导出数据")
+
+    val exportFile = Files.createTempFile("yhsb", ".xls").toString
+    Session.use() {
+      _.exportAllTo(
+        RetiredPersonPauseQuery(),
+        RetiredPersonPauseQuery.columnMap
+      )(
+        exportFile
+      )
+    }
+
+    val workbook = Excel.load(exportFile)
+    val sheet = workbook.getSheetAt(0)
+    sheet.setColumnWidth(0, 35 * 256)
+    sheet.setColumnWidth(2, 20 * 256)
+    sheet.setColumnWidth(3, 8 * 256)
+
+    sheet.deleteRowIf(startRow = 1) {
+      _("H").value == "月度拨付触发暂停"
+    }
+
+    workbook.saveAfter(
+      outputDir / s"截至目前未认证已停发待遇人员名单${Formatter.formatDate()}.xls"
+    ) { path =>
+      println(s"保存: $path")
+    }
+
+    println("结束导出数据")
+  }
+}
+
+class UncertList extends Subcommand("uncertList") {
+  descr("从业务系统下载未认证人员名单")
+
+  val startDate = trailArg[String](
+    descr = "认证开始年月, 格式: YYYYMM, 例如: 202101"
+  )
+
+  val endDate = trailArg[String](
+    descr = "认证结束年月, 格式: YYYYMM, 例如: 202101"
+  )
+
+  val outputDir = """D:\待遇核定"""
+
+  override def execute(): Unit = {
+    println("开始导出数据")
+
+    val exportFile = Files.createTempFile("yhsb", ".xls").toString
+    Session.use() {
+      _.exportAllTo(
+        CertedPersonQuery(
+          startNextCentDate = startDate(),
+          endNextCentDate = endDate()
+        ),
+        CertedPersonQuery.columnMap
+      )(
+        exportFile
+      )
+    }
+
+    val workbook = Excel.load(exportFile)
+    val sheet = workbook.getSheetAt(0)
+    sheet.setColumnWidth(0, 35 * 256)
+    sheet.setColumnWidth(2, 8 * 256)
+    sheet.setColumnWidth(3, 20 * 256)
+
+    workbook.saveAfter {
+      val (sy, sm, _) = Formatter.splitDate(startDate())
+      val (ey, em, _) = Formatter.splitDate(endDate())
+      val dateRange = if (sy == ey) {
+        if (sm == em) {
+          s"${sy}年${sm.stripPrefix("0")}月"
+        } else {
+          s"${sy}年${sm.stripPrefix("0")}-${em.stripPrefix("0")}月"
+        }
+      } else {
+        s"${sy}年${sm.stripPrefix("0")}月-${ey}年${em.stripPrefix("0")}月"
+      }
+      outputDir / s"${dateRange}认证即将到期的待遇人员名单${Formatter.formatDate()}.xls"
+    } { path =>
+      println(s"保存: $path")
+    }
+
+    println("结束导出数据")
   }
 }

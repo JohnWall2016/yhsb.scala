@@ -12,7 +12,7 @@ class Request[T : ClassTag](@transient val id: String) extends Jsonable
 
 class PageRequest[T : ClassTag](
     id: String,
-    val page: Int = 1,
+    var page: Int = 1,
     @JsonName("pagesize") var pageSize: Integer = 15,
     sortOptions : Map[String, String] = null,
     totalOptions: Map[String, String] = null,

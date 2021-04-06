@@ -206,6 +206,46 @@ object Excel {
       sheet.getRow(row).getCell(col)
 
     def apply(cellName: String) = getCell(cellName)
+
+    def deleteRows(rowIndex: Int, count: Int) = {
+      val lastRowNum = sheet.getLastRowNum()
+      if (rowIndex >= 0 && rowIndex <= lastRowNum && count > 0) {
+        val endRowIndex = Math.min(rowIndex + count - 1, lastRowNum)
+        for (index <- rowIndex to endRowIndex) {
+          val row = sheet.getRow(index)
+          if (row != null) sheet.removeRow(row)
+        }
+        if (endRowIndex < lastRowNum) {
+          sheet.shiftRows(endRowIndex + 1, lastRowNum, rowIndex - endRowIndex - 1)
+        }
+      }
+    }
+
+    def deleteRow(rowIndex: Int) = deleteRows(rowIndex, 1)
+
+    def deleteRowIf(startRow: Int, endRow: Int = sheet.getLastRowNum() + 1)
+      (filter: Row => Boolean) = {
+      var startIndex = startRow
+      var endRowIndex = endRow
+      while (startIndex < endRowIndex) {
+        var endIndex = startIndex
+        var continue = true
+        while (endIndex < endRowIndex && continue) {
+          if (filter(sheet.getRow(endIndex))) {
+            continue = false
+          } else {
+            endIndex += 1
+          }
+        }
+        def count = endIndex - startIndex
+        if (count > 0) {
+          sheet.deleteRows(startIndex, count)
+          endRowIndex -= count
+        } else {
+          startIndex += 1
+        }
+      }
+    }
   }
 
   implicit class RowOps(val row: Row) extends AnyVal {

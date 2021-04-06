@@ -58,23 +58,31 @@ object SessionTest extends TestSuite {
       }
     }
     test("export") {
+      import java.nio.file.Files
       import yhsb.base.util._
+      import yhsb.base.excel.Excel._
+
+      val exportFile = Files.createTempFile("yhsb", ".xls").toString
       Session.use() {
         _.exportTo(
           RetiredPersonPauseQuery().set(_.pageSize = null),
-          LinkedHashMap(
-            "aaf102" -> "所在村组",
-            "aac009" -> "户籍性质",
-            "aac002" -> "证件号码",
-            "aac003" -> "姓名",
-            "aac004" -> "性别",
-            "aae141" -> "暂停年月",
-            "aae160" -> "暂停原因",
-            "aae013" -> "暂停备注"
-          ),
-          "E:\\retire.xls"
+          RetiredPersonPauseQuery.ColumnMap
+        )(
+          exportFile
         )
       }
+
+      val workbook = Excel.load(exportFile)
+      val sheet = workbook.getSheetAt(0)
+      sheet.setColumnWidth(0, 35 * 256)
+      sheet.setColumnWidth(2, 20 * 256)
+      sheet.setColumnWidth(3, 8 * 256)
+
+      sheet.deleteRowIf(startRow = 1) {
+        _("H").value == "月度拨付触发暂停"
+      }
+
+      workbook.save("e:\\retire.xls")
     }
   }
 }

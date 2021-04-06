@@ -1,6 +1,9 @@
 package yhsb.cjb.net
 
+import java.net.URLEncoder
+
 import scala.collection.mutable
+import scala.collection.SeqMap
 import scala.reflect.ClassTag
 
 import yhsb.base.io.AutoClose
@@ -8,7 +11,6 @@ import yhsb.base.json.Jsonable
 import yhsb.base.net.HttpRequest
 import yhsb.base.net.HttpSocket
 import yhsb.cjb.net.protocol._
-import scala.collection.mutable.LinkedHashMap
 
 object Config {
   val cjbSession = yhsb.base.util.Config.load("cjb.session")
@@ -107,14 +109,15 @@ class Session(
     readBody()
   }
 
-  private def urlEncode(s: String) = java.net.URLEncoder.encode(s, charset)
+  private def urlEncode(s: String) = URLEncoder.encode(s, charset)
 
   def exportTo(
-      req: Request[_],
-      columnHeaders: collection.SeqMap[String, String],
-      filePath: String
+    req: PageRequest[_],
+    columnHeaders: SeqMap[String, String]
+  )(
+    filePath: String
   ) = {
-    val args = LinkedHashMap[String, String]()
+    val args = mutable.LinkedHashMap[String, String]()
     args("serviceid") = "exportexecl"
     args("queryserviceid") = req.id
     args("params") = urlEncode(req.toJsonNoNulls)
@@ -163,6 +166,25 @@ class Session(
     }
     write(request.getBytes)
     exportToFile(filePath)
+  }
+
+  def exportAllTo(
+    req: PageRequest[_],
+    columnHeaders: SeqMap[String, String]
+  )(
+    filePath: String
+  ) = {
+    import yhsb.base.util._
+
+    exportTo(
+      req.set { it =>
+        it.page = 1
+        it.pageSize = null
+      },
+      columnHeaders
+    )(
+      filePath
+    )
   }
 }
 
