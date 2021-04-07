@@ -93,7 +93,7 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
   override def execute(): Unit = {
     val (year, month, _) = Formatter.splitDate(date())
 
-    val inputExcel = outputDir / s"信息核对报告表$date.xlsx"
+    val inputExcel = outputDir / s"信息核对报告表${date()}.xlsx"
     val infoExcel = outputDir / "信息核对报告表模板.xlsx"
     val destDir = outputDir / s"${year}年${month.stripPrefix("0")}月待遇核定数据"
 
@@ -101,7 +101,7 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
     val sheet = workbook.getSheetAt(0)
 
     println("生成分组映射表")
-    val map = (for (index <- (startRow() - 1) to endRow())
+    val map = (for (index <- (startRow() - 1) until endRow())
       yield {
         (sheet.getRow(index)("D").value, index)
       }).groupByDwAndCsName()
@@ -117,7 +117,7 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
       Files.createDirectory(destDir / dw)
 
       for ((cs, indexes) <- csMap) {
-        println(s"  $cs: $indexes")
+        println(s"  $cs: ${indexes.mkString(",")}")
         Files.createDirectory(destDir / dw / cs)
 
         val outWorkbook = Excel.load(infoExcel)
@@ -150,18 +150,13 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
             val name = row("B").value
             val idCard = row("C").value
             println(s"  $idCard $name")
-
-            try {
-              downloadPaymentInfoReport(
-                session,
-                name,
-                idCard,
-                destDir / dw / cs
-              )
-            } catch {
-              case e: Exception =>
-                println(s"$idCard $name 获得养老金计算表岀错: $e")
-            }
+            
+            downloadPaymentInfoReport(
+              session,
+              name,
+              idCard,
+              destDir / dw / cs
+            )
           }
         }
       }

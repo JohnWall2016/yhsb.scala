@@ -113,11 +113,13 @@ object TreatmentReviewQuery {
         new HttpSocket(config.getString("host"), config.getInt("port"), "UTF-8")
       ) { it =>
         val content = it.getHttp(treatmentInfoUrl).replace("""[\r\n\t]""".r, "")
-        rePaymentInfo.findFirstMatchIn(content)
+        Item.rePaymentInfo.findFirstMatchIn(content)
       }
     }
+  }
 
-    private val rePaymentInfo =
+  object Item {
+    val rePaymentInfo =
       """<tr id="75">
         <td height="32" align="center" id="3">姓名</td>
         <td align="center" id="4">性别</td>

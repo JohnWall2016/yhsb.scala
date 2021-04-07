@@ -203,7 +203,7 @@ object Division {
       iter.foreach { case (division, data) =>
         val (dw, cs) = getDwAndCsName(division) match {
           case Some(value) => value
-          case None        => throw new Exception(s"未匹配行政区划: $division")
+          case None        => throw new Exception(s"未匹配行政区划: '$division'")
         }
         val subMap = map.getOrElseUpdate(dw, mutable.LinkedHashMap())
         val list = subMap.getOrElseUpdate(cs, mutable.ListBuffer())
