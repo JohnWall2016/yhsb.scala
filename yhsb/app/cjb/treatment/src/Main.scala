@@ -27,12 +27,13 @@ object Main {
 }
 
 class Treatment(args: collection.Seq[String]) extends Command(args) {
-  banner("信息核对报告表、养老金计算表生成、待遇认证表格相关程序")
+  banner("信息核对报告表、养老金计算表生成、待遇认证表格等相关程序")
   addSubCommand(new Download)
   addSubCommand(new Split)
   addSubCommand(new PayFailedList)
   addSubCommand(new UncertPauseList)
   addSubCommand(new UncertList)
+  addSubCommand(new ArrearList)
 }
 
 trait ReportDate { _: ScallopConf =>
@@ -400,3 +401,47 @@ class UncertList extends Subcommand("uncertList") {
     println("结束导出数据")
   }
 }
+
+class ArrearList extends Subcommand("arrearList") {
+  descr("从业务系统下载欠费人员名单")
+
+  val retireDate = trailArg[String](
+    descr = "预算到龄日期, 格式: YYYYMMDD, 例如: 20210131"
+  )
+
+  val outputDir = """D:\待遇核定"""
+
+  override def execute(): Unit = {
+    println("开始导出数据")
+
+    val exportFile = Files.createTempFile("yhsb", ".xls").toString
+    Session.use() {
+      _.exportAllTo(
+        RetiringPersonQuery(
+          retireDate = Formatter.toDashedDate(retireDate()),
+          inArrear = "1",
+          cbState = "1",
+        ),
+        RetiringPersonQuery.columnMap
+      )(
+        exportFile
+      )
+    }
+
+    val workbook = Excel.load(exportFile)
+    val sheet = workbook.getSheetAt(0)
+    sheet.setColumnWidth(0, 35 * 256)
+    sheet.setColumnWidth(2, 8 * 256)
+    sheet.setColumnWidth(3, 20 * 256)
+    sheet.setColumnWidth(11, 30 * 256)
+
+    workbook.saveAfter(
+      outputDir / s"截至目前到龄欠费人员名单${Formatter.formatDate()}.xls"
+    ) { path =>
+      println(s"保存: $path")
+    }
+
+    println("结束导出数据")
+  }
+}
+

@@ -66,7 +66,7 @@ object SessionTest extends TestSuite {
       Session.use() {
         _.exportTo(
           RetiredPersonPauseQuery().set(_.pageSize = null),
-          RetiredPersonPauseQuery.ColumnMap
+          RetiredPersonPauseQuery.columnMap
         )(
           exportFile
         )
