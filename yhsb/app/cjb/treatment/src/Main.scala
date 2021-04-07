@@ -18,9 +18,6 @@ import yhsb.base.text.String.StringOps
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol._
 import yhsb.cjb.net.protocol.Division.GroupOps
-import yhsb.cjb.net.protocol.BankInfoQuery
-import yhsb.cjb.net.protocol.PaymentQuery
-import yhsb.cjb.net.protocol.PaymentPersonalDetailQuery
 
 object Main {
   def main(args: Array[String]): Unit = new Treatment(args).runCommand()
