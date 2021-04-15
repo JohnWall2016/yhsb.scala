@@ -17,6 +17,8 @@ import java.nio.file.Files
 import yhsb.base.io.Path._
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.ss.usermodel.Sheet
+import scala.tools.nsc.doc.html.HtmlTags
+import yhsb.cjb.net.Session
 
 object Main {
   def main(args: Array[String]): Unit = new Auth(args).runCommand()
@@ -32,6 +34,7 @@ class Auth(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(new MergeHistory)
   addSubCommand(new GenerateBook)
   addSubCommand(new Authenticate)
+  addSubCommand(new ExportJBData)
   addSubCommand(new ImportJBData)
   addSubCommand(new UpdateJBState)
   addSubCommand(new ExportData)
@@ -45,9 +48,11 @@ object Auth {
     transaction {
       items.zipWithIndex
         .foreach { case (item, index) =>
-          print(s"${index + 1} ${item.idCard} ${item.name.getOrElse("").padRight(6)} ${item.personType.getOrElse("")} ")
+          print(
+            s"${index + 1} ${item.idCard} ${item.name.getOrElse("").padRight(6)} ${item.personType.getOrElse("")} "
+          )
           if (item.idCard.nonNullAndEmpty) {
-            val result: List[RawItem] = 
+            val result: List[RawItem] =
               run(
                 rawData.filter { it =>
                   it.idCard == lift(item.idCard) &&
@@ -78,7 +83,7 @@ object Auth {
 
   def mergeRawData(date: String, month: String = null) = {
     import AuthData2021._
-    
+
     transaction {
       val list: List[RawItem] = run(
         rawData.filter(_.date == lift(Option(date)))
@@ -89,7 +94,7 @@ object Auth {
       if (month == null) {
         groups.zipWithIndex.foreach { case ((idCard, items), index) =>
           println(s"${index + 1} $idCard")
-          
+
           val data: List[HistoryItem] =
             run(historyData.filter(_.idCard == lift(idCard)))
           if (data.nonEmpty) {
@@ -106,9 +111,13 @@ object Auth {
       } else {
         groups.zipWithIndex.foreach { case ((idCard, items), index) =>
           println(s"${index + 1} $idCard")
-          
+
           val data: List[MonthItem] =
-            run(monthData.filter(it => it.idCard == lift(idCard) && it.month == lift(Option(month))))
+            run(
+              monthData.filter(it =>
+                it.idCard == lift(idCard) && it.month == lift(Option(month))
+              )
+            )
           if (data.nonEmpty) {
             data.foreach { item =>
               items.foreach(item.merge(_))
@@ -126,7 +135,7 @@ object Auth {
 
   def authenticate(date: String, monthOrAll: String) = {
     import AuthData2021._
-    
+
     transaction {
       val data: List[AuthItem] =
         if (monthOrAll.toUpperCase() == "ALL") {
@@ -158,18 +167,46 @@ object Auth {
         }
 
         var update = false
-        if (jbKind != null && jbKind != item.jbKind.getOrElse("")) {
-          if (item.jbKind.getOrElse("").nonEmpty) {
-            println(s"$index ${item.idCard} ${item.name.getOrElse("").padRight(6)} $jbKind <- ${item.jbKind}")
-          } else {
-            println(s"$index ${item.idCard} ${item.name.getOrElse("").padRight(6)} $jbKind")
+        if (jbKind != null) {
+          item.jbKind match {
+            case None =>
+              println(
+                s"$index ${item.idCard} ${item.name.getOrElse("").padRight(6)} $jbKind"
+              )
+              item.jbKind = Some(jbKind)
+              item.jbKindFirstDate = Some(date)
+              item.jbKindLastDate = None
+              index += 1
+              update = true
+            case Some(value) =>
+              if (jbKind != value) {
+                println(
+                  s"$index ${item.idCard} ${item.name.getOrElse("").padRight(6)} $jbKind <- ${item.jbKind}"
+                )
+                item.jbKind = Some(jbKind)
+                if (item.jbKindFirstDate.isEmpty) {
+                  item.jbKindFirstDate = Some(date)
+                  item.jbKindLastDate = None
+                } else {
+                  item.jbKindLastDate = Some(date)
+                }
+                index += 1
+                update = true
+              } else if (item.jbKindFirstDate.isEmpty) {
+                println(
+                  s"$index ${item.idCard} ${item.name.getOrElse("").padRight(6)} $jbKind <- ${item.jbKind}"
+                )
+                item.jbKindFirstDate = Some(date)
+                item.jbKindLastDate = None
+                index += 1
+                update = true
+              }
           }
-          item.jbKind = Some(jbKind)
-          item.jbKindLastDate = Some(date)
-          update = true
         }
 
-        if (isDestitute != null && isDestitute != item.isDestitute.getOrElse("")) {
+        if (
+          isDestitute != null && isDestitute != item.isDestitute.getOrElse("")
+        ) {
           item.isDestitute = Some(isDestitute)
           update = true
         }
@@ -177,10 +214,18 @@ object Auth {
         if (update) {
           if (monthOrAll.toUpperCase() == "ALL") {
             val historyItem = item.asInstanceOf[HistoryItem]
-            run(historyData.filter(_.no == lift(historyItem.no)).update(lift(historyItem)))
+            run(
+              historyData
+                .filter(_.no == lift(historyItem.no))
+                .update(lift(historyItem))
+            )
           } else {
             val monthItem = item.asInstanceOf[MonthItem]
-            run(monthData.filter(_.no == lift(monthItem.no)).update(lift(monthItem)))
+            run(
+              monthData
+                .filter(_.no == lift(monthItem.no))
+                .update(lift(monthItem))
+            )
           }
         }
       }
@@ -201,19 +246,23 @@ object Auth {
       if (monthOrAll.toUpperCase() == "ALL") {
         run {
           quote(
-            infix"$historyData ORDER BY CONVERT( xzj USING gbk ), CONVERT( csq USING gbk ), CONVERT( name USING gbk )".as[Query[HistoryItem]])
+            infix"$historyData ORDER BY CONVERT( xzj USING gbk ), CONVERT( csq USING gbk ), CONVERT( name USING gbk )"
+              .as[Query[HistoryItem]]
+          )
         }
       } else {
         run {
           quote(
-            infix"$monthData where month='${lift(monthOrAll)}' ORDER BY CONVERT( xzj USING gbk ), CONVERT( csq USING gbk ), CONVERT( name USING gbk )".as[Query[MonthItem]])
+            infix"${monthData.filter(_.month == Option(lift(monthOrAll)))} ORDER BY CONVERT( xzj USING gbk ), CONVERT( csq USING gbk ), CONVERT( name USING gbk )"
+              .as[Query[MonthItem]]
+          )
         }
       }
-    
+
     data.foreach { item =>
       val index = currentRow - startRow + 1
 
-      println(s"$index ${item.idCard} ${item.name}")
+      println(s"$index ${item.idCard} ${item.name.getOrElse("")}")
 
       val row = sheet.getOrCopyRow(currentRow, startRow)
       currentRow += 1
@@ -251,7 +300,7 @@ object Auth {
   }
 }
 
-trait ImportCommand {  _: ScallopConf =>
+trait ImportCommand { _: ScallopConf =>
   val date = trailArg[String](descr = "数据月份, 例如: 201912")
   val excel = trailArg[String](descr = "excel表格文件路径")
   val startRow = trailArg[Int](descr = "开始行, 从1开始")
@@ -262,23 +311,23 @@ trait ImportCommand {  _: ScallopConf =>
   def clearData(): Unit
 
   /**
-    * 提取数据字段信息
-    *
-    * @param nameAndIdCards 姓名 -> 身份证号码
-    * @param neighborhood 乡镇、街道
-    * @param community 村、社区
-    * @param address 地址
-    * @param personType 人员类型
-    * @param init 初始化信息操作
-    */
+   * 提取数据字段信息
+   *
+   * @param nameAndIdCards 姓名 -> 身份证号码
+   * @param neighborhood 乡镇、街道
+   * @param community 村、社区
+   * @param address 地址
+   * @param personType 人员类型
+   * @param init 初始化信息操作
+   */
   case class FieldColumns(
-    nameAndIdCards: Seq[(String, String)],
-    neighborhood: String,
-    community: String,
-    address: Option[String] = None,
-    personType: Option[String] = None
+      nameAndIdCards: Seq[(String, String)],
+      neighborhood: String,
+      community: String,
+      address: Option[String] = None,
+      personType: Option[String] = None
   )(
-    val init: RawItem => Unit
+      val init: RawItem => Unit
   )
 
   val fieldColumns: FieldColumns
@@ -338,18 +387,20 @@ class ImportVeryPoor extends Subcommand("tkry") with ImportCommand {
   override def clearData(): Unit = {
     import AuthData2021._
     run(
-      rawData.filter(it => 
-        it.date == Option(lift(date())) && it.personType == Some("特困人员")
-      ).delete
+      rawData
+        .filter(it =>
+          it.date == Option(lift(date())) && it.personType == Some("特困人员")
+        )
+        .delete
     )
   }
 
-  override val fieldColumns: FieldColumns = 
+  override val fieldColumns: FieldColumns =
     FieldColumns(
       nameAndIdCards = Seq("G" -> "H"),
       neighborhood = "C",
       community = "D",
-      address = Some("E"),
+      address = Some("E")
     ) { item =>
       item.personType = Some("特困人员")
       item.detail = Some("是")
@@ -362,33 +413,34 @@ class ImportCityAllowance extends Subcommand("csdb") with ImportCommand {
   override def clearData(): Unit = {
     import AuthData2021._
     run(
-      rawData.filter(it => 
-        it.date == Option(lift(date())) && 
-        (infix"${it.personType} like '%低保人员'".as[Boolean]) && 
-        it.detail == Some("城市")
-      ).delete
+      rawData
+        .filter(it =>
+          it.date == Option(lift(date())) &&
+            (infix"${it.personType} like '%低保人员'".as[Boolean]) &&
+            it.detail == Some("城市")
+        )
+        .delete
     )
   }
 
-  override val fieldColumns: FieldColumns = 
+  override val fieldColumns: FieldColumns =
     FieldColumns(
       nameAndIdCards = Seq(
         "I" -> "J",
         "K" -> "L",
         "M" -> "N",
         "O" -> "P",
-        "Q" -> "R",
+        "Q" -> "R"
       ),
       neighborhood = "A",
       community = "B",
       address = Some("E"),
-      personType = Some("G"),
+      personType = Some("G")
     ) { item =>
-      item.personType = 
-        item.personType match {
-          case Some("全额救助") | Some("全额") => Some("全额低保人员")
-          case None | Some(_) => Some("差额低保人员")
-        }
+      item.personType = item.personType match {
+        case Some("全额救助") | Some("全额") => Some("全额低保人员")
+        case None | Some(_)            => Some("差额低保人员")
+      }
       item.detail = Some("城市")
     }
 }
@@ -399,15 +451,17 @@ class ImportCountryAllowance extends Subcommand("ncdb") with ImportCommand {
   override def clearData(): Unit = {
     import AuthData2021._
     run(
-      rawData.filter(it => 
-        it.date == Option(lift(date())) && 
-        (infix"${it.personType} like '%低保人员'".as[Boolean]) && 
-        it.detail == Some("农村")
-      ).delete
+      rawData
+        .filter(it =>
+          it.date == Option(lift(date())) &&
+            (infix"${it.personType} like '%低保人员'".as[Boolean]) &&
+            it.detail == Some("农村")
+        )
+        .delete
     )
   }
 
-  override val fieldColumns: FieldColumns = 
+  override val fieldColumns: FieldColumns =
     FieldColumns(
       nameAndIdCards = Seq(
         "H" -> "J",
@@ -415,18 +469,17 @@ class ImportCountryAllowance extends Subcommand("ncdb") with ImportCommand {
         "M" -> "N",
         "O" -> "P",
         "Q" -> "R",
-        "S" -> "T",
+        "S" -> "T"
       ),
       neighborhood = "A",
       community = "B",
       address = Some("D"),
-      personType = Some("F"),
+      personType = Some("F")
     ) { item =>
-      item.personType = 
-        item.personType match {
-          case Some("全额救助") | Some("全额") => Some("全额低保人员")
-          case None | Some(_) => Some("差额低保人员")
-        }
+      item.personType = item.personType match {
+        case Some("全额救助") | Some("全额") => Some("全额低保人员")
+        case None | Some(_)            => Some("差额低保人员")
+      }
       item.detail = Some("农村")
     }
 }
@@ -437,29 +490,31 @@ class ImportDisability extends Subcommand("cjry") with ImportCommand {
   override def clearData(): Unit = {
     import AuthData2021._
     run(
-      rawData.filter(it => 
-        it.date == Option(lift(date())) && 
-        (infix"${it.personType} like '%残疾人员'".as[Boolean])
-      ).delete
+      rawData
+        .filter(it =>
+          it.date == Option(lift(date())) &&
+            (infix"${it.personType} like '%残疾人员'".as[Boolean])
+        )
+        .delete
     )
   }
 
-  override val fieldColumns: FieldColumns = 
+  override val fieldColumns: FieldColumns =
     FieldColumns(
       nameAndIdCards = Seq(
-        "A" -> "B",
+        "A" -> "B"
       ),
       neighborhood = "E",
       community = "F",
       address = Some("G"),
-      personType = Some("O"),
+      personType = Some("O")
     ) { item =>
-      item.personType = 
-        item.personType match {
-          case Some("一级") | Some("二级") => Some("一二级残疾人员")
-          case Some("三级") | Some("四级") => Some("三四级残疾人员")
-          case other => throw new Exception(s"未知残疾类型: $other")
-        }
+      item.detail = item.personType
+      item.personType = item.personType match {
+        case Some("一级") | Some("二级") => Some("一二级残疾人员")
+        case Some("三级") | Some("四级") => Some("三四级残疾人员")
+        case other                   => throw new Exception(s"未知残疾类型: $other")
+      }
     }
 }
 
@@ -503,9 +558,53 @@ class Authenticate extends Subcommand("rdsf") {
   val date = trailArg[String](descr = "认定月份, 例如: 201912")
 
   override def execute(): Unit = {
-    println(s"开始认定参保人员身份: ${monthOrAll}特殊缴费类型数据底册")
+    println(s"开始认定参保人员身份: ${monthOrAll()}特殊缴费类型数据底册")
     Auth.authenticate(date(), monthOrAll())
-    println(s"结束认定参保人员身份: ${monthOrAll}特殊缴费类型数据底册")
+    println(s"结束认定参保人员身份: ${monthOrAll()}特殊缴费类型数据底册")
+  }
+}
+
+class ExportJBData extends Subcommand("dcjb") {
+  descr("导出居保参保数据")
+
+  val outputDir = """D:\特殊缴费\参保人员明细表"""
+
+  override def execute(): Unit = {
+    val joinedDates = List(
+      "" -> "2010-01-26",
+      "2010-01-27" -> "2011-12-31",
+      "2012-01-01" -> ""
+    )
+
+    for (((start, end), index) <- joinedDates.zipWithIndex) {
+      println(s"开始导出参保时间段: $start -> $end")
+
+      val exportFile = Files.createTempFile("yhsb", ".xls").toString
+      Session.use() {
+        _.exportAllTo(
+          PersonInfoQuery(start, end),
+          PersonInfoQuery.columnMap
+        )(
+          exportFile
+        )
+      }
+
+      val workbook = Excel.load(exportFile)
+      val sheet = workbook.getSheetAt(0)
+      sheet.setColumnWidth(0, 35 * 256)
+      sheet.setColumnWidth(2, 12 * 256)
+      sheet.setColumnWidth(3, 8 * 256)
+      sheet.setColumnWidth(4, 20 * 256)
+      sheet.setColumnWidth(5, 20 * 256)
+
+      workbook.saveAfter(
+        outputDir / s"居保参保人员明细表${Formatter.formatDate()}${('A' + index).toChar}.xls"
+      ) { path =>
+        println(s"保存: $path")
+      }
+    }
+
+    println("结束数据导出")
   }
 }
 
@@ -533,7 +632,7 @@ class ImportJBData extends Subcommand("drjb") {
       excel(),
       startRow(),
       endRow(),
-      Seq("E", "A", "B", "C", "F", "G", "I", "K", "L", "Q"),
+      Seq("F", "A", "B", "D", "G", "H", "J", "L", "M", "R"),
       printSql = true
     )
 
@@ -555,30 +654,30 @@ class UpdateJBState extends Subcommand("jbzt") {
     transaction {
       val peopleTable = "jbrymx"
       if (monthOrAll().toUpperCase() == "ALL") {
-          val dataTable = "fphistorydata"
-          for (((cbState, jfState), jbState) <- JBState.jbStateMap) {
-              val sql = 
-                s"""update $dataTable, $peopleTable
-                   |   set ${dataTable}.jbcbqk='$jbState',
-                   |       ${dataTable}.jbcbqkDate='${date()}'
-                   | where ${dataTable}.idcard=${peopleTable}.idcard
-                   |   and ${peopleTable}.cbzt='$cbState'
-                   |   and ${peopleTable}.jfzt='$jfState'""".stripMargin
-              AuthData2021.execute(sql, true)
-          }
+        val dataTable = "fphistorydata"
+        for (((cbState, jfState), jbState) <- JBState.jbStateMap) {
+          val sql =
+            s"""update $dataTable, $peopleTable
+               |   set ${dataTable}.jbcbqk='$jbState',
+               |       ${dataTable}.jbcbqkDate='${date()}'
+               | where ${dataTable}.idcard=${peopleTable}.idcard
+               |   and ${peopleTable}.cbzt='$cbState'
+               |   and ${peopleTable}.jfzt='$jfState'""".stripMargin
+          AuthData2021.execute(sql, true)
+        }
       } else {
-          val dataTable = "fpmonthdata"
-          for (((cbState, jfState), jbState) <- JBState.jbStateMap) {
-              val sql = 
-                s"""update $dataTable, $peopleTable
-                   |   set ${dataTable}.jbcbqk='$jbState',
-                   |        ${dataTable}.jbcbqkDate='${date()}'
-                   | where ${dataTable}.month='${monthOrAll()}'
-                   |   and ${dataTable}.idcard=${peopleTable}.idcard
-                   |   and ${peopleTable}.cbzt='$cbState'
-                   |   and ${peopleTable}.jfzt='$jfState'""".stripMargin
-              AuthData2021.execute(sql, true)
-          }
+        val dataTable = "fpmonthdata"
+        for (((cbState, jfState), jbState) <- JBState.jbStateMap) {
+          val sql =
+            s"""update $dataTable, $peopleTable
+               |   set ${dataTable}.jbcbqk='$jbState',
+               |        ${dataTable}.jbcbqkDate='${date()}'
+               | where ${dataTable}.month='${monthOrAll()}'
+               |   and ${dataTable}.idcard=${peopleTable}.idcard
+               |   and ${peopleTable}.cbzt='$cbState'
+               |   and ${peopleTable}.jfzt='$jfState'""".stripMargin
+          AuthData2021.execute(sql, true)
+        }
       }
     }
 
@@ -625,18 +724,20 @@ class ExportChangedData extends Subcommand("sfbg") {
     for ((kind, code) <- JBKind.special.invert) {
       val data: List[(String, String, String)] =
         run(
-          historyData.join(joinedPersonData).on(_.idCard == _.idCard)
+          historyData
+            .join(joinedPersonData)
+            .on(_.idCard == _.idCard)
             .filter { case (h, p) =>
               h.jbKind == Some(lift(kind)) &&
-              p.jbKind != Some(lift(code)) &&
-              p.cbState == Some("1") &&
-              p.jfState == Some("1")
+                p.jbKind != Some(lift(code)) &&
+                p.cbState == Some("1") &&
+                p.jfState == Some("1")
             }
             .map { case (_, p) =>
               (p.idCard, p.name.getOrElse(""), lift(code))
             }
         )
-      
+
       if (data.nonEmpty) {
         println(s"开始导出 $kind 批量信息变更表")
 

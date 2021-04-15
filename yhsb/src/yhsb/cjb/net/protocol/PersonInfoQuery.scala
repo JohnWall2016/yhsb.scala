@@ -1,10 +1,14 @@
 package yhsb
 package cjb.net.protocol
 
+import scala.collection.SeqMap
+
 /** 个人信息综合查询 */
 class PersonInfoQuery(
-    idCard: String,
-    name: String
+    idCard: String = "",
+    name: String = "",
+    joinedStartDate: String = "", // "yyyy-MM-dd"
+    joinedEndDate: String = "",
 ) extends PageRequest[PersonInfoQuery.Item]("zhcxgrinfoQuery") {
   val aaf013 = ""
   val aaz070 = ""
@@ -24,8 +28,8 @@ class PersonInfoQuery(
 
   val aac066 = ""
 
-  val aae030str = ""
-  val aae030end = ""
+  val aae030str = joinedStartDate
+  val aae030end = joinedEndDate
 
   val aae476 = ""
   val aae480 = ""
@@ -42,6 +46,14 @@ class PersonInfoQuery(
 }
 
 object PersonInfoQuery {
+  def apply(
+    joinedStartDate: String = "", // "yyyy-MM-dd"
+    joinedEndDate: String = "",
+  ) = new PersonInfoQuery(
+    joinedStartDate = joinedStartDate,
+    joinedEndDate = joinedEndDate,
+  )
+
   case class Item(
       @JsonName("aac001")
       pid: Int,
@@ -74,4 +86,25 @@ object PersonInfoQuery {
       @JsonName("aaf103")
       zdName: String
   ) extends JBState
+
+  val columnMap = SeqMap(
+    "aaf102" -> "行政区划",
+    "aac009" -> "户籍性质",
+    "aac001" -> "个人编号",
+    "aac003" -> "姓名",
+    "aaa103" -> "证件类型",
+    "aac002" -> "证件号码",
+    "aac004" -> "性别",
+    "aac006" -> "出生日期",
+    "aac005" -> "民族",
+    "aac066" -> "参保身份",
+    "aae016" -> "业务状态",
+    "aac008" -> "参保状态",
+    "aac031" -> "缴费状态",
+    "aae476" -> "被征地身份",
+    "aae480" -> "退捕渔民身份",
+    "aae479" -> "核工业身份",
+    "aae478" -> "老农保身份",
+    "aac049" -> "参保时间",
+  )
 }

@@ -159,7 +159,9 @@ object Excel {
         clearValue: Boolean = true
     ): Row = {
       if (targetRowIndex == sourceRowIndex) {
-        sheet.getRow(sourceRowIndex)
+        val srcRow = sheet.getRow(sourceRowIndex)
+        if (srcRow != null && clearValue) srcRow.setBlank()
+        srcRow
       } else {
         if (sheet.getLastRowNum >= targetRowIndex) {
           sheet.shiftRows(targetRowIndex, sheet.getLastRowNum, 1, true, false)
@@ -288,6 +290,13 @@ object Excel {
 
     def setCellValue[T](colName: String, value: Option[T]) = {
       if (value.isDefined) row(colName).setCellValue(value.get.toString)
+    }
+
+    def setBlank() = {
+      for (index <- row.getFirstCellNum until row.getLastCellNum()) {
+        val cell = row.getCell(index)
+        if (cell != null) cell.setBlank()
+      }
     }
   }
 
