@@ -59,7 +59,7 @@ object Auth {
               result.foreach { it =>
                 item.no = it.no
                 run(
-                  rawData.update(lift(item))
+                  rawData.filter(_.no == lift(item.no)).update(lift(item))
                 )
               }
               println("更新")
@@ -95,7 +95,7 @@ object Auth {
           if (data.nonEmpty) {
             data.foreach { item =>
               items.foreach(item.merge(_))
-              run(historyData.update(lift(item)))
+              run(historyData.filter(_.no == lift(item.no)).update(lift(item)))
             }
           } else {
             val item = HistoryItem()
@@ -112,7 +112,7 @@ object Auth {
           if (data.nonEmpty) {
             data.foreach { item =>
               items.foreach(item.merge(_))
-              run(monthData.update(lift(item)))
+              run(monthData.filter(_.no == lift(item.no)).update(lift(item)))
             }
           } else {
             val item = MonthItem(month = Some(month))
@@ -176,9 +176,11 @@ object Auth {
 
         if (update) {
           if (monthOrAll.toUpperCase() == "ALL") {
-            run(historyData.update(lift(item.asInstanceOf[HistoryItem])))
+            val historyItem = item.asInstanceOf[HistoryItem]
+            run(historyData.filter(_.no == lift(historyItem.no)).update(lift(historyItem)))
           } else {
-            run(monthData.update(lift(item.asInstanceOf[MonthItem])))
+            val monthItem = item.asInstanceOf[MonthItem]
+            run(monthData.filter(_.no == lift(monthItem.no)).update(lift(monthItem)))
           }
         }
       }
@@ -259,6 +261,16 @@ trait ImportCommand {  _: ScallopConf =>
 
   def clearData(): Unit
 
+  /**
+    * 提取数据字段信息
+    *
+    * @param nameAndIdCards 姓名 -> 身份证号码
+    * @param neighborhood 乡镇、街道
+    * @param community 村、社区
+    * @param address 地址
+    * @param personType 人员类型
+    * @param init 初始化信息操作
+    */
   case class FieldColumns(
     nameAndIdCards: Seq[(String, String)],
     neighborhood: String,
@@ -281,7 +293,7 @@ trait ImportCommand {  _: ScallopConf =>
     val sheet = workbook.getSheetAt(0)
 
     for {
-      index <- (startRow() - 1) to endRow()
+      index <- (startRow() - 1) until endRow()
       row = sheet.getRow(index)
       neighborhood = row(fieldColumns.neighborhood).value
       community = row(fieldColumns.community).value
