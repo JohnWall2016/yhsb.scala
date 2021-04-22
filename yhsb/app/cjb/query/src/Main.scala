@@ -9,6 +9,10 @@ import yhsb.cjb.net.protocol.Result
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
 import yhsb.base.util.OptionalOps
 import yhsb.base.util.UtilOps
+import yhsb.base.run.process
+import yhsb.base.util.Config
+import java.nio.file.Files
+import java.io.OutputStream
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -71,7 +75,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
             val idCard = row.getCell(idCardRow()).value.trim().toUpperCase()
 
             println(idCard)
-            
+
             val result = session.request(PersonInfoInProvinceQuery(idCard))
             result.map(item => {
               row
@@ -97,6 +101,8 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   val payInfo =
     new Subcommand("pay") with Export {
       descr("缴费信息查询")
+
+      val print = opt[Boolean](required = false, descr = "是否直接打印")
 
       val idCard = trailArg[String](descr = "身份证号码")
 
@@ -249,17 +255,17 @@ class Query(args: collection.Seq[String]) extends Command(args) {
             session
               .request(PersonInfoInProvinceQuery(idCard()))
               .let { result =>
-              if (result.isEmpty || result(0).invalid) null else result(0)
-            }
+                if (result.isEmpty || result(0).invalid) null else result(0)
+              }
 
           val payInfoResult =
             session
               .request(PayingInfoInProvinceQuery(idCard()))
               .let { result =>
-              if (result.isEmpty || result.size == 1 && result(0).year == 0)
-                null
-              else result
-            }
+                if (result.isEmpty || result.size == 1 && result(0).year == 0)
+                  null
+                else result
+              }
 
           (info, payInfoResult)
         }
@@ -288,7 +294,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
           (records, unrecords)
         }
 
-        if (export() && records != null && records.nonEmpty) {
+        if ((export() || print()) && records != null && records.nonEmpty) {
           val path = """D:\征缴管理"""
           val xlsx = """雨湖区城乡居民基本养老保险缴费查询单模板.xlsx"""
 
@@ -337,9 +343,19 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               }
             }
           }
-          (path / s"${info.name}缴费查询单.xlsx").let { path =>
-            println(s"\n保存: $path")
-            workbook.save(path)
+
+          if (export()) {
+            val file = path / s"${info.name}缴费查询单.xlsx"
+            println(s"\n保存: $file")
+            workbook.save(file)
+          }
+          if (print()) {
+            val file = Files.createTempFile("yhsb", ".xlsx")
+            workbook.save(file)
+            val cmd =
+              s"""${Config.load("cmd").getString("print.excel")} "$file""""
+            println(s"\n打印: $cmd")
+            process.execute(cmd, OutputStream.nullOutputStream(), OutputStream.nullOutputStream())
           }
         }
       }
