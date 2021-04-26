@@ -15,7 +15,10 @@ import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.Result
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
-import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.{PayInfoRecord, PayInfoTotalRecord}
+import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.{
+  PayInfoRecord,
+  PayInfoTotalRecord
+}
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -263,7 +266,11 @@ class Query(args: collection.Seq[String]) extends Command(args) {
             val cmd =
               s"""${Config.load("cmd").getString("print.excel")} "$file""""
             println(s"\n打印: $cmd")
-            process.execute(cmd, OutputStream.nullOutputStream(), OutputStream.nullOutputStream())
+            process.execute(
+              cmd,
+              OutputStream.nullOutputStream(),
+              OutputStream.nullOutputStream()
+            )
           }
         }
       }
