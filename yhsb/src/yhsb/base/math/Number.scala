@@ -2,6 +2,8 @@ package yhsb.base.math
 
 import scala.math.BigDecimal.RoundingMode
 
+import yhsb.base.text.String.StringOps
+
 object Number {
   val chineseNumbers = List(
     "零", "壹", "贰", "叁", "肆",
@@ -80,5 +82,31 @@ object Number {
 
   implicit class BigIntOps(i: BigInt) {
     def **(e: Int) = i.pow(e)
+  }
+
+  implicit class OptionBigDecimalOps(left: Option[BigDecimal]) {
+    def +(right: BigDecimal): Option[BigDecimal] =
+      if (left.isDefined) {
+        Some(left.get + right)
+      } else {
+        Some(right)
+      }
+
+    def +(right: Option[BigDecimal]): Option[BigDecimal] =
+      if (left.isDefined) {
+        if (right.isDefined) Some(left.get + right.get)
+        else left
+      } else {
+        right
+      }
+
+    def mkString = left match {
+      case Some(value) => value.toString()
+      case None        => "0"
+    }
+
+    def padLeft(width: Int) = mkString.padLeft(width)
+
+    def padRight(width: Int) = mkString.padRight(width)
   }
 }

@@ -1,18 +1,21 @@
+import java.nio.file.Files
+import java.io.OutputStream
+
 import yhsb.base.command._
 import yhsb.base.excel.Excel._
-import yhsb.cjb.net.Session
-import scala.collection.mutable
 import yhsb.base.text.String._
 import yhsb.base.io.Path._
-import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
-import yhsb.cjb.net.protocol.Result
-import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
 import yhsb.base.util.OptionalOps
 import yhsb.base.util.UtilOps
 import yhsb.base.run.process
 import yhsb.base.util.Config
-import java.nio.file.Files
-import java.io.OutputStream
+import yhsb.base.math.Number.OptionBigDecimalOps
+
+import yhsb.cjb.net.Session
+import yhsb.cjb.net.protocol.Result
+import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
+import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
+import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.{PayInfoRecord, PayInfoTotalRecord}
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -106,98 +109,6 @@ class Query(args: collection.Seq[String]) extends Command(args) {
 
       val idCard = trailArg[String](descr = "身份证号码")
 
-      class PayInfoRecord(
-          val year: Int, // 年度
-          var personal: Option[BigDecimal] = None, // 个人缴费
-          var provincial: Option[BigDecimal] = None, // 省级补贴
-          var civic: Option[BigDecimal] = None, // 市级补贴
-          var prefectural: Option[BigDecimal] = None, // 县级补贴
-          var governmentalPay: Option[BigDecimal] = None, // 政府代缴
-          var communalPay: Option[BigDecimal] = None, // 集体补助
-          var fishmanPay: Option[BigDecimal] = None, // 退捕渔民补助
-          val transferDates: mutable.Set[String] = mutable.Set(),
-          val agencies: mutable.Set[String] = mutable.Set()
-      )
-
-      class PayInfoTotalRecord(
-          var total: Option[BigDecimal] = None
-      ) extends PayInfoRecord(0)
-
-      private implicit class OptionBigDecimalOps(left: Option[BigDecimal]) {
-        def +(right: BigDecimal): Option[BigDecimal] =
-          if (left.isDefined) {
-            Some(left.get + right)
-          } else {
-            Some(right)
-          }
-
-        def +(right: Option[BigDecimal]): Option[BigDecimal] =
-          if (left.isDefined) {
-            if (right.isDefined) Some(left.get + right.get)
-            else left
-          } else {
-            right
-          }
-
-        def mkString = left match {
-          case Some(value) => value.toString()
-          case None        => "0"
-        }
-
-        def padLeft(width: Int) = mkString.padLeft(width)
-
-        def padRight(width: Int) = mkString.padRight(width)
-      }
-
-      def getPayInfoRecords(
-          payInfo: Result[PayingInfoInProvinceQuery.Item]
-      ) = {
-        val payedRecords = mutable.Map[Int, PayInfoRecord]()
-        val unpayedRecords = mutable.Map[Int, PayInfoRecord]()
-
-        for (data <- payInfo) {
-          if (data.year != 0) {
-            val records = if (data.isPayedOff) payedRecords else unpayedRecords
-            if (!records.contains(data.year)) {
-              records(data.year) = new PayInfoRecord(data.year)
-            }
-            val record = records(data.year)
-            data.item.value match {
-              case "1"  => record.personal += data.amount
-              case "3"  => record.provincial += data.amount
-              case "4"  => record.civic += data.amount
-              case "5"  => record.prefectural += data.amount
-              case "6"  => record.communalPay += data.amount
-              case "11" => record.governmentalPay += data.amount
-              case _    => println(s"未知缴费类型${data.item.value}, 金额${data.amount}")
-            }
-            record.agencies.add(data.agency ?: "")
-            record.transferDates.add(data.payedOffDay ?: "")
-          }
-        }
-
-        (payedRecords, unpayedRecords)
-      }
-
-      def orderAndTotal(records: collection.Map[Int, PayInfoRecord]) = {
-        var results = mutable.ListBuffer.from(records.values)
-        results = results.sortWith((a, b) => a.year < b.year)
-        val total = new PayInfoTotalRecord
-        for (r <- results) {
-          total.personal += r.personal
-          total.provincial += r.provincial
-          total.civic += r.civic
-          total.prefectural += r.prefectural
-          total.governmentalPay += r.governmentalPay
-          total.communalPay += r.communalPay
-          total.fishmanPay += r.fishmanPay
-        }
-        total.total = total.personal + total.provincial + total.civic +
-          total.prefectural + total.governmentalPay + total.communalPay +
-          total.fishmanPay
-        results.addOne(total)
-      }
-
       def printInfo(info: PersonInfoInProvinceQuery.Item) = {
         println("个人信息:")
         println(
@@ -281,17 +192,14 @@ class Query(args: collection.Seq[String]) extends Command(args) {
           println("未查询到缴费信息")
           (null, null)
         } else {
-          val (payedRecords, unpayedRecords) = getPayInfoRecords(payInfoResult)
+          val (payedRecords, unpayedRecords) = payInfoResult.getPayInfoRecords()
 
-          val records = orderAndTotal(payedRecords)
-          val unrecords = orderAndTotal(unpayedRecords)
-
-          printPayInfoRecords(records, "已拨付缴费历史记录:")
+          printPayInfoRecords(payedRecords, "已拨付缴费历史记录:")
           if (unpayedRecords.nonEmpty) {
-            printPayInfoRecords(unrecords, "\n未拨付补录入记录:")
+            printPayInfoRecords(unpayedRecords, "\n未拨付补录入记录:")
           }
 
-          (records, unrecords)
+          (payedRecords, unpayedRecords)
         }
 
         if ((export() || print()) && records != null && records.nonEmpty) {
