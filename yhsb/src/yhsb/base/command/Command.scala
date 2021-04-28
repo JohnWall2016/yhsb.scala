@@ -29,6 +29,10 @@ trait SheetIndex { _: ScallopConf =>
     trailArg[Int](descr = "数据表序号, 默认为0", default = Some(0), required = false)
 }
 
+trait SheetName { _: ScallopConf =>
+  val sheetName = trailArg[String](descr = "数据表名称")
+}
+
 trait SheetIndexOpt { _: ScallopConf =>
   val sheetIndex =
     opt[Int](name = "sheetIndex", descr = "数据表序号, 默认为0", default = Some(0))

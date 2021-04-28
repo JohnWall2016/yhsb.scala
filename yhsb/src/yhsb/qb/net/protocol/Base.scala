@@ -87,10 +87,12 @@ case class OutBusiness[T](
     @AttrNode("result", "querysql")
     var querySql: String,
     @Node("resultset", OutBusiness.filter)
-    var resultSet: ResultSet[T],
+    var _resultSet: ResultSet[T],
     @Node("resultset", OutBusiness.nofilter)
     var otherResultSets: List[ResultSet[T]]
-)
+) {
+  def resultSet = if (_resultSet == null) EmptyResultSet else _resultSet
+}
 
 object OutBusiness {
   val filter: Element => Boolean = { e =>
@@ -129,6 +131,8 @@ case class ResultSet[T](
     rowList.iterator
   }
 }
+
+object EmptyResultSet extends ResultSet[Nothing](null, List())
 
 case class Result(
     @Attribute("result")

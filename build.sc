@@ -55,6 +55,7 @@ object yhsb extends CustomModule {
     object qb extends CustomModule {
       object spancalc extends YhsbModule
       object landacq extends YhsbModule
+      object query extends YhsbModule
     }
     object jgb extends CustomModule {
       object clearpilot extends YhsbModule
