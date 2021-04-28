@@ -41,6 +41,10 @@ object CompanyInfoQuery {
       /** 专管员 */
       @Attribute("aab016")
       var managerName: String,
+      @Attribute("sab212")
+      var managerIdCard: String,
+      @Attribute("sab156")
+      var managerPhone: String,
       /** 登记机构 */
       @Attribute("djjg")
       var agencyName: String,
