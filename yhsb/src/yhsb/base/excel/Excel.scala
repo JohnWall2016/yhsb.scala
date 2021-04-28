@@ -2,16 +2,19 @@ package yhsb.base
 
 package excel
 
+import java.io.ByteArrayInputStream
+import java.nio.file.{Files, Path, Paths}
+
+import scala.annotation.tailrec
+
 import org.apache.poi.hssf.usermodel.HSSFWorkbook
 import org.apache.poi.ss.usermodel._
 import org.apache.poi.ss.util.CellRangeAddressList
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import yhsb.base.io.AutoClose.use
 
-import java.io.ByteArrayInputStream
-import java.nio.file.{Files, Path, Paths}
-import scala.annotation.tailrec
+import yhsb.base.io.AutoClose.use
 import yhsb.base.io.Path._
+import yhsb.base.math.Number.RichDouble
 
 object Excel {
   val Excel = yhsb.base.excel.Excel
@@ -311,7 +314,9 @@ object Excel {
           case STRING => cell.getStringCellValue
           case NUMERIC =>
             val v = cell.getNumericCellValue
-            if (v.isValidInt) v.toInt.toString else v.toString
+            if (v.isValidInt) v.toInt.toString
+            else if (v.isValidLong) v.toLong.toString
+            else v.toString
           case BLANK   => ""
           case BOOLEAN => cell.getBooleanCellValue.toString
           case ERROR   => ""

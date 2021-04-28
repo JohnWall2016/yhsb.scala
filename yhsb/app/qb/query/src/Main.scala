@@ -37,10 +37,10 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                 .map(_.companyName)
                 .getOrElse("")
 
-              println(s"${index+1} $code $name")
+              println(f"${index+1}%-3d $code $name")
 
               row(codeCol()).setBlank()
-              row(titleCol()).value = s"$name$title"
+              row(titleCol()).value = s"$name\n$title"
             }
           }
         } finally {

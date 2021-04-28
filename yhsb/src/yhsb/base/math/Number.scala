@@ -109,4 +109,8 @@ object Number {
 
     def padRight(width: Int) = mkString.padRight(width)
   }
+
+  implicit class RichDouble(d: Double) {
+    def isValidLong = { val l = d.toLong; l.toDouble == d && l != Long.MaxValue }
+  }
 }
