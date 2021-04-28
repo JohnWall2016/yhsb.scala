@@ -1,6 +1,5 @@
 package yhsb.qb
 
-
 import utest._
 import yhsb.qb.net.Session
 import yhsb.qb.net.protocol._
@@ -25,6 +24,12 @@ object SessionTest extends TestSuite {
           ))
           .resultSet.foreach(println)
         }
+      }
+    }
+    test("company") {
+      Session.use() { session =>
+        session.request(CompanyInfoQuery("430302031124"))
+          .resultSet.foreach(println)
       }
     }
   }
