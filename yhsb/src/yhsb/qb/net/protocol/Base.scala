@@ -91,7 +91,7 @@ case class OutBusiness[T](
     @Node("resultset", OutBusiness.nofilter)
     var otherResultSets: List[ResultSet[T]]
 ) {
-  def resultSet = if (_resultSet == null) EmptyResultSet else _resultSet
+  def resultSet = if (_resultSet == null) ResultSet.empty else _resultSet
 }
 
 object OutBusiness {
@@ -132,7 +132,9 @@ case class ResultSet[T](
   }
 }
 
-object EmptyResultSet extends ResultSet[Nothing](null, List())
+object ResultSet {
+  val empty = ResultSet[Nothing](null, List())
+}
 
 case class Result(
     @Attribute("result")
