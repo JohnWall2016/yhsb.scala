@@ -9,9 +9,9 @@ import scala.collection.mutable
 
 object Context {
   implicit class JdbcContextOps(val context: JdbcContext[_, _]) {
-    def loadExcel(
+    def loadExcel[T: Loadable](
         entity: Entity,
-        fileName: String,
+        excel: T,
         startRow: Int,
         endRow: Int,
         fields: Seq[String],
@@ -20,9 +20,9 @@ object Context {
         ident: String = "",
         tableIndex: Int = 0
     ): Long = {
-      val workbook = Excel.load(fileName)
+      val workbook = implicitly[Loadable[T]].apply(excel)
       val sheet = workbook.getSheetAt(tableIndex)
-      val regex = "(?i)^[A-Z]+$".r
+      val regex = "(?i)^([A-Z]+)$".r
 
       val builder = new StringBuilder()
 
@@ -30,12 +30,16 @@ object Context {
         try {
           val values = mutable.ArrayBuffer[String]()
           for (row <- fields) {
-            var value = row
-            if (regex.matches(row)) {
-              value = sheet.getRow(index).getCell(row).value
-              if (noQuoted == null || !noQuoted.contains(row)) {
-                value = s"'$value'"
-              }
+            val value = row match {
+              case regex(r) =>
+                val value = sheet.getRow(index).getCell(r).value
+                if (noQuoted == null || !noQuoted.contains(r)) {
+                  s"'$value'"
+                } else {
+                  value
+                }
+              case s"`$s`" => s
+              case _       => row
             }
             values.addOne(value)
           }
@@ -60,14 +64,19 @@ object Context {
         "CHARACTER SET utf8 FIELDS TERMINATED BY ',' OPTIONALLY " +
         "ENCLOSED BY '\\'' LINES TERMINATED BY '\\n';"
 
-      execute(sql, printSql, ident, afterExecute = Files.deleteIfExists(cvsFile))
+      execute(
+        sql,
+        printSql,
+        ident,
+        afterExecute = Files.deleteIfExists(cvsFile)
+      )
     }
 
     def execute(
-      sql: String,
-      printSql: Boolean = false,
-      ident: String = "",
-      afterExecute: => Unit = {}
+        sql: String,
+        printSql: Boolean = false,
+        ident: String = "",
+        afterExecute: => Unit = {}
     ): Long = {
       if (printSql) println(s"$ident$sql")
       val result = context.executeAction(sql)

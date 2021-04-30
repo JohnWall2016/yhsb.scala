@@ -51,6 +51,7 @@ object yhsb extends CustomModule {
       object delegate extends YhsbModule
       object treatment extends YhsbModule
       object auth extends YhsbModule
+      object compare extends YhsbModule
     }
     object qb extends CustomModule {
       object spancalc extends YhsbModule

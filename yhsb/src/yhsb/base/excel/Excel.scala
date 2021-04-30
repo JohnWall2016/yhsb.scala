@@ -54,6 +54,20 @@ object Excel {
     }
   }
 
+  sealed trait Loadable[T] {
+    def apply(loadable: T): Workbook
+  }
+
+  object Loadable {
+    implicit object PathLoadable extends Loadable[String] {
+      def apply(path: String): Workbook = load(path)
+    }
+
+    implicit object WorkbookLoadad extends Loadable[Workbook] {
+      def apply(workbook: Workbook): Workbook = workbook
+    }
+  }
+
   implicit class WorkbookOps(val book: Workbook) extends AnyVal {
     def save[T : PathConvertible](file: T): Unit = {
       use(Files.newOutputStream(file)) { out =>
