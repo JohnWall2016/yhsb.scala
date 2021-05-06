@@ -39,7 +39,7 @@ abstract class MapField {
 }
 
 object MapField {
-  class Val[T <: MapField: TypeTag] {
+  abstract class Val[T <: MapField: TypeTag] {
     def Val(value: String): T = {
       val t = Extension.newInstance()
       t._value = value
