@@ -299,9 +299,28 @@ class StopReason extends MapField {
 class PayType extends MapField {
   override def valueMap = {
     case "F10004" => "重复缴费退费"
+    case "F10005" => "月度银行代发"
     case "F10006" => "享受终止退保"
     case "F10007" => "缴费调整退款"
   }
+}
+
+/** 支付状态 */
+class PayState extends MapField {
+  override def valueMap = {
+    case "0" => "待支付"
+    case "1" => "已支付"
+    case "2" => "支付失败"
+    case "3" => "已核销"
+  }
+}
+
+object PayState {
+  def apply(value: String) = MapField.newField[PayState](value)
+  val Wait = PayState("0")
+  val Sucess = PayState("1")
+  val Fail = PayState("2")
+  val Cancel = PayState("3")
 }
 
 object SessionOps {

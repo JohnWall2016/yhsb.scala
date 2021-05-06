@@ -2,6 +2,9 @@ package yhsb.base.struct
 
 import scala.collection.mutable
 import scala.collection.immutable.AbstractSeq
+import scala.reflect.runtime.universe._
+
+import yhsb.base.reflect.Extension
 
 abstract class MapField {
   private[base] var _value: String = null
@@ -21,6 +24,14 @@ abstract class MapField {
   def valueMap: PartialFunction[String, String]
   
   override def toString: String = name
+}
+
+object MapField {
+  def newField[T <: MapField: TypeTag](value: String): T = {
+    val t = Extension.newInstance()
+    t._value = value
+    t
+  }
 }
 
 final class ListField[T] extends AbstractSeq[T] {

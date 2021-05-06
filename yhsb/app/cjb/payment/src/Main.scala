@@ -7,6 +7,7 @@ import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.PaymentQuery
 import yhsb.cjb.net.protocol.PaymentPersonalDetailQuery
 import yhsb.cjb.net.protocol.SessionOps.CeaseInfo
+import yhsb.cjb.net.protocol.PayState
 
 class Payment(args: collection.Seq[String]) extends Command(args) {
   banner("财务支付单生成程序")
@@ -41,7 +42,7 @@ class Payment(args: collection.Seq[String]) extends Command(args) {
 
       val items =
         session
-          .request(PaymentQuery(yearMonth(), state()))
+          .request(PaymentQuery(yearMonth(), PayState(state())))
           .sortWith(_.payList < _.payList)
 
       items.foreach { item =>

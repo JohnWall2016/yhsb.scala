@@ -4,7 +4,7 @@ package cjb.net.protocol
 import scala.jdk.CollectionConverters._
 
 /** 财务支付管理查询 */
-class PaymentQuery(yearMonth: String, state: String = "0")
+class PaymentQuery(yearMonth: String, state: PayState = PayState.Wait)
   extends PageRequest[PaymentQuery.Item](
     "cwzfglQuery",
     1,
@@ -36,7 +36,7 @@ class PaymentQuery(yearMonth: String, state: String = "0")
 object PaymentQuery {
   def apply(
       yearMonth: String,
-      state: String = "0"
+      state: PayState = PayState.Wait
   ) = new PaymentQuery(yearMonth, state)
 
   case class Item(
