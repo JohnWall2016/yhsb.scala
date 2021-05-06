@@ -305,8 +305,18 @@ object Excel {
       }
     }
 
-    def setCellValue[T](colName: String, value: Option[T]) = {
-      if (value.isDefined) row(colName).setCellValue(value.get.toString)
+    def setCellValue[T: ValidateCellValue](colName: String, value: T) = {
+      row(colName).value = value
+    }
+
+    def setCellValue[T: ValidateCellValue](colName: String, value: Option[T]) = {
+      row(colName).value = value
+    }
+
+    def setCellValues(columnAndValues: (String, Any)*) = {
+      for ((col, value) <- columnAndValues) {
+        row(col).setValue(value)
+      }
     }
 
     def setBlank() = {
@@ -342,36 +352,58 @@ object Excel {
       getString(cell.getCellType)
     }
 
-    def value_=(v: String): Unit = {
-      if (cell == null) return
-      if (v != null) cell.setCellValue(v)
-      else cell.setBlank()
+    def value_=[T: ValidateCellValue](v: T): Unit = {
+      implicitly[ValidateCellValue[T]].setCellValue(cell, v)
     }
 
-    def value_=(v: Double): Unit = {
-      if (cell == null) return
-      cell.setCellValue(v)
+    def value_=[T: ValidateCellValue](v: Option[T]): Unit = {
+      if (v.isDefined) cell.value = v.get
     }
 
-    def value_=(v: BigDecimal): Unit = {
-      if (cell == null) return
-      if (v != null) cell.setCellValue(v.toDouble)
-      else cell.setBlank()
-    }
-
-    def value_=(v: Int): Unit = {
-      if (cell == null) return
-      cell.setCellValue(v.toDouble)
-    }
-
-    def value_=[T](v: Option[T]): Unit = {
-      if (v.isDefined) {
-        v.get match {
-          case d: Double => cell.value = d
-          case d: BigDecimal => cell.value = d
-          case i: Int => cell.value = i
-          case s: String => cell.value = s
+    def setValue(value: Any): Unit = {
+      if (cell != null) {
+        value match {
+          case null => cell.setBlank()
+          case v: Double => cell.value_=(v)(ValidateCellValue.DoubleCellValue)
+          case v: BigDecimal => cell.value_=(v)(ValidateCellValue.BigDecimalCellValue)
+          case v: Int => cell.value_=(v)(ValidateCellValue.IntCellValue)
+          case v: String => cell.value_=(v)(ValidateCellValue.StringCellValue)
+          case v: Option[_] => if (v.isDefined) setValue(v.get)
+          case v => throw new Exception(s"unsupported cell value: $v")
         }
+      }
+    }
+  }
+
+  trait ValidateCellValue[T] {
+    def setCellValue(cell: Cell, value: T): Unit
+  }
+
+  object ValidateCellValue {
+    implicit object DoubleCellValue extends ValidateCellValue[Double] {
+      def setCellValue(cell: Cell, value: Double): Unit = {
+        if (cell == null) return
+        cell.setCellValue(value)
+      }
+    }
+    implicit object BigDecimalCellValue extends ValidateCellValue[BigDecimal] {
+      def setCellValue(cell: Cell, value: BigDecimal): Unit = {
+        if (cell == null) return
+        if (value != null) cell.setCellValue(value.toDouble)
+        else cell.setBlank()
+      }
+    }
+    implicit object IntCellValue extends ValidateCellValue[Int] {
+      def setCellValue(cell: Cell, value: Int): Unit = {
+        if (cell == null) return
+        cell.setCellValue(value.toDouble)
+      }
+    }
+    implicit object StringCellValue extends ValidateCellValue[String] {
+      def setCellValue(cell: Cell, value: String): Unit = {
+        if (cell == null) return
+        if (value != null) cell.setCellValue(value)
+        else cell.setBlank()
       }
     }
   }

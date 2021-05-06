@@ -37,7 +37,7 @@ class Compare(args: collection.Seq[String]) extends Command(args) {
 }
 
 class ExportJBData extends Subcommand("dcjb") {
-  descr("导出居保参保数据")
+  descr("下载居保参保数据")
 
   val outputDir = """D:\数据核查\参保人员明细表"""
 
@@ -210,17 +210,19 @@ class ExportJgsbDupData extends Subcommand("jgcf") {
       val (dw, cs) =
         Division.getDwAndCsName(it.division.getOrElse("")).getOrElse(("", ""))
 
-      row("A").value = index
-      row("B").value = dw
-      row("C").value = cs
-      row("D").value = it.division
-      row("E").value = it.name
-      row("F").value = it.idCard
-      row("G").value = it.birthDay
-      row("H").value = it.jbState
-      row("I").value = it.jbKind
-      row("J").value = it.jgsbName
-      row("K").value = it.jgsbArea
+      row.setCellValues(
+        "A" -> index,
+        "B" -> dw,
+        "C" -> cs,
+        "D" -> it.division,
+        "E" -> it.name,
+        "F" -> it.idCard,
+        "G" -> it.birthDay,
+        "H" -> it.jbState,
+        "I" -> it.jbKind,
+        "J" -> it.jgsbName,
+        "K" -> it.jgsbArea
+      )
 
       currentRow += 1
     }
