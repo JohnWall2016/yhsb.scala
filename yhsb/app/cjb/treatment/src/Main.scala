@@ -259,7 +259,7 @@ class PayFailedList extends Subcommand("failList") {
 
     val items = Session.use() { session =>
       session
-        .request(PaymentQuery(yearMonth(), state = "0"))
+        .request(PaymentQuery(yearMonth(), PayState.Wait))
         .filter(_.objectType == "1")
         .flatMap(it => session.request(PaymentPersonalDetailQuery(it)))
         .filter(_.idCard.nonNullAndEmpty)

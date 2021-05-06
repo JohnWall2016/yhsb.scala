@@ -315,11 +315,11 @@ class PayState extends MapField {
   }
 }
 
-object PayState extends MapField.Util[PayState] {
-  val Wait = newField("0")
-  val Sucess = newField("1")
-  val Fail = newField("2")
-  val Cancel = newField("3")
+object PayState extends MapField.Val[PayState] {
+  val Wait = Val("0")
+  val Sucess = Val("1")
+  val Fail = Val("2")
+  val Cancel = Val("3")
 }
 
 object SessionOps {

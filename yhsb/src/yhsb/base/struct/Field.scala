@@ -24,22 +24,23 @@ abstract class MapField {
   def valueMap: PartialFunction[String, String]
   
   override def toString: String = name
+
+  override def equals(other: Any): Boolean = {
+    if (other == null || this.getClass != other.getClass) {
+      false
+    } else {
+      other.asInstanceOf[MapField]._value == this._value
+    }
+  }
+
+  override def hashCode(): Int = {
+    (getClass, _value).##
+  }
 }
 
 object MapField {
-  def newField[T <: MapField: TypeTag](value: String): T = {
-    val t = Extension.newInstance()
-    t._value = value
-    t
-  }
-
-  class Ordering[T <: MapField] extends scala.Ordering[T] {
-    override def compare(x: T, y: T): Int = x._value.compare(y._value)
-  }
-
-  class Util[T <: MapField: TypeTag] extends scala.Ordering[T] {
-    override def compare(x: T, y: T): Int = x._value.compare(y._value)
-    def newField(value: String): T = {
+  class Val[T <: MapField: TypeTag] {
+    def Val(value: String): T = {
       val t = Extension.newInstance()
       t._value = value
       t 
