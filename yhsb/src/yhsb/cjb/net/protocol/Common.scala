@@ -315,12 +315,11 @@ class PayState extends MapField {
   }
 }
 
-object PayState {
-  def apply(value: String) = MapField.newField[PayState](value)
-  val Wait = PayState("0")
-  val Sucess = PayState("1")
-  val Fail = PayState("2")
-  val Cancel = PayState("3")
+object PayState extends MapField.Util[PayState] {
+  val Wait = newField("0")
+  val Sucess = newField("1")
+  val Fail = newField("2")
+  val Cancel = newField("3")
 }
 
 object SessionOps {

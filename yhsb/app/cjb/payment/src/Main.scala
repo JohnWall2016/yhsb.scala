@@ -42,7 +42,7 @@ class Payment(args: collection.Seq[String]) extends Command(args) {
 
       val items =
         session
-          .request(PaymentQuery(yearMonth(), PayState(state())))
+          .request(PaymentQuery(yearMonth(), PayState.newField(state())))
           .sortWith(_.payList < _.payList)
 
       items.foreach { item =>

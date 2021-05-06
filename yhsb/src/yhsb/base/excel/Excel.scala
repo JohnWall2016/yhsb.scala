@@ -393,6 +393,13 @@ object Excel {
         else cell.setBlank()
       }
     }
+    implicit object JBigDecimalCellValue extends ValidateCellValue[java.math.BigDecimal] {
+      def setCellValue(cell: Cell, value: java.math.BigDecimal): Unit = {
+        if (cell == null) return
+        if (value != null) cell.setCellValue(BigDecimal(value).toDouble)
+        else cell.setBlank()
+      }
+    }
     implicit object IntCellValue extends ValidateCellValue[Int] {
       def setCellValue(cell: Cell, value: Int): Unit = {
         if (cell == null) return

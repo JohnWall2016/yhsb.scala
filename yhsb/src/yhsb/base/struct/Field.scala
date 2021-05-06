@@ -32,6 +32,19 @@ object MapField {
     t._value = value
     t
   }
+
+  class Ordering[T <: MapField] extends scala.Ordering[T] {
+    override def compare(x: T, y: T): Int = x._value.compare(y._value)
+  }
+
+  class Util[T <: MapField: TypeTag] extends scala.Ordering[T] {
+    override def compare(x: T, y: T): Int = x._value.compare(y._value)
+    def newField(value: String): T = {
+      val t = Extension.newInstance()
+      t._value = value
+      t 
+    }
+  }
 }
 
 final class ListField[T] extends AbstractSeq[T] {
