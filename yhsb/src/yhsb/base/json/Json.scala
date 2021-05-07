@@ -10,6 +10,20 @@ import scala.reflect.{ClassTag, classTag}
 
 trait JsonAdapter[T] extends JsonSerializer[T] with JsonDeserializer[T]
 
+class BigDecimalAdapter extends JsonAdapter[BigDecimal] {
+  def serialize(
+      src: BigDecimal,
+      typeOfSrc: Type,
+      context: JsonSerializationContext
+  ): JsonElement = new JsonPrimitive(src.bigDecimal)
+
+  def deserialize(
+      json: JsonElement,
+      typeOfT: Type,
+      context: JsonDeserializationContext
+  ): BigDecimal = BigDecimal(json.getAsBigDecimal())
+}
+
 class MapFieldAdapter extends JsonAdapter[MapField] {
   def serialize(
       src: MapField,
@@ -65,11 +79,13 @@ class ListFieldAdapter extends JsonAdapter[ListField[_]] {
 object Json {
   private[json] lazy val gson = new GsonBuilder()
     .serializeNulls()
+    .registerTypeHierarchyAdapter(classOf[BigDecimal], new BigDecimalAdapter)
     .registerTypeHierarchyAdapter(classOf[MapField], new MapFieldAdapter)
     .registerTypeHierarchyAdapter(classOf[ListField[_]], new ListFieldAdapter)
     .create()
 
   private[json] lazy val gsonNoNulls = new GsonBuilder()
+    .registerTypeHierarchyAdapter(classOf[BigDecimal], new BigDecimalAdapter)
     .registerTypeHierarchyAdapter(classOf[MapField], new MapFieldAdapter)
     .registerTypeHierarchyAdapter(classOf[ListField[_]], new ListFieldAdapter)
     .create()

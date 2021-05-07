@@ -2,12 +2,12 @@ package yhsb
 package cjb.net.protocol
 
 /** 财务支付管理查询_支付单人员明细 */
-class PaymentPersonalDetailQuery(
+class PayListPersonalDetailQuery(
     payList: String = "",
     yearMonth: String = "",
     state: String = "",
     payType: String = ""
-) extends PageRequest[PaymentPersonalDetailQuery.Item](
+) extends PageRequest[PayListPersonalDetailQuery.Item](
       "cwzfgl_zfdryQuery",
       1,
       1000,
@@ -51,9 +51,9 @@ class PaymentPersonalDetailQuery(
   val yearMonth_ = yearMonth
 }
 
-object PaymentPersonalDetailQuery {
-  def apply(item: PaymentQuery.Item) =
-    new PaymentPersonalDetailQuery(
+object PayListPersonalDetailQuery {
+  def apply(item: PayListQuery.Item) =
+    new PayListPersonalDetailQuery(
       item.payList.toString,
       item.yearMonth.toString,
       item.state,

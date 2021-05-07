@@ -4,8 +4,8 @@ import yhsb.base.datetime.Formatter
 import yhsb.base.math.Number.BigDecimalOps
 import yhsb.base.text.String.StringOps
 import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol.PaymentQuery
-import yhsb.cjb.net.protocol.PaymentPersonalDetailQuery
+import yhsb.cjb.net.protocol.PayListQuery
+import yhsb.cjb.net.protocol.PayListPersonalDetailQuery
 import yhsb.cjb.net.protocol.SessionOps.CeaseInfo
 import yhsb.cjb.net.protocol.PayState
 
@@ -42,13 +42,13 @@ class Payment(args: collection.Seq[String]) extends Command(args) {
 
       val items =
         session
-          .request(PaymentQuery(yearMonth(), PayState.Val(state())))
+          .request(PayListQuery(yearMonth(), PayState.Val(state())))
           .sortWith(_.payList < _.payList)
 
       items.foreach { item =>
         if (item.objectType == "3") { // 个人支付
           val it = session
-            .request(PaymentPersonalDetailQuery(item))
+            .request(PayListPersonalDetailQuery(item))
             .head
           val info = session.getStopInfoByIdCard(it.idCard, true)
 

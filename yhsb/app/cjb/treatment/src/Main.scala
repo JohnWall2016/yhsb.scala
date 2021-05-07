@@ -259,9 +259,9 @@ class PayFailedList extends Subcommand("failList") {
 
     val items = Session.use() { session =>
       session
-        .request(PaymentQuery(yearMonth(), PayState.Wait))
+        .request(PayListQuery(yearMonth(), PayState.Wait))
         .filter(_.objectType == "1")
-        .flatMap(it => session.request(PaymentPersonalDetailQuery(it)))
+        .flatMap(it => session.request(PayListPersonalDetailQuery(it)))
         .filter(_.idCard.nonNullAndEmpty)
         .sortWith((e1, e2) =>
           Collator

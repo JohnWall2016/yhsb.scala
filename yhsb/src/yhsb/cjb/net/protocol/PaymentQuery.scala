@@ -1,67 +1,59 @@
-package yhsb
-package cjb.net.protocol
+package yhsb.cjb.net.protocol
 
-import scala.jdk.CollectionConverters._
-
-/** 财务支付管理查询 */
-class PaymentQuery(yearMonth: String, state: PayState = PayState.Wait)
-  extends PageRequest[PaymentQuery.Item](
-    "cwzfglQuery",
+class PaymentQuery(
+    startYearMonth: String,
+    endYearMonth: String,
+    payState: PayState = PayState.Sucess
+) extends PageRequest[PaymentQuery.Item](
+    "executePayffqkcxQuery",
     1,
-    100,
-    totalOptions = Map(
-      "dataKey" -> "aae169",
-      "aggregate" -> "sum"
+    10,
+    sortOptions = Map(
+      "dataKey" -> "aaf103",
+      "sortDirection" -> "ascending"
     )
   ) {
+  val aaf013 = ""
+  val aaf030 = ""
 
-  /** 支付类型 */
-  @JsonName("aaa121")
-  val payType = ""
+  @JsonName("aac002")
+  val idCard = ""
 
-  /** 支付单号 */
-  @JsonName("aaz031")
-  val payList = ""
+  @JsonName("aae002str")
+  val startYearMonth_ = startYearMonth
 
-  /** 发放年月 */
-  @JsonName("aae002")
-  val yearMonth_ = yearMonth
+  @JsonName("aae002end")
+  val endYearMonth_ = endYearMonth
 
-  @JsonName("aae089")
-  val state_ = state
+  val aac009 = ""
+  val aac066 = ""
 
-  val bie013 = ""
+  @JsonName("aae117")
+  val payState_ = payState
 }
 
 object PaymentQuery {
   def apply(
-      yearMonth: String,
-      state: PayState = PayState.Wait
-  ) = new PaymentQuery(yearMonth, state)
+      startYearMonth: String,
+      endYearMonth: String = null,
+      payState: PayState = PayState.Sucess
+  ) = new PaymentQuery(
+    startYearMonth,
+    if (endYearMonth == null) startYearMonth else endYearMonth,
+    payState
+  )
 
   case class Item(
-      /** 支付对象类型: "1" - 月度银行代发, "3" - 个人支付 */
-      @JsonName("aaa079")
-      objectType: String,
-      /** 支付单号 */
-      @JsonName("aaz031")
-      payList: Int,
-      /** 支付状态 */
-      @JsonName("aae088")
-      state: String,
-      @JsonName("aaa121")
-      payType: PayType,
-      /** 发放年月 */
-      @JsonName("aae002")
-      yearMonth: Int,
-      /** 支付对象银行户名 */
-      @JsonName("aae009")
+      @JsonName("aac002")
+      idCard: String,
+      @JsonName("aac003")
       name: String,
-      /** 支付银行编码 */
-      @JsonName("bie013")
-      bankType: String,
-      /** 支付对象银行账号 */
-      @JsonName("aae010")
-      account: String
+      @JsonName("aac004")
+      sex: String,
+      /** 组队名称区划编码 */
+      @JsonName("aaf103")
+      zdName: String,
+      @JsonName("aae019")
+      amount: BigDecimal,
   )
 }

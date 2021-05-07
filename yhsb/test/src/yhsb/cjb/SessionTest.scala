@@ -84,5 +84,11 @@ object SessionTest extends TestSuite {
 
       workbook.save("e:\\retire.xls")
     }
+    test("payment") {
+      Session.use() { sess =>
+        val result = sess.request(PaymentQuery("202104"))
+        println(result)
+      }
+    }
   }
 }
