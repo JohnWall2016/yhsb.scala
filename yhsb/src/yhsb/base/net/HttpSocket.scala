@@ -1,21 +1,23 @@
 package yhsb.base.net
 
-import java.net.Socket
-import yhsb.base.io.AutoClose.use
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
-import yhsb.base.net.HttpHeader
+import java.io.Closeable
+import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
-import yhsb.base.net.HttpRequest
-import java.io.Closeable
-import java.net.URL
 import java.net.InetAddress
-import yhsb.base.util._
-import java.util.zip.GZIPInputStream
-import java.io.ByteArrayInputStream
-import scala.io.Source
+import java.net.Socket
+import java.net.URL
 import java.nio.file.Files
-import java.io.FileOutputStream
+import java.util.zip.GZIPInputStream
+
+import scala.io.Source
+
+import yhsb.base.io.AutoClose.use
+import yhsb.base.net.HttpHeader
+import yhsb.base.net.HttpRequest
+import yhsb.base.util._
 
 class HttpSocket private (
     val ip: String,

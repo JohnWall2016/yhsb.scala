@@ -3,22 +3,22 @@ import java.nio.file.Path
 import java.text.Collator
 import java.util.Locale
 
-import org.rogach.scallop.ScallopConf
-
 import scala.collection.mutable.LinkedHashMap
 
+import org.rogach.scallop.ScallopConf
+
 import yhsb.base.command.Command
-import yhsb.base.command.Subcommand
-import yhsb.base.excel.Excel._
-import yhsb.base.util._
-import yhsb.base.io.Path._
-import yhsb.base.command.RowRange
-import yhsb.base.datetime.Formatter
-import yhsb.base.text.String.StringOps
-import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol._
-import yhsb.cjb.net.protocol.Division.GroupOps
 import yhsb.base.command.InputFile
+import yhsb.base.command.RowRange
+import yhsb.base.command.Subcommand
+import yhsb.base.datetime.Formatter
+import yhsb.base.excel.Excel._
+import yhsb.base.io.Path._
+import yhsb.base.text.String.StringOps
+import yhsb.base.util._
+import yhsb.cjb.net.Session
+import yhsb.cjb.net.protocol.Division.GroupOps
+import yhsb.cjb.net.protocol._
 
 object Main {
   def main(args: Array[String]): Unit = new Treatment(args).runCommand()
