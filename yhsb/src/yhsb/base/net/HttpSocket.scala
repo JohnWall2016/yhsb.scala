@@ -105,33 +105,38 @@ class HttpSocket private (
     header
   }
 
-  private def transfer(to: OutputStream, len: Int) = {
-    to.write(input.readNBytes(len))
+  private def transferTo(out: OutputStream, len: Int) = {
+    out.write(input.readNBytes(len))
+  }
+
+  def readByteArrayOutputStream(header: HttpHeader): ByteArrayOutputStream = {
+    val out = new ByteArrayOutputStream(512)
+    if ("chunked" in header.get("Transfer-Encoding")) {
+      var continue = true
+      while (continue) {
+        val len = Integer.parseInt(readLine(), 16)
+        if (len <= 0) {
+          readLine()
+          continue = false
+        } else {
+          transferTo(out, len)
+          readLine()
+        }
+      }
+    } else if (header.contains("Content-Length")) {
+      val len = Integer.parseInt(header.get("Content-Length").get.head, 10)
+      if (len > 0) {
+        transferTo(out, len)
+      }
+    } else {
+      throw new NotImplementedError("unsupported transfer mode")
+    }
+    out
   }
 
   def readBody(header: HttpHeader = null): String = {
     val header_ = if (header == null) readHeader() else header
-    use(new ByteArrayOutputStream(512)) { buf =>
-      if ("chunked" in header_.get("Transfer-Encoding")) {
-        var continue = true
-        while (continue) {
-          val len = Integer.parseInt(readLine(), 16)
-          if (len <= 0) {
-            readLine()
-            continue = false
-          } else {
-            transfer(buf, len)
-            readLine()
-          }
-        }
-      } else if (header_.contains("Content-Length")) {
-        val len = Integer.parseInt(header_.get("Content-Length").get.head, 10)
-        if (len > 0) {
-          transfer(buf, len)
-        }
-      } else {
-        throw new NotImplementedError("unsupported transfer mode")
-      }
+    use(readByteArrayOutputStream(header_)) { buf =>
       if ("gzip" in header_.get("Content-Encoding")) {
         Source
           .fromInputStream(
@@ -149,29 +154,7 @@ class HttpSocket private (
 
   def exportToFile(fileName: String, header: HttpHeader = null) = {
     val header_ = if (header == null) readHeader() else header
-    //println(s"header: $header_")
-    use(new ByteArrayOutputStream(512)) { buf =>
-      if ("chunked" in header_.get("Transfer-Encoding")) {
-        var continue = true
-        while (continue) {
-          val len = Integer.parseInt(readLine(), 16)
-          //println(s"len: $len")
-          if (len <= 0) {
-            readLine()
-            continue = false
-          } else {
-            transfer(buf, len)
-            readLine()
-          }
-        }
-      } else if (header_.contains("Content-Length")) {
-        val len = Integer.parseInt(header_.get("Content-Length").get.head, 10)
-        if (len > 0) {
-          transfer(buf, len)
-        }
-      } else {
-        throw new NotImplementedError("unsupported transfer mode")
-      }
+    use(readByteArrayOutputStream(header_)) { buf =>
       use(new FileOutputStream(fileName)) { out =>
         if ("gzip" in header_.get("Content-Encoding")) {
           new GZIPInputStream(
