@@ -79,7 +79,7 @@ object SessionTest extends TestSuite {
       sheet.setColumnWidth(3, 8 * 256)
 
       sheet.deleteRowIf(startRow = 1) {
-        _("H").value == "月度拨付触发暂停"
+        _("H").value != "月度拨付触发暂停"
       }
 
       workbook.save("e:\\retire.xls")

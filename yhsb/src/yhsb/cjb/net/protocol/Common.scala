@@ -197,7 +197,7 @@ object Division {
     }
 
     def groupByDwAndCsName()
-        : collection.Map[String, collection.Map[String, Iterable[T]]] = {
+        : collection.Map[String, collection.Map[String, collection.Seq[T]]] = {
       val map = mutable
         .LinkedHashMap[String, mutable.Map[String, mutable.ListBuffer[T]]]()
       iter.foreach { case (division, data) =>

@@ -35,6 +35,20 @@ object Formatter {
           s"Invalid date format ($format): $date"
         )
     }
+
+  def normalizeSpan(startTime: String, endTime: String, to: String = "-") = {
+    val (sy, sm, _) = splitDate(startTime)
+    val (ey, em, _) = splitDate(endTime)
+    if (sy == ey) {
+      if (sm == em) {
+        s"${sy}年${sm.stripPrefix("0")}月"
+      } else {
+        s"${sy}年${sm.stripPrefix("0")}$to${em.stripPrefix("0")}月"
+      }
+    } else {
+      s"${sy}年${sm.stripPrefix("0")}月$to${ey}年${em.stripPrefix("0")}月"
+    }
+  }
 }
 
 case class YearMonth(year: Int, month: Int) {
@@ -42,7 +56,7 @@ case class YearMonth(year: Int, month: Int) {
     year > 0 && (month < 1 || month > 12),
     "year must be greater than 0 and month must be between 1 and 12."
   )
-  
+
   def offset(months: Int): YearMonth = {
     val ms = month + months
     var y = ms / 12

@@ -18,19 +18,22 @@ import yhsb.base.text.String.StringOps
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol._
 import yhsb.cjb.net.protocol.Division.GroupOps
+import yhsb.base.command.InputFile
 
 object Main {
   def main(args: Array[String]): Unit = new Treatment(args).runCommand()
 }
 
 class Treatment(args: collection.Seq[String]) extends Command(args) {
-  banner("信息核对报告表、养老金计算表生成、待遇认证表格等相关程序")
+  banner("信息核对报告表、养老金计算表生成、待遇认证表格、待遇人员公示表格等相关程序")
   addSubCommand(new Download)
   addSubCommand(new Split)
   addSubCommand(new PayFailedList)
   addSubCommand(new UncertPauseList)
   addSubCommand(new UncertList)
   addSubCommand(new ArrearList)
+  addSubCommand(new PaymentDownload)
+  addSubCommand(new PaymentSplit)
 }
 
 trait ReportDate { _: ScallopConf =>
@@ -325,7 +328,7 @@ class UncertPauseList extends Subcommand("pauseList") {
     sheet.setColumnWidth(3, 8 * 256)
 
     sheet.deleteRowIf(startRow = 1) {
-      _("H").value == "月度拨付触发暂停"
+      _("H").value != "月度拨付触发暂停"
     }
 
     workbook.saveAfter(
@@ -374,17 +377,7 @@ class UncertList extends Subcommand("uncertList") {
     sheet.setColumnWidth(3, 20 * 256)
 
     workbook.saveAfter {
-      val (sy, sm, _) = Formatter.splitDate(startDate())
-      val (ey, em, _) = Formatter.splitDate(endDate())
-      val dateRange = if (sy == ey) {
-        if (sm == em) {
-          s"${sy}年${sm.stripPrefix("0")}月"
-        } else {
-          s"${sy}年${sm.stripPrefix("0")}-${em.stripPrefix("0")}月"
-        }
-      } else {
-        s"${sy}年${sm.stripPrefix("0")}月-${ey}年${em.stripPrefix("0")}月"
-      }
+      val dateRange = Formatter.normalizeSpan(startDate(), endDate())
       outputDir / s"${dateRange}认证即将到期的待遇人员名单${Formatter.formatDate()}.xls"
     } { path =>
       println(s"保存: $path")
@@ -437,3 +430,157 @@ class ArrearList extends Subcommand("arrearList") {
   }
 }
 
+class PaymentDownload extends Subcommand("payDownload") {
+  descr("从业务系统下载待遇发放人员名单")
+
+  val startYearMonth = trailArg[String](
+    descr = "起始年月, 格式: YYYYMM, 例如: 202104"
+  )
+
+  val endYearMonth = trailArg[String](
+    descr = "截止年月, 格式: YYYYMM, 例如: 202104",
+    required = false
+  )
+
+  val outputDir = """D:\待遇核定"""
+
+  override def execute(): Unit = {
+    println("开始导出数据")
+
+    val startYearMonth_ = startYearMonth()
+    val endYearMonth_ = if (endYearMonth.isDefined) endYearMonth() else startYearMonth()
+
+    val exportFile = Files.createTempFile("yhsb", ".xls").toString
+    Session.use() {
+      _.exportAllTo(
+        PaymentQuery(
+          startYearMonth_,
+          endYearMonth_
+        ),
+        PaymentQuery.columnMap
+      )(
+        exportFile
+      )
+    }
+
+    val workbook = Excel.load(exportFile)
+    val sheet = workbook.getSheetAt(0)
+    sheet.setColumnWidth(0, 35 * 256)
+    sheet.setColumnWidth(1, 20 * 256)
+    sheet.setColumnWidth(2, 8 * 256)
+
+    workbook.saveAfter{
+      val dateRange = Formatter.normalizeSpan(startYearMonth_, endYearMonth_)
+      outputDir / s"${dateRange}待遇发放人员名单${Formatter.formatDate()}.xls"
+    } { path =>
+      println(s"保存: $path")
+    }
+
+    println("结束导出数据")
+  }
+}
+
+class PaymentSplit extends Subcommand("paySplit") with InputFile with RowRange {
+  descr("对下载的待遇发放人员名单分组")
+
+  val outputDir = """D:\待遇核定"""
+
+  val template = "待遇发放人员公示表模板.xlsx"
+
+  override def execute(): Unit = {
+    val date = Formatter.formatDate()
+
+    val (year, month, _) = Formatter.splitDate(date)
+
+    val destDir = outputDir / s"${year}年${month.stripPrefix("0")}月待遇人员公示数据"
+
+    val workbook = Excel.load(inputFile())
+    val sheet = workbook.getSheetAt(0)
+
+    println("生成分组映射表")
+    val map = (for (index <- (startRow() - 1) until endRow())
+      yield {
+        (sheet.getRow(index)("A").value, index)
+      }).groupByDwAndCsName()
+
+    println("生成待遇人员公示表")
+    if (Files.exists(destDir)) {
+      Files.move(destDir, s"${destDir.toString}.orig")
+    }
+    Files.createDirectory(destDir)
+
+    for ((dw, csMap) <- map) {
+      println(s"$dw:")
+      Files.createDirectory(destDir / dw)
+
+      for ((cs, indexes) <- csMap) {
+        println(s"  $cs: ${indexes.mkString(",")}")
+
+        val outWorkbook = Excel.load(outputDir / template)
+        val outSheet = outWorkbook.getSheetAt(0)
+        val startRow = 3
+        var currentRow = startRow
+
+        outSheet.getCell("A2").value = s"单位名称：$dw$cs"
+        outSheet.getCell("F2").value = s"制表时间：$date"
+/*
+        indexes.foreach { rowIndex =>
+          val index = currentRow - startRow + 1
+          val inRow = sheet.getRow(rowIndex)
+
+          println(s"    $index ${inRow("B").value} ${inRow("C").value}")
+
+          val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+          outRow.setCellValues(
+            "A" -> index,
+            "B" -> inRow("A").value,
+            "C" -> inRow("C").value,
+            "D" -> (if (inRow("D").value == "1") "男" else "女"),
+            "E" -> inRow("B").value.substring(6, 14),
+            "F" -> inRow("F").value,
+          )
+
+          currentRow += 1
+        }
+*/
+
+        val collator = Collator.getInstance(Locale.CHINESE)
+
+        indexes.map { index =>
+          val inRow = sheet.getRow(index)
+          (
+            inRow("A").value,
+            inRow("C").value,
+            (if (inRow("D").value == "1") "男" else "女"),
+            inRow("B").value.substring(6, 14),
+            inRow("F").value,
+          )
+        }.sortWith { (e1, e2) =>
+          collator.compare(e1._1, e2._1) match {
+            case i if i == 0 =>
+              collator.compare(e1._2, e2._2) < 0
+            case i => i < 0
+          }
+        }.foreach { it =>
+          val index = currentRow - startRow + 1
+
+          println(s"    $index ${it._2} ${it._1}")
+
+          val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+          outRow.setCellValues(
+            "A" -> index,
+            "B" -> it._1,
+            "C" -> it._2,
+            "D" -> it._3,
+            "E" -> it._4,
+            "F" -> it._5,
+          )
+
+          currentRow += 1
+        }
+
+        outWorkbook.save(destDir / dw / s"${cs}待遇发放人员公示表$date.xlsx")
+      }
+    }
+  }
+}

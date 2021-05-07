@@ -243,16 +243,16 @@ object Excel {
     def deleteRow(rowIndex: Int) = deleteRows(rowIndex, 1)
 
     def deleteRowIf(startRow: Int, endRow: Int = sheet.getLastRowNum() + 1)
-      (filter: Row => Boolean) = {
+      (cond: Row => Boolean) = {
       var startIndex = startRow
       var endRowIndex = endRow
       while (startIndex < endRowIndex) {
         var endIndex = startIndex
         var continue = true
         while (endIndex < endRowIndex && continue) {
-          if (filter(sheet.getRow(endIndex))) {
+          if (!cond(sheet.getRow(endIndex))) { // not item to delete
             continue = false
-          } else {
+          } else { // item to delete
             endIndex += 1
           }
         }
