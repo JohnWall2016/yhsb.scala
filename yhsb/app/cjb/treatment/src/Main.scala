@@ -487,6 +487,9 @@ class PaymentSplit extends Subcommand("paySplit") with InputFile with RowRange {
 
   val template = "待遇发放人员公示表模板.xlsx"
 
+  val onlyStatics =
+    opt[Boolean](name = "onlyStatics", descr = "只统计人数", default = Some(false))
+
   override def execute(): Unit = {
     val date = Formatter.formatDate()
 
@@ -497,90 +500,86 @@ class PaymentSplit extends Subcommand("paySplit") with InputFile with RowRange {
     val workbook = Excel.load(inputFile())
     val sheet = workbook.getSheetAt(0)
 
-    println("生成分组映射表")
-    val map = (for (index <- (startRow() - 1) until endRow())
-      yield {
-        (sheet.getRow(index)("A").value, index)
-      }).groupByDwAndCsName()
+    val map = (
+      for {
+        index <- (startRow() - 1) until endRow()
+        row = sheet.getRow(index)
+        if (row("I").value != "0")
+      } yield {
+        (row("A").value, index)
+      }
+    ).groupByDwAndCsName()
 
-    println("生成待遇人员公示表")
-    if (Files.exists(destDir)) {
-      Files.move(destDir, s"${destDir.toString}.orig")
+    if (!onlyStatics()) {
+      println("生成待遇人员公示表")
+      if (Files.exists(destDir)) {
+        Files.move(destDir, s"${destDir.toString}.orig")
+      }
+      Files.createDirectory(destDir)
+    } else {
+      println("生成待遇人员公示统计数据")
     }
-    Files.createDirectory(destDir)
 
+    var total = 0
     for ((dw, csMap) <- map) {
-      println(s"$dw:")
-      Files.createDirectory(destDir / dw)
+      val sum = csMap.values.collect(_.size).sum
+      total += sum
+
+      println(s"\r\n${(dw + ":").padRight(13)} $sum")
+
+      if (!onlyStatics()) Files.createDirectory(destDir / dw)
 
       for ((cs, indexes) <- csMap) {
-        println(s"  $cs: ${indexes.mkString(",")}")
+        println(s"  ${(cs + ":").padRight(11)} ${indexes.size}")
 
-        val outWorkbook = Excel.load(outputDir / template)
-        val outSheet = outWorkbook.getSheetAt(0)
-        val startRow = 3
-        var currentRow = startRow
+        if (!onlyStatics()) {
+          val outWorkbook = Excel.load(outputDir / template)
+          val outSheet = outWorkbook.getSheetAt(0)
+          val startRow = 3
+          var currentRow = startRow
 
-        outSheet.getCell("A2").value = s"单位名称：$dw$cs"
-        outSheet.getCell("F2").value = s"制表时间：$date"
-/*
-        indexes.foreach { rowIndex =>
-          val index = currentRow - startRow + 1
-          val inRow = sheet.getRow(rowIndex)
+          outSheet.getCell("A2").value = s"单位名称：$dw$cs"
+          outSheet.getCell("F2").value = s"制表时间：$date"
 
-          println(s"    $index ${inRow("B").value} ${inRow("C").value}")
+          val collator = Collator.getInstance(Locale.CHINESE)
 
-          val outRow = outSheet.getOrCopyRow(currentRow, startRow)
-          outRow.setCellValues(
-            "A" -> index,
-            "B" -> inRow("A").value,
-            "C" -> inRow("C").value,
-            "D" -> (if (inRow("D").value == "1") "男" else "女"),
-            "E" -> inRow("B").value.substring(6, 14),
-            "F" -> inRow("F").value,
-          )
+          indexes.map { index =>
+            val inRow = sheet.getRow(index)
+            (
+              inRow("A").value,
+              inRow("C").value,
+              (if (inRow("D").value == "1") "男" else "女"),
+              inRow("B").value.substring(6, 14),
+              inRow("F").value,
+            )
+          }.sortWith { (e1, e2) =>
+            collator.compare(e1._1, e2._1) match {
+              case i if i == 0 =>
+                collator.compare(e1._2, e2._2) < 0
+              case i => i < 0
+            }
+          }.foreach { it =>
+            val index = currentRow - startRow + 1
 
-          currentRow += 1
-        }
-*/
+            //println(s"    $index ${it._2} ${it._1}")
 
-        val collator = Collator.getInstance(Locale.CHINESE)
+            val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+            outRow.setCellValues(
+              "A" -> index,
+              "B" -> it._1,
+              "C" -> it._2,
+              "D" -> it._3,
+              "E" -> it._4,
+              "F" -> it._5,
+            )
 
-        indexes.map { index =>
-          val inRow = sheet.getRow(index)
-          (
-            inRow("A").value,
-            inRow("C").value,
-            (if (inRow("D").value == "1") "男" else "女"),
-            inRow("B").value.substring(6, 14),
-            inRow("F").value,
-          )
-        }.sortWith { (e1, e2) =>
-          collator.compare(e1._1, e2._1) match {
-            case i if i == 0 =>
-              collator.compare(e1._2, e2._2) < 0
-            case i => i < 0
+            currentRow += 1
           }
-        }.foreach { it =>
-          val index = currentRow - startRow + 1
 
-          println(s"    $index ${it._2} ${it._1}")
-
-          val outRow = outSheet.getOrCopyRow(currentRow, startRow)
-          outRow.setCellValues(
-            "A" -> index,
-            "B" -> it._1,
-            "C" -> it._2,
-            "D" -> it._3,
-            "E" -> it._4,
-            "F" -> it._5,
-          )
-
-          currentRow += 1
+          outWorkbook.save(destDir / dw / s"${cs}待遇发放人员公示表$date.xlsx")
         }
-
-        outWorkbook.save(destDir / dw / s"${cs}待遇发放人员公示表$date.xlsx")
       }
     }
+    println(s"\r\n${"总计:".padRight(13)} $total")
   }
 }
