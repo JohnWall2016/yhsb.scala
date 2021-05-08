@@ -77,13 +77,13 @@ object RetiredPersonStopAuditQuery {
       bankAccount: String,
       /** 多拨扣回额 */
       @JsonName("aae422")
-      chargeBackAmount: JBigDecimal,
+      chargeBackAmount: BigDecimal,
       /** 抵扣金额 */
       @JsonName("aae424")
-      deductAmount: JBigDecimal,
+      deductAmount: BigDecimal,
       /** 退款金额 */
       @JsonName("aae425")
-      refundAmount: JBigDecimal,
+      refundAmount: BigDecimal,
       @JsonName("aae011")
       operator: String,
       /** 经办时间 */

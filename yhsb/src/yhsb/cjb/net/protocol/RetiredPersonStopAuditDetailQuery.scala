@@ -16,6 +16,10 @@ object RetiredPersonStopAuditDetailQuery {
       @JsonName("aae160")
       reason: StopReason,
       @JsonName("aaz065")
-      bankType: BankType
+      bankType: BankType,
+      @JsonName("aae427")
+      refundAmount: String, // 应稽核金额
+      @JsonName("aae424")
+      deductAmount: String, // 抵扣金额
   )
 }

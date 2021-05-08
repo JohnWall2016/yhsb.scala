@@ -117,5 +117,18 @@ object SessionTest extends TestSuite {
         }
       }
     }
+    test("refund") {
+      val idCard = "430303193407103510"
+      Session.use() { sess =>
+        val refund = sess
+          .request(RefundQuery(idCard))
+          .filter { it =>
+            it.state == "已到账"
+          }
+          .map(_.amount)
+          .sum
+        println(refund)
+      }
+    }
   }
 }

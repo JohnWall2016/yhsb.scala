@@ -53,8 +53,8 @@ object Formatter {
 
 case class YearMonth(year: Int, month: Int) {
   require(
-    year > 0 && (month < 1 || month > 12),
-    "year must be greater than 0 and month must be between 1 and 12."
+    year > 0 && (month >= 1 && month <= 12),
+    s"year must be greater than 0 and month must be between 1 and 12: $year $month"
   )
 
   def offset(months: Int): YearMonth = {
@@ -67,6 +67,8 @@ case class YearMonth(year: Int, month: Int) {
     }
     YearMonth(year + y, m)
   }
+
+  def toYearMonth = year * 100 + month
 
   override def toString = f"$year%04d$month%02d"
 }

@@ -18,6 +18,12 @@ import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
 import yhsb.cjb.net.protocol.PersonInfoQuery
 import yhsb.cjb.net.protocol.Result
+import yhsb.cjb.net.protocol.RefundQuery
+import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
+import yhsb.cjb.net.protocol.TreatmentReviewQuery
+import yhsb.base.datetime.Formatter
+import yhsb.base.datetime.YearMonth
+import yhsb.cjb.net.protocol.RetiredPersonStopAuditDetailQuery
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -279,6 +285,122 @@ class Query(args: collection.Seq[String]) extends Command(args) {
     new Subcommand("paySpan") with InputFile with RowRange {
       descr("查询时间段内基础养老金情况")
 
+      val currentYearMonth = 202104
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        try {
+          Session.use() { session =>
+            for {
+              i <- (startRow() - 1) until endRow()
+              row = sheet.getRow(i)
+              name = row("C").value.trim()
+              idCard = row("B").value.trim().toUpperCase()
+              startYearMonth = row("K").value.toInt
+              endYearMonth = row("L").value.toInt
+              if row("M").value == ""
+              //if row("P").value != ""
+            } {
+              print(s"$i $idCard $name ${startYearMonth}-${endYearMonth} ")
+
+              val pInfo = session.request(PersonInfoQuery(idCard)).headOption
+
+              if (pInfo.isEmpty) {
+                println("未在我区参保")
+              } else {
+                val startTime = session
+                  .request(TreatmentReviewQuery(idCard, reviewState = "1"))
+                  .lastOption
+                  .map(_.payMonth) match {
+                  case None       => startYearMonth
+                  case Some(time) => time
+                }
+
+                val endTime = session
+                  .request(RetiredPersonStopAuditQuery(idCard, "1"))
+                  .lastOption match {
+                  case None =>
+                    if (pInfo.get.cbState.value == "4") { // 缴费终止人员
+                      YearMonth.from(startYearMonth).offset(-1).toYearMonth
+                    } else {
+                      currentYearMonth
+                    }
+                  case Some(item) =>
+                    val detail = session
+                      .request(RetiredPersonStopAuditDetailQuery(item))
+                      .head
+                    val refundAmount = detail.refundAmount
+                    val deductAmount = detail.deductAmount
+                    //println(refundAmount)
+                    if (
+                      (refundAmount != "" && refundAmount != "0") ||
+                      (deductAmount != "" && deductAmount != "0")
+                    ) {
+                      endYearMonth
+                    } else {
+                      item.stopYearMonth
+                    }
+                }
+
+                if (endTime < startYearMonth) {
+                  println("未重复领取")
+                  row.getOrCreateCell("M").setBlank()
+                  row.getOrCreateCell("N").setBlank()
+                  row.getOrCreateCell("O").setBlank()
+                  row.getOrCreateCell("P").setBlank()
+                } else {
+                  val dupStartTime = startTime.max(startYearMonth)
+                  val dupEndTime = endTime.min(endYearMonth)
+
+                  val dupSpan = s"$dupStartTime-$dupEndTime"
+                  val afterSpan =
+                    if (endTime > endYearMonth) {
+                      //println(endYearMonth)
+                      s"${YearMonth.from(endYearMonth).offset(1).toYearMonth}-$endTime"
+                    } else {
+                      ""
+                    }
+
+                  val dupAmount = session
+                    .request(PersonInfoPaylistQuery(pInfo.get))
+                    .filter { it =>
+                      it.payYearMonth >= dupStartTime &&
+                      it.payYearMonth <= dupEndTime &&
+                      //it.payItem.startsWith("基础养老金") &&
+                      it.payState == "已支付"
+                    }
+                    .map(_.amount)
+                    .sum
+
+                  val refund = session
+                    .request(RefundQuery(idCard))
+                    .filter { it =>
+                      it.state == "已到账"
+                    }
+                    .map(_.amount)
+                    .sum
+
+                  println(s"重复: $dupSpan  $dupAmount $refund $afterSpan")
+                  row.getOrCreateCell("M").value = dupSpan
+                  row.getOrCreateCell("N").value = dupAmount
+                  row.getOrCreateCell("O").value = refund
+                  row.getOrCreateCell("P").value = afterSpan
+                }
+              }
+            }
+          }
+        } finally {
+          workbook.save(inputFile().insertBeforeLast(".upd"))
+        }
+      }
+    }
+
+  val refund =
+    new Subcommand("refund") with InputFile with RowRange {
+      descr("查询已稽核金额")
+
       def execute(): Unit = {
         val workbook = Excel.load(inputFile())
         val sheet = workbook.getSheetAt(0)
@@ -289,33 +411,21 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               val row = sheet.getRow(i)
               val name = row("C").value.trim()
               val idCard = row("B").value.trim().toUpperCase()
-              val startYearMonth = row("K").value.toInt
-              val endYearMonth = row("L").value.toInt
-
-              print(s"$i $idCard $name ${startYearMonth}-${endYearMonth} ")
-
-              session.request(PersonInfoQuery(idCard)).headOption match {
-                case None => println("未参保")
-                case Some(item) => {
-                  val items = session
-                    .request(PersonInfoPaylistQuery(item))
-                    .filter { it =>
-                      it.payYearMonth >= startYearMonth &&
-                      it.payYearMonth <= endYearMonth &&
-                      it.payItem.startsWith("基础养老金") &&
-                      it.payState == "已支付"
-                    }
-                  if (!items.isEmpty) {
-                    val startTime = items.head.payYearMonth
-                    val endTime = items.last.payYearMonth
-                    val payTotals = items.map(_.amount).sum
-
-                    println(s"重复: $startTime-$endTime $payTotals")
-                    row.getOrCreateCell("M").value = s"$startTime-$endTime"
-                    row.getOrCreateCell("N").value = payTotals
-                  } else {
-                    println("无重复")
+              val sAmount = row("N").value.trim()
+              if (sAmount != "") {
+                val amount = sAmount.toInt
+                val refund = session
+                  .request(RefundQuery(idCard))
+                  .filter { it =>
+                    it.state == "已到账"
                   }
+                  .map(_.amount)
+                  .sum
+
+                println(s"$i $idCard $name $amount $refund")
+
+                if (refund > 0) {
+                  row.getOrCreateCell("O").value = refund
                 }
               }
             }
@@ -330,6 +440,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(up)
   addSubCommand(payInfo)
   addSubCommand(paySpan)
+  addSubCommand(refund)
 }
 
 object Main {
