@@ -1,24 +1,23 @@
-import java.nio.file.Files
 import java.io.OutputStream
+import java.nio.file.Files
 
 import yhsb.base.command._
 import yhsb.base.excel.Excel._
-import yhsb.base.text.String._
 import yhsb.base.io.Path._
+import yhsb.base.math.Number.OptionBigDecimalOps
+import yhsb.base.run.process
+import yhsb.base.text.String._
+import yhsb.base.util.Config
 import yhsb.base.util.OptionalOps
 import yhsb.base.util.UtilOps
-import yhsb.base.run.process
-import yhsb.base.util.Config
-import yhsb.base.math.Number.OptionBigDecimalOps
-
 import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol.Result
-import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
-import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.{
-  PayInfoRecord,
-  PayInfoTotalRecord
-}
+import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.PayInfoRecord
+import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.PayInfoTotalRecord
+import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
+import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
+import yhsb.cjb.net.protocol.PersonInfoQuery
+import yhsb.cjb.net.protocol.Result
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -276,9 +275,61 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val paySpan =
+    new Subcommand("paySpan") with InputFile with RowRange {
+      descr("查询时间段内基础养老金情况")
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        try {
+          Session.use() { session =>
+            for (i <- (startRow() - 1) until endRow()) {
+              val row = sheet.getRow(i)
+              val name = row("C").value.trim()
+              val idCard = row("B").value.trim().toUpperCase()
+              val startYearMonth = row("K").value.toInt
+              val endYearMonth = row("L").value.toInt
+
+              print(s"$i $idCard $name ${startYearMonth}-${endYearMonth} ")
+
+              session.request(PersonInfoQuery(idCard)).headOption match {
+                case None => println("未参保")
+                case Some(item) => {
+                  val items = session
+                    .request(PersonInfoPaylistQuery(item))
+                    .filter { it =>
+                      it.payYearMonth >= startYearMonth &&
+                      it.payYearMonth <= endYearMonth &&
+                      it.payItem.startsWith("基础养老金") &&
+                      it.payState == "已支付"
+                    }
+                  if (!items.isEmpty) {
+                    val startTime = items.head.payYearMonth
+                    val endTime = items.last.payYearMonth
+                    val payTotals = items.map(_.amount).sum
+
+                    println(s"重复: $startTime-$endTime $payTotals")
+                    row.getOrCreateCell("M").value = s"$startTime-$endTime"
+                    row.getOrCreateCell("N").value = payTotals
+                  } else {
+                    println("无重复")
+                  }
+                }
+              }
+            }
+          }
+        } finally {
+          workbook.save(inputFile().insertBeforeLast(".upd"))
+        }
+      }
+    }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(payInfo)
+  addSubCommand(paySpan)
 }
 
 object Main {

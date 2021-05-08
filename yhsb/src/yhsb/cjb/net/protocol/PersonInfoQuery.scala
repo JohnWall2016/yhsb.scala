@@ -47,12 +47,16 @@ class PersonInfoQuery(
 
 object PersonInfoQuery {
   def apply(
-    joinedStartDate: String = "", // "yyyy-MM-dd"
-    joinedEndDate: String = "",
+    joinedStartDate: String, // "yyyy-MM-dd"
+    joinedEndDate: String,
   ) = new PersonInfoQuery(
     joinedStartDate = joinedStartDate,
     joinedEndDate = joinedEndDate,
   )
+
+  def apply(
+    idCard: String
+  ) = new PersonInfoQuery(idCard)
 
   case class Item(
       @JsonName("aac001")
@@ -84,7 +88,8 @@ object PersonInfoQuery {
       csName: String,
       /** 组队名称区划编码 */
       @JsonName("aaf103")
-      zdName: String
+      zdName: String,
+      aaz159: Int,
   ) extends JBState
 
   val columnMap = SeqMap(

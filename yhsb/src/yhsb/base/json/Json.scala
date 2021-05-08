@@ -66,7 +66,11 @@ class ListFieldAdapter extends JsonAdapter[ListField[_]] {
       case array: JsonArray =>
         array.forEach {
           case obj: JsonObject if obj.size() > 0 =>
-            field.items.addOne(Json.fromJson(obj, argClass))
+            try {
+              field.items.addOne(Json.fromJson(obj, argClass))
+            } catch {
+              case e: JsonSyntaxException => field.addUnknownOne(obj)
+            }
           case _ =>
         }
       case _ =>

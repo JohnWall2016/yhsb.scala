@@ -278,7 +278,11 @@ object Excel {
 
     def getOrCreateCell(col: Int): Cell = {
       var cell = row.getCell(col)
-      if (cell == null) cell = row.createCell(col)
+      if (cell == null) {
+        cell = row.createCell(col)
+        val style = row.getSheet().getColumnStyle(col)
+        if (style != null) cell.setCellStyle(style)
+      }
       cell
     }
 

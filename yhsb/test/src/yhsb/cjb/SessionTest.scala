@@ -90,5 +90,32 @@ object SessionTest extends TestSuite {
         println(result)
       }
     }
+    test("paylist") {
+      val idCard = "430321195701251576" //"430321195701251576"
+      val startYearMonth = 201704
+      val endYearMonth = 201710
+      Session.use() { sess =>
+        sess.request(PersonInfoQuery(idCard)).headOption match {
+          case None => println("未参保")
+          case Some(item) => {
+            val items = sess
+              .request(PersonInfoPaylistQuery(item))
+              .filter { it =>
+                it.payYearMonth >= startYearMonth &&
+                it.payYearMonth <= endYearMonth &&
+                it.payItem.startsWith("基础养老金") &&
+                it.payState == "已支付"
+              }
+            if (!items.isEmpty) {
+              val startTime = items.head.payYearMonth
+              val endTime = items.last.payYearMonth
+              val payTotals = items.map(_.amount).sum
+
+              println(s"$startTime-$endTime $payTotals")
+            }
+          }
+        }
+      }
+    }
   }
 }

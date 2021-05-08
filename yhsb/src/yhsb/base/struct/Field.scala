@@ -5,6 +5,7 @@ import scala.collection.immutable.AbstractSeq
 import scala.reflect.runtime.universe._
 
 import yhsb.base.reflect.Extension
+import com.google.gson.JsonObject
 
 abstract class MapField {
   private[base] var _value: String = null
@@ -56,11 +57,20 @@ final class ListField[T] extends AbstractSeq[T] {
 
   private[base] val items = mutable.ListBuffer[T]()
 
+  private var _unknownItems: mutable.ListBuffer[JsonObject] = null
+
   override def iterator: Iterator[T] = items.iterator
 
   override def length: Int = items.length
 
+  def unknownItems = _unknownItems
+
   def addOne(e: T) = items.addOne(e)
+
+  def addUnknownOne(e: JsonObject) = {
+    if (_unknownItems == null) _unknownItems = mutable.ListBuffer(e)
+    else _unknownItems.addOne(e)
+  }
 
   def apply(index: Int) = items(index)
 }
