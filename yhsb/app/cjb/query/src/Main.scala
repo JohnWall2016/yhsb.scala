@@ -285,8 +285,6 @@ class Query(args: collection.Seq[String]) extends Command(args) {
     new Subcommand("paySpan") with InputFile with RowRange {
       descr("查询时间段内基础养老金情况")
 
-      val currentYearMonth = 202104
-
       def execute(): Unit = {
         val workbook = Excel.load(inputFile())
         val sheet = workbook.getSheetAt(0)
@@ -314,7 +312,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   .request(TreatmentReviewQuery(idCard, reviewState = "1"))
                   .lastOption
                   .map(_.payMonth) match {
-                  case None       => startYearMonth
+                  case None       => startYearMonth // 无法取得待遇开始时间
                   case Some(time) => time
                 }
 
@@ -324,8 +322,8 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   case None =>
                     if (pInfo.get.cbState.value == "4") { // 缴费终止人员
                       YearMonth.from(startYearMonth).offset(-1).toYearMonth
-                    } else {
-                      currentYearMonth
+                    } else { // 正常或暂停人员
+                      endYearMonth
                     }
                   case Some(item) =>
                     val detail = session
@@ -333,11 +331,10 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                       .head
                     val refundAmount = detail.refundAmount
                     val deductAmount = detail.deductAmount
-                    //println(refundAmount)
                     if (
                       (refundAmount != "" && refundAmount != "0") ||
                       (deductAmount != "" && deductAmount != "0")
-                    ) {
+                    ) { // 有稽核金额
                       endYearMonth
                     } else {
                       item.stopYearMonth
