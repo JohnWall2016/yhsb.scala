@@ -17,12 +17,25 @@ class CBState extends MapField {
   }
 }
 
+object CBState extends MapField.Val[CBState] {
+  val NoJoined = Val("0")
+  val Normal = Val("1")
+  val Paused = Val("2")
+  val Stopped = Val("4")
+}
+
 class JFState extends MapField {
   override def valueMap = {
     case "1" => "参保缴费"
     case "2" => "暂停缴费"
     case "3" => "终止缴费"
   }
+}
+
+object JFState extends MapField.Val[JFState] {
+  val Normal = Val("1")
+  val Paused = Val("2")
+  val Stopped = Val("3")
 }
 
 class JFType extends MapField {

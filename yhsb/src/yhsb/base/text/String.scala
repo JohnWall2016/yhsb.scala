@@ -93,6 +93,14 @@ object String {
       }
     }
 
+    def insertBeforeIndex(index: Int, insert: String) = {
+      if (s.length() > index) {
+        s.substring(0, index) + insert + s.substring(index)
+      } else {
+        s + insert
+      }
+    }
+
     def replace(
       re: Regex,
       replacement: String

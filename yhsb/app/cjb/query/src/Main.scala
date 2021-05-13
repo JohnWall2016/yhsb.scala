@@ -2,6 +2,8 @@ import java.io.OutputStream
 import java.nio.file.Files
 
 import yhsb.base.command._
+import yhsb.base.datetime.Formatter
+import yhsb.base.datetime.YearMonth
 import yhsb.base.excel.Excel._
 import yhsb.base.io.Path._
 import yhsb.base.math.Number.OptionBigDecimalOps
@@ -11,21 +13,24 @@ import yhsb.base.util.Config
 import yhsb.base.util.OptionalOps
 import yhsb.base.util.UtilOps
 import yhsb.cjb.net.Session
+import yhsb.cjb.net.protocol.CBState
+import yhsb.cjb.net.protocol.PayStopReason
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.PayInfoRecord
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.PayInfoTotalRecord
+import yhsb.cjb.net.protocol.PayingPersonStopAuditDetailQuery
+import yhsb.cjb.net.protocol.PayingPersonStopAuditQuery
+import yhsb.cjb.net.protocol.PaymentTerminateQuery
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
 import yhsb.cjb.net.protocol.PersonInfoQuery
-import yhsb.cjb.net.protocol.Result
 import yhsb.cjb.net.protocol.RefundQuery
+import yhsb.cjb.net.protocol.Result
+import yhsb.cjb.net.protocol.RetiredPersonStopAuditDetailQuery
 import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
 import yhsb.cjb.net.protocol.TreatmentReviewQuery
-import yhsb.base.datetime.Formatter
-import yhsb.base.datetime.YearMonth
-import yhsb.cjb.net.protocol.RetiredPersonStopAuditDetailQuery
-import yhsb.cjb.net.protocol.PayingPersonStopAuditDetailQuery
-import yhsb.cjb.net.protocol.PayingPersonStopAuditQuery
+import yhsb.cjb.net.protocol.JoinTerminateQuery
+import yhsb.cjb.net.protocol.JoinStopReason
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -480,24 +485,73 @@ class Query(args: collection.Seq[String]) extends Command(args) {
             for (i <- (startRow() - 1) until endRow()) {
               val row = sheet.getRow(i)
               val name = row("F").value.trim()
-              val idCard = row("B").value.trim().toUpperCase()
-              val sAmount = row("N").value.trim()
-              if (sAmount != "") {
-                val amount = sAmount.toInt
-                val refund = session
-                  .request(RefundQuery(idCard))
-                  .filter { it =>
-                    it.state == "已到账"
+              val idCard = row("E").value.trim().toUpperCase()
+              val time = {
+                val t = row("I").value.trim()
+                if ("""\d\d\d\d\d\d.*""".r.matches(t)) {
+                  val yearMonth = t.substring(0, 6)
+                  if (yearMonth >= "190101" && yearMonth <= "209912") {
+                    Some(s"${yearMonth.insertBeforeIndex(4, "-")}")
+                  } else {
+                    None
                   }
-                  .map(_.amount)
-                  .sum
-
-                println(s"$i $idCard $name $amount $refund")
-
-                if (refund > 0) {
-                  row.getOrCreateCell("O").value = refund
+                } else {
+                  None
                 }
               }
+
+              var memo = ""
+              var amount = ""
+              if (time.isEmpty) {
+                memo = "日期无效"
+              } else {
+                session.request(PersonInfoQuery(idCard)).headOption match {
+                  case None => memo = "未在我区参保"
+                  case Some(it) =>
+                    if (it.cbState == CBState.Stopped) {
+                      memo = "终止人员"
+                    } else if (
+                      it.cbState == CBState.Normal ||
+                      it.cbState == CBState.Paused
+                    ) {
+                      session
+                        .request(
+                          PaymentTerminateQuery(
+                            it,
+                            time.get,
+                            PayStopReason.Death
+                          )
+                        )
+                        .headOption match {
+                        case None =>
+                          session
+                            .request(
+                              JoinTerminateQuery(
+                                it,
+                                time.get,
+                                JoinStopReason.Death
+                              )
+                            )
+                            .headOption match {
+                            case Some(it) =>
+                              if (it.payAmount != "" && it.payAmount != "0") {
+                                memo = "有个人账户可清退"
+                              }
+                            case None =>
+                          }
+                        case Some(it) => {
+                          amount = it.auditAmount
+                          if (it.payAmount != "" && it.payAmount != "0") {
+                            memo = "有个人账户可清退"
+                          }
+                        }
+                      }
+                    }
+                }
+              }
+              println(s"$i $idCard $name ${amount.padLeft(8, ' ')} $memo")
+              row.getOrCreateCell("J").value = amount
+              row.getOrCreateCell("K").value = memo
             }
           }
         } finally {
