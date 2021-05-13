@@ -2,6 +2,13 @@ package yhsb.cjb.net.protocol
 
 import scala.collection.SeqMap
 
+/**
+  * 待遇发放情况查询
+  *
+  * @param startYearMonth
+  * @param endYearMonth
+  * @param payState
+  */
 class PaymentQuery(
     startYearMonth: String,
     endYearMonth: String,

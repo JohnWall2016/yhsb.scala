@@ -284,15 +284,29 @@ class AuditState extends MapField {
 /** 终止参保原因 */
 class StopReason extends MapField {
   override def valueMap = {
+    // 待遇终止原因
     case "1401" => "死亡"
     case "1406" => "出外定居"
     case "1407" => "参加职保"
     case "1499" => "其他原因"
+    // 参保终止原因
     case "6401" => "死亡"
     case "6406" => "出外定居"
     case "6407" => "参加职保"
     case "6499" => "其他原因"
   }
+}
+
+object PayStopReason extends MapField.Val[StopReason] {
+  val Death = Val("1401")
+  val EnterpriseInsurance = Val("1407")
+  val Other = Val("1499")
+}
+
+object JoinStopReason extends MapField.Val[StopReason] {
+  val Death = Val("6401")
+  val EnterpriseInsurance = Val("6407")
+  val Other = Val("6499")
 }
 
 /** 支付业务类型 */

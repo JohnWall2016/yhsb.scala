@@ -69,6 +69,8 @@ object PersonInfoQuery {
       birthDay: String,
       @JsonName("aac008")
       cbState: CBState,
+      @JsonName("aac009")
+      houseHold: String,
       /** 户口所在地 */
       @JsonName("aac010")
       hkArea: String,

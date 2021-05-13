@@ -24,6 +24,8 @@ import yhsb.cjb.net.protocol.TreatmentReviewQuery
 import yhsb.base.datetime.Formatter
 import yhsb.base.datetime.YearMonth
 import yhsb.cjb.net.protocol.RetiredPersonStopAuditDetailQuery
+import yhsb.cjb.net.protocol.PayingPersonStopAuditDetailQuery
+import yhsb.cjb.net.protocol.PayingPersonStopAuditQuery
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -298,15 +300,31 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               idCard = row("B").value.trim().toUpperCase()
               startYearMonth = row("K").value.toInt
               endYearMonth = row("L").value.toInt
-              if row("M").value == ""
+              //if row("M").value == ""
               //if row("P").value != ""
             } {
               print(s"$i $idCard $name ${startYearMonth}-${endYearMonth} ")
 
               val pInfo = session.request(PersonInfoQuery(idCard)).headOption
 
+              def clearCells() = {
+                row.getOrCreateCell("M").setBlank()
+                row.getOrCreateCell("N").setBlank()
+                row.getOrCreateCell("O").setBlank()
+                row.getOrCreateCell("P").setBlank()
+                row.getOrCreateCell("Q").setBlank()
+                row.getOrCreateCell("R").setBlank()
+              }
+
+              def setMemo(memo: String) = {
+                println(memo)
+                row.getOrCreateCell("R").value = memo
+              }
+
+              clearCells()
+
               if (pInfo.isEmpty) {
-                println("未在我区参保")
+                setMemo("未在我区参保")
               } else {
                 val startTime = session
                   .request(TreatmentReviewQuery(idCard, reviewState = "1"))
@@ -316,15 +334,22 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   case Some(time) => time
                 }
 
-                val endTime = session
+                sealed abstract class StopTime {
+                  def str: String
+                }
+                case class RetiredStopTime(time: Int) extends StopTime {
+                  override def str: String = time.toString()
+                }
+                case class PayingStopTime(time: Int) extends StopTime {
+                  override def str: String = time.toString()
+                }
+                case class NonStopTime() extends StopTime {
+                  override def str: String = ""
+                }
+
+                val (stopTime: StopTime, endTime) = session
                   .request(RetiredPersonStopAuditQuery(idCard, "1"))
                   .lastOption match {
-                  case None =>
-                    if (pInfo.get.cbState.value == "4") { // 缴费终止人员
-                      YearMonth.from(startYearMonth).offset(-1).toYearMonth
-                    } else { // 正常或暂停人员
-                      endYearMonth
-                    }
                   case Some(item) =>
                     val detail = session
                       .request(RetiredPersonStopAuditDetailQuery(item))
@@ -335,18 +360,27 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                       (refundAmount != "" && refundAmount != "0") ||
                       (deductAmount != "" && deductAmount != "0")
                     ) { // 有稽核金额
-                      endYearMonth
+                      (RetiredStopTime(item.stopYearMonth), endYearMonth)
                     } else {
-                      item.stopYearMonth
+                      (RetiredStopTime(item.stopYearMonth), item.stopYearMonth)
+                    }
+                  case None =>
+                    session
+                      .request(PayingPersonStopAuditQuery(idCard, "1"))
+                      .lastOption match {
+                      case Some(item) =>
+                        (PayingStopTime(item.stopYearMonth), endYearMonth)
+                      case None =>
+                        (NonStopTime, endYearMonth)
                     }
                 }
 
-                if (endTime < startYearMonth) {
-                  println("未重复领取")
-                  row.getOrCreateCell("M").setBlank()
-                  row.getOrCreateCell("N").setBlank()
-                  row.getOrCreateCell("O").setBlank()
-                  row.getOrCreateCell("P").setBlank()
+                if (stopTime.isInstanceOf[PayingStopTime]) {
+                  setMemo("缴费终止人员")
+                  row.getOrCreateCell("Q").value = stopTime.str
+                } else if (endTime < startYearMonth) {
+                  setMemo("企保领待前已终止")
+                  row.getOrCreateCell("Q").value = stopTime.str
                 } else {
                   val dupStartTime = startTime.max(startYearMonth)
                   val dupEndTime = endTime.min(endYearMonth)
@@ -354,7 +388,6 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   val dupSpan = s"$dupStartTime-$dupEndTime"
                   val afterSpan =
                     if (endTime > endYearMonth) {
-                      //println(endYearMonth)
                       s"${YearMonth.from(endYearMonth).offset(1).toYearMonth}-$endTime"
                     } else {
                       ""
@@ -384,6 +417,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   row.getOrCreateCell("N").value = dupAmount
                   row.getOrCreateCell("O").value = refund
                   row.getOrCreateCell("P").value = afterSpan
+                  row.getOrCreateCell("Q").value = stopTime.str
                 }
               }
             }
@@ -433,11 +467,51 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val audit =
+    new Subcommand("audit") with InputFile with RowRange {
+      descr("测试应稽核金额")
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        try {
+          Session.use() { session =>
+            for (i <- (startRow() - 1) until endRow()) {
+              val row = sheet.getRow(i)
+              val name = row("F").value.trim()
+              val idCard = row("B").value.trim().toUpperCase()
+              val sAmount = row("N").value.trim()
+              if (sAmount != "") {
+                val amount = sAmount.toInt
+                val refund = session
+                  .request(RefundQuery(idCard))
+                  .filter { it =>
+                    it.state == "已到账"
+                  }
+                  .map(_.amount)
+                  .sum
+
+                println(s"$i $idCard $name $amount $refund")
+
+                if (refund > 0) {
+                  row.getOrCreateCell("O").value = refund
+                }
+              }
+            }
+          }
+        } finally {
+          workbook.save(inputFile().insertBeforeLast(".upd"))
+        }
+      }
+    }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(payInfo)
   addSubCommand(paySpan)
   addSubCommand(refund)
+  addSubCommand(audit)
 }
 
 object Main {

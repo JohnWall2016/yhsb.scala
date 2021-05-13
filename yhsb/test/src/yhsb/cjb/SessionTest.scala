@@ -130,5 +130,33 @@ object SessionTest extends TestSuite {
         println(refund)
       }
     }
+    test("terminate") {
+      Session.use() { session =>
+        session
+          .request(PersonInfoQuery("430311194204131525"))
+          .headOption match {
+          case None => println("未参保")
+          case Some(it) =>
+            println(it)
+            session
+              .request(
+                PaymentTerminateQuery(it, "2021-05", PayStopReason.Death)
+              )
+              .foreach(println)
+        }
+        session
+          .request(PersonInfoQuery("430311196608141526"))
+          .headOption match {
+          case None => println("未参保")
+          case Some(it) =>
+            println(it)
+            session
+              .request(
+                JoinTerminateQuery(it, "2021-05", JoinStopReason.Death)
+              )
+              .foreach(println)
+        }
+      }
+    }
   }
 }
