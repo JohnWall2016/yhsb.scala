@@ -32,5 +32,11 @@ object SessionTest extends TestSuite {
           .resultSet.foreach(println)
       }
     }
+    test("stop") {
+      Session.use("sqb") { session =>
+        session.request(RetiredPersonStopQuery("430302192211031025"))
+          .resultSet.foreach(println)
+      }
+    }
   }
 }

@@ -31,6 +31,8 @@ import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
 import yhsb.cjb.net.protocol.TreatmentReviewQuery
 import yhsb.cjb.net.protocol.JoinTerminateQuery
 import yhsb.cjb.net.protocol.JoinStopReason
+import yhsb.qb.net.{Session => QBSession}
+import yhsb.qb.net.protocol.RetiredPersonStopQuery
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -292,17 +294,45 @@ class Query(args: collection.Seq[String]) extends Command(args) {
     new Subcommand("paySpan") with InputFile with RowRange {
       descr("查询时间段内基础养老金情况")
 
+      val queryQBData = opt[Boolean](required = false, descr = "是否查询企保终止数据")
+
       def execute(): Unit = {
         val workbook = Excel.load(inputFile())
         val sheet = workbook.getSheetAt(0)
 
         try {
+          if (queryQBData()) {
+            QBSession.use("sqb") { session =>
+              for {
+                i <- (startRow() - 1) until endRow()
+                row = sheet.getRow(i)
+                name = row("C").value.trim()
+                idCard = row("B").value.trim().toUpperCase()
+              } {
+                print(s"$i $idCard $name 查询企保终止情况: ")
+                session
+                  .request(RetiredPersonStopQuery(idCard))
+                  .resultSet
+                  .headOption match {
+                    case None => println("未查询到记录")
+                    case Some(it) =>
+                      row.getOrCreateCell("J").value = it.retiredDate
+                      row.getOrCreateCell("K").value = it.payStartYearMonth
+                      row.getOrCreateCell("L").value = it.stopYearMonth
+                      println(s"${it.retiredDate} ${it.payStartYearMonth} ${it.stopYearMonth}")
+                  }
+              }
+            }
+          }
+
           Session.use() { session =>
             for {
               i <- (startRow() - 1) until endRow()
               row = sheet.getRow(i)
               name = row("C").value.trim()
               idCard = row("B").value.trim().toUpperCase()
+
+              if row("K").value != "" && row("L").value != ""
               startYearMonth = row("K").value.toInt
               endYearMonth = row("L").value.toInt
               //if row("M").value == ""
