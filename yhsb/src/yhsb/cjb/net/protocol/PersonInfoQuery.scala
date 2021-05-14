@@ -87,12 +87,12 @@ object PersonInfoQuery {
       xzName: String,
       /** 村社名称区划编码 */
       @JsonName("aaf102")
-      csName: String,
+      czName: String,
       /** 组队名称区划编码 */
       @JsonName("aaf103")
       zdName: String,
       aaz159: Int,
-  ) extends JBState
+  ) extends JBState with DivisionName
 
   val columnMap = SeqMap(
     "aaf102" -> "行政区划",

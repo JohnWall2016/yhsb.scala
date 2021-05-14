@@ -314,13 +314,15 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   .request(RetiredPersonStopQuery(idCard))
                   .resultSet
                   .headOption match {
-                    case None => println("未查询到记录")
-                    case Some(it) =>
-                      row.getOrCreateCell("J").value = it.retiredDate
-                      row.getOrCreateCell("K").value = it.payStartYearMonth
-                      row.getOrCreateCell("L").value = it.stopYearMonth
-                      println(s"${it.retiredDate} ${it.payStartYearMonth} ${it.stopYearMonth}")
-                  }
+                  case None => println("未查询到记录")
+                  case Some(it) =>
+                    row.getOrCreateCell("J").value = it.retiredDate
+                    row.getOrCreateCell("K").value = it.payStartYearMonth
+                    row.getOrCreateCell("L").value = it.stopYearMonth
+                    println(
+                      s"${it.retiredDate} ${it.payStartYearMonth} ${it.stopYearMonth}"
+                    )
+                }
               }
             }
           }
@@ -331,7 +333,6 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               row = sheet.getRow(i)
               name = row("C").value.trim()
               idCard = row("B").value.trim().toUpperCase()
-
               if row("K").value != "" && row("L").value != ""
               startYearMonth = row("K").value.toInt
               endYearMonth = row("L").value.toInt
@@ -590,12 +591,58 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val division =
+    new Subcommand("division") with InputFile with RowRange {
+      descr("查询乡镇街道、村社区")
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        try {
+          Session.use() { session =>
+            for {
+              i <- (startRow() - 1) until endRow()
+              row = sheet.getRow(i)
+              name = row("C").value.trim()
+              idCard_ = row("F").value.trim()
+            } {
+              print(s"$i $idCard_ $name ")
+
+              val len = idCard_.length()
+              if (len >= 18) {
+                val idCard =
+                  if (len > 18) idCard_.substring(0, 18).toUpperCase()
+                  else idCard_.toUpperCase()
+
+                session
+                  .request(PersonInfoQuery(idCard))
+                  .headOption match {
+                  case None =>
+                    println("未在我区参保")
+                  case Some(it) =>
+                    println(s"${it.dwName.getOrElse("")} ${it.csName.getOrElse("")}")
+                    row.getOrCreateCell("K").value = it.dwName
+                    row.getOrCreateCell("L").value = it.csName
+                }
+              } else {
+                println("身份证号码有误")
+              }
+            }
+          }
+        } finally {
+          workbook.save(inputFile().insertBeforeLast(".upd"))
+        }
+      }
+    }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(payInfo)
   addSubCommand(paySpan)
   addSubCommand(refund)
   addSubCommand(audit)
+  addSubCommand(division)
 }
 
 object Main {
