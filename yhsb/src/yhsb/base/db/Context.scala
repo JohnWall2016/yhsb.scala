@@ -18,7 +18,10 @@ object Context {
         noQuoted: Seq[String] = null,
         printSql: Boolean = false,
         ident: String = "",
-        tableIndex: Int = 0
+        tableIndex: Int = 0,
+        polish: ( /*field:*/ String, /*value:*/ String) => String = { (_, v) =>
+          v
+        }
     ): Long = {
       val workbook = implicitly[Loadable[T]].apply(excel)
       val sheet = workbook.getSheetAt(tableIndex)
@@ -32,7 +35,7 @@ object Context {
           for (row <- fields) {
             val value = row match {
               case regex(r) =>
-                val value = sheet.getRow(index).getCell(r).value
+                val value = polish(r, sheet.getRow(index).getCell(r).value)
                 if (noQuoted == null || !noQuoted.contains(r)) {
                   s"'$value'"
                 } else {

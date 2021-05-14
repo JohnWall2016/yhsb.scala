@@ -42,3 +42,21 @@ select a.idcard as idcard,
        b.area as jgsb_area
 from jbrymx a, jgsbrymx b where a.idcard=b.idcard
 order by CONVERT( a.xzqh USING gbk ), CONVERT( a.name USING gbk );
+
+create table table5_1 (
+  f1 varchar(18) not null,
+  f2 longtext CHARACTER SET utf8mb4,
+  f3 longtext CHARACTER SET utf8mb4,
+  f4 longtext CHARACTER SET utf8mb4,
+  f5 longtext CHARACTER SET utf8mb4,
+  primary key(f1)
+);
+
+create table table5_2 (
+  f1 varchar(18) not null,
+  f2 longtext CHARACTER SET utf8mb4,
+  f3 longtext CHARACTER SET utf8mb4,
+  f4 longtext CHARACTER SET utf8mb4,
+  f5 longtext CHARACTER SET utf8mb4,
+  primary key(f1)
+);

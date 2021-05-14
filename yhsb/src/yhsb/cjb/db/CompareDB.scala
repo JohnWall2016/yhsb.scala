@@ -2,6 +2,7 @@ package yhsb.cjb.db
 
 import io.getquill._
 import yhsb.base.text.String._
+import io.getquill.ast.Entity
 
 case class Jbrymx(
     var idCard: String,
@@ -87,8 +88,36 @@ trait JgsbdupData { this: MysqlJdbcContext[_] =>
   }
 }
 
+case class Table5(
+    f1: String,
+    f2: Option[String],
+    f3: Option[String],
+    f4: Option[String],
+    f5: Option[String],
+)
+
+trait CustomTables { this: MysqlJdbcContext[_] =>
+  val Table5_1 = quote {
+    querySchema[Table5]("table5_1")
+  }
+  val Table5_2 = quote {
+    querySchema[Table5]("table5_2")
+  }
+  val tableMap: PartialFunction[String, Quoted[EntityQuery[Table5]] { def quoted: Entity }] = {
+    case "table5_1" => Table5_1
+    case "table5_2" => Table5_2
+  }
+
+  trait TableQuoted[T] extends Quoted[EntityQuery[Table5]] {
+    def quoted: Entity
+  }
+
+  def getTable(name: String) = tableMap(name)
+}
+
 object CompareData2021
   extends MysqlJdbcContext(LowerCase, "CompareDB2021")
      with JbrymxData
      with JgsbrymxData
      with JgsbdupData
+     with CustomTables
