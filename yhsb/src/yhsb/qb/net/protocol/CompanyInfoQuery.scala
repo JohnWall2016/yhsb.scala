@@ -25,9 +25,9 @@ object CompanyInfoQuery {
       @Attribute("aab003")
       var organizationCode: String,
       /** 单位名称 */
-      @Attribute("aab025")
+      @Attribute("aab004")
       var companyName: String,
-      @Attribute("aab028")
+      @Attribute("aab042")
       var shortCompanyName: String,
       @Attribute("aae006")
       var address: String,
