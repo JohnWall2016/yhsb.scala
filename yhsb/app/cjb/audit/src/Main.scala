@@ -11,11 +11,11 @@ import yhsb.cjb.net.protocol.{
   JoinAuditQuery,
   PayingPersonPauseAuditDetailQuery,
   PayingPersonPauseAuditQuery,
-  PayingPersonStopAuditQuery,
   RetiredPersonPauseAuditDetailQuery,
   RetiredPersonPauseAuditQuery,
-  RetiredPersonStopAuditQuery
+  RetiredPersonStopAuditQuery,
 }
+import yhsb.cjb.net.protocol.SessionOps.PersonStopAuditQuery
 
 import scala.collection.mutable
 
@@ -116,8 +116,10 @@ class QueryAudit extends Subcommand("query") {
 
   lazy val auditData = {
     AuditData(
-      if (startAuditDate().isNullOrEmpty && endAuditDate().isNullOrEmpty) "0" else "1",
-      if (startAuditDate().isNullOrEmpty) "" else toDashedDate(startAuditDate()),
+      if (startAuditDate().isNullOrEmpty && endAuditDate().isNullOrEmpty) "0"
+      else "1",
+      if (startAuditDate().isNullOrEmpty) ""
+      else toDashedDate(startAuditDate()),
       if (endAuditDate().isNullOrEmpty) "" else toDashedDate(endAuditDate())
     )
   }
@@ -135,7 +137,7 @@ class QueryAudit extends Subcommand("query") {
       session
         .request(
           JoinAuditQuery(
-            operator = operator_, 
+            operator = operator_,
             auditState = state,
             startAuditDate = startDate,
             endAuditDate = endDate
@@ -149,37 +151,31 @@ class QueryAudit extends Subcommand("query") {
 
       println(" 缴费人员终止查询 ".bar(60, '='))
       session
-        .request(
-          PayingPersonStopAuditQuery(
-            operator = operator_,
-            auditState = state,
-            startAuditDate = startDate,
-            endAuditDate = endDate
-          )
+        .payingPersonStopAuditQuery(
+          operator = operator_,
+          auditState = state,
+          startAuditDate = startDate,
+          endAuditDate = endDate
         )
         .zipWithIndex
-        .foreach {
-        case (item, i) =>
+        .foreach { case (item, i) =>
           println(s"${(i + 1).toString.padRight(3)} ${item.name
             .padRight(6)} ${item.idCard} ${item.opTime} ${item.operator}")
-      }
+        }
 
       println(" 待遇人员终止查询 ".bar(60, '='))
       session
-        .request(
-          RetiredPersonStopAuditQuery(
-            operator = operator_,
-            auditState = state,
-            startAuditDate = startDate,
-            endAuditDate = endDate
-          )
+        .retiredPersonStopAuditQuery(
+          operator = operator_,
+          auditState = state,
+          startAuditDate = startDate,
+          endAuditDate = endDate
         )
         .zipWithIndex
-        .foreach {
-        case (item, i) =>
+        .foreach { case (item, i) =>
           println(s"${(i + 1).toString.padRight(3)} ${item.name
             .padRight(6)} ${item.idCard} ${item.opTime} ${item.operator}")
-      }
+        }
 
       println(" 缴费人员暂停查询 ".bar(60, '='))
       session
@@ -187,7 +183,7 @@ class QueryAudit extends Subcommand("query") {
           PayingPersonPauseAuditQuery(
             auditState = state,
             startAuditDate = startDate,
-            endAuditDate = endDate,
+            endAuditDate = endDate
           )
         )
         .flatMap { item =>

@@ -19,20 +19,19 @@ import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.PayInfoRecord
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.PayInfoTotalRecord
 import yhsb.cjb.net.protocol.PayingPersonStopAuditDetailQuery
-import yhsb.cjb.net.protocol.PayingPersonStopAuditQuery
 import yhsb.cjb.net.protocol.PaymentTerminateQuery
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
 import yhsb.cjb.net.protocol.PersonInfoQuery
 import yhsb.cjb.net.protocol.RefundQuery
 import yhsb.cjb.net.protocol.Result
-import yhsb.cjb.net.protocol.RetiredPersonStopAuditDetailQuery
-import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
+import yhsb.cjb.net.protocol.SessionOps.PersonStopAuditQuery
 import yhsb.cjb.net.protocol.TreatmentReviewQuery
 import yhsb.cjb.net.protocol.JoinTerminateQuery
 import yhsb.cjb.net.protocol.JoinStopReason
 import yhsb.qb.net.{Session => QBSession}
 import yhsb.qb.net.protocol.RetiredPersonStopQuery
+import yhsb.cjb.net.protocol.RetiredPersonStopAuditDetailQuery
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -386,10 +385,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                 }
 
                 val (stopTime: StopTime, endTime) = session
-                  .requestOr(
-                    RetiredPersonStopAuditQuery(idCard, "1", recieveType = "1"),
-                    RetiredPersonStopAuditQuery(idCard, "1", recieveType = "2")
-                  )
+                  .retiredPersonStopAuditQuery(idCard, "1")
                   .lastOption match {
                   case Some(item) =>
                     val detail = session
@@ -407,17 +403,9 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                     }
                   case None =>
                     session
-                      .requestOr(
-                        PayingPersonStopAuditQuery(
-                          idCard,
-                          "1",
-                          recieveType = "1"
-                        ),
-                        PayingPersonStopAuditQuery(
-                          idCard,
-                          "1",
-                          recieveType = "2"
-                        )
+                      .payingPersonStopAuditQuery(
+                        idCard,
+                        "1"
                       )
                       .lastOption match {
                       case Some(item) =>

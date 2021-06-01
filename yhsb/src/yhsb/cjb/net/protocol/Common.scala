@@ -80,10 +80,10 @@ object JBKind
     "071" -> "计生特扶人员",
     "090" -> "其他"
   ) {
-    lazy val special = subBiMap(
-      Set("021", "022", "031", "051", "061", "062")
-    )
-  }
+  lazy val special = subBiMap(
+    Set("021", "022", "031", "051", "061", "062")
+  )
+}
 
 class JBKind extends MapField {
   override def valueMap = JBKind
@@ -350,6 +350,59 @@ object PayState extends MapField.Val[PayState] {
 }
 
 object SessionOps {
+  implicit class PersonStopAuditQuery(session: net.Session) {
+    def retiredPersonStopAuditQuery(
+        idCard: String = "",
+        auditState: String = "0",
+        operator: String = "",
+        startAuditDate: String = "",
+        endAuditDate: String = ""
+    ) = session.requestOr(
+      RetiredPersonStopAuditQuery(
+        idCard,
+        auditState,
+        operator,
+        startAuditDate,
+        endAuditDate,
+        recieveType = "1"
+      ),
+      RetiredPersonStopAuditQuery(
+        idCard,
+        auditState,
+        operator,
+        startAuditDate,
+        endAuditDate,
+        recieveType = "2"
+      )
+    )
+
+    def payingPersonStopAuditQuery(
+        idCard: String = "",
+        auditState: String = "0",
+        operator: String = "",
+        startAuditDate: String = "",
+        endAuditDate: String = ""
+    ) = session.requestOr(
+      PayingPersonStopAuditQuery(
+        idCard,
+        auditState,
+        operator,
+        startAuditDate,
+        endAuditDate,
+        recieveType = "1"
+      ),
+      PayingPersonStopAuditQuery(
+        idCard,
+        auditState,
+        operator,
+        startAuditDate,
+        endAuditDate,
+        recieveType = "2"
+      )
+    )
+
+  }
+
   implicit class CeaseInfo(session: net.Session) {
     object CeaseType extends Enumeration {
       type CeaseType = Value
@@ -410,8 +463,8 @@ object SessionOps {
         idCard: String,
         additionalInfo: Boolean = false
     ): Option[CeaseInfo] = {
-      val rpResult = session
-        .request(RetiredPersonStopAuditQuery(idCard, "1"))
+      val rpResult = PersonStopAuditQuery(session)
+        .retiredPersonStopAuditQuery(idCard, "1")
       if (rpResult.nonEmpty) {
         val it = rpResult.head
         val bankName =
@@ -437,8 +490,8 @@ object SessionOps {
           )
         )
       } else {
-        val ppResult = session
-          .request(PayingPersonStopAuditQuery(idCard, "1"))
+        val ppResult = PersonStopAuditQuery(session)
+          .payingPersonStopAuditQuery(idCard, "1")
         if (ppResult.nonEmpty) {
           val it = ppResult.head
           val bankName =
