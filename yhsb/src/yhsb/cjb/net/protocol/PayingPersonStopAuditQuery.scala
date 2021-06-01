@@ -8,10 +8,11 @@ class PayingPersonStopAuditQuery(
     operator: String = "",
     startAuditDate: String = "",
     endAuditDate: String = "",
+    recieveType: String = "1"
 ) extends PageRequest[PayingPersonStopAuditQuery.Item](
-      "cbzzfhPerInfoList",
-      pageSize = 500
-    ) {
+    "cbzzfhPerInfoList",
+    pageSize = 500
+  ) {
   val aaf013 = ""
   val aaf030 = ""
 
@@ -38,18 +39,26 @@ class PayingPersonStopAuditQuery(
   val aac003 = ""
   val aac009 = ""
   val aae160 = ""
+
+  val aae465 = recieveType
 }
 
 object PayingPersonStopAuditQuery {
   def apply(
-    idCard: String = "",
-    auditState: String = "0",
-    operator: String = "",
-    startAuditDate: String = "",
-    endAuditDate: String = "",
+      idCard: String = "",
+      auditState: String = "0",
+      operator: String = "",
+      startAuditDate: String = "",
+      endAuditDate: String = "",
+      recieveType: String = "1"
   ): PayingPersonStopAuditQuery =
     new PayingPersonStopAuditQuery(
-      idCard, auditState, operator, startAuditDate, endAuditDate
+      idCard,
+      auditState,
+      operator,
+      startAuditDate,
+      endAuditDate,
+      recieveType
     )
 
   case class Item(

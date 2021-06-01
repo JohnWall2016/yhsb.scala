@@ -87,6 +87,15 @@ class Session(
     getResult[T]
   }
 
+  def requestOr[T: ClassTag](req1: Request[T], req2: Request[T]) = {
+    val ret = request(req1)
+    if (ret.nonEmpty) {
+      ret
+    } else {
+      request(req2)
+    }
+  }
+
   def login(): String = {
     sendService("loadCurrentUser")
 

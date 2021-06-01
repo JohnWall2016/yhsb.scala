@@ -338,6 +338,8 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               endYearMonth = row("L").value.toInt
               //if row("M").value == ""
               //if row("P").value != ""
+              if startYearMonth > 190001
+              if endYearMonth > 190001
             } {
               print(s"$i $idCard $name ${startYearMonth}-${endYearMonth} ")
 
@@ -384,7 +386,10 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                 }
 
                 val (stopTime: StopTime, endTime) = session
-                  .request(RetiredPersonStopAuditQuery(idCard, "1"))
+                  .requestOr(
+                    RetiredPersonStopAuditQuery(idCard, "1", recieveType = "1"),
+                    RetiredPersonStopAuditQuery(idCard, "1", recieveType = "2")
+                  )
                   .lastOption match {
                   case Some(item) =>
                     val detail = session
@@ -402,7 +407,18 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                     }
                   case None =>
                     session
-                      .request(PayingPersonStopAuditQuery(idCard, "1"))
+                      .requestOr(
+                        PayingPersonStopAuditQuery(
+                          idCard,
+                          "1",
+                          recieveType = "1"
+                        ),
+                        PayingPersonStopAuditQuery(
+                          idCard,
+                          "1",
+                          recieveType = "2"
+                        )
+                      )
                       .lastOption match {
                       case Some(item) =>
                         (PayingStopTime(item.stopYearMonth), endYearMonth)
@@ -621,7 +637,9 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   case None =>
                     println("未在我区参保")
                   case Some(it) =>
-                    println(s"${it.dwName.getOrElse("")} ${it.csName.getOrElse("")}")
+                    println(
+                      s"${it.dwName.getOrElse("")} ${it.csName.getOrElse("")}"
+                    )
                     row.getOrCreateCell("K").value = it.dwName
                     row.getOrCreateCell("L").value = it.csName
                 }
