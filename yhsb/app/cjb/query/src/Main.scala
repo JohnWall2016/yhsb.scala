@@ -522,7 +522,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               val name = row("F").value.trim()
               val idCard = row("E").value.trim().toUpperCase()
               val time = {
-                val t = row("I").value.trim()
+                val t = row("M").value.trim()
                 if ("""\d\d\d\d\d\d.*""".r.matches(t)) {
                   val yearMonth = t.substring(0, 6)
                   if (yearMonth >= "190101" && yearMonth <= "209912") {
@@ -585,8 +585,8 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                 }
               }
               println(s"$i $idCard $name ${amount.padLeft(8, ' ')} $memo")
-              row.getOrCreateCell("J").value = amount
-              row.getOrCreateCell("K").value = memo
+              row.getOrCreateCell("N").value = amount
+              row.getOrCreateCell("P").value = memo
             }
           }
         } finally {
