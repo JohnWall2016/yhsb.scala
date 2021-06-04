@@ -18,7 +18,7 @@ import yhsb.cjb.net.protocol.PayStopReason
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.PayInfoRecord
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.PayInfoTotalRecord
-import yhsb.cjb.net.protocol.PayingPersonStopAuditDetailQuery
+import yhsb.cjb.net.protocol.WorkingPersonStopAuditDetailQuery
 import yhsb.cjb.net.protocol.PaymentTerminateQuery
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
@@ -32,6 +32,8 @@ import yhsb.cjb.net.protocol.JoinStopReason
 import yhsb.qb.net.{Session => QBSession}
 import yhsb.qb.net.protocol.RetiredPersonStopQuery
 import yhsb.cjb.net.protocol.RetiredPersonStopAuditDetailQuery
+import yhsb.base.datetime.YearMonthRange
+import yhsb.cjb.net.protocol.PaymentQuery
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -642,6 +644,33 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val payment =
+    new Subcommand("payment") {
+      descr("按月统计待遇发放情况")
+
+      val startMonth = trailArg[Int](descr = "开始月份, 如: 202001")
+      val endMonth = trailArg[Int](descr = "结束行, 如: 202001")
+
+      def execute(): Unit = {
+        Session.use() { session =>
+          for (
+            ym <- YearMonthRange(
+              YearMonth.from(startMonth()),
+              YearMonth.from(endMonth())
+            )
+          ) {
+            val total = session
+              .request(PaymentQuery(ym.toString()))
+              .last
+            val totalOfPeople = total.idCard.toInt
+            val totalOfMoney = total.amount
+            val average = totalOfMoney / totalOfPeople
+            println(f"$ym ${totalOfPeople} ${totalOfMoney}%.2f ${average}%.2f")
+          }
+        }
+      }
+    }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(payInfo)
@@ -649,6 +678,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(refund)
   addSubCommand(audit)
   addSubCommand(division)
+  addSubCommand(payment)
 }
 
 object Main {

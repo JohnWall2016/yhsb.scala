@@ -9,8 +9,8 @@ import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.{
   JBKind,
   JoinAuditQuery,
-  PayingPersonPauseAuditDetailQuery,
-  PayingPersonPauseAuditQuery,
+  WorkingPersonPauseAuditDetailQuery,
+  WorkingPersonPauseAuditQuery,
   RetiredPersonPauseAuditDetailQuery,
   RetiredPersonPauseAuditQuery,
   RetiredPersonStopAuditQuery,
@@ -180,7 +180,7 @@ class QueryAudit extends Subcommand("query") {
       println(" 缴费人员暂停查询 ".bar(60, '='))
       session
         .request(
-          PayingPersonPauseAuditQuery(
+          WorkingPersonPauseAuditQuery(
             auditState = state,
             startAuditDate = startDate,
             endAuditDate = endDate
@@ -188,7 +188,7 @@ class QueryAudit extends Subcommand("query") {
         )
         .flatMap { item =>
           session
-            .request(PayingPersonPauseAuditDetailQuery(item))
+            .request(WorkingPersonPauseAuditDetailQuery(item))
             .headOption match {
             case Some(v) if operator_ == "" || operator_ == v.operator =>
               Some((v.operator, item))

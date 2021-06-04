@@ -2,14 +2,14 @@ package yhsb
 package cjb.net.protocol
 
 /** 缴费人员终止审核查询 */
-class PayingPersonStopAuditQuery(
+class WorkingPersonStopAuditQuery(
     idCard: String = "",
     auditState: String = "0",
     operator: String = "",
     startAuditDate: String = "",
     endAuditDate: String = "",
     recieveType: String = "1"
-) extends PageRequest[PayingPersonStopAuditQuery.Item](
+) extends PageRequest[WorkingPersonStopAuditQuery.Item](
     "cbzzfhPerInfoList",
     pageSize = 500
   ) {
@@ -43,7 +43,7 @@ class PayingPersonStopAuditQuery(
   val aae465 = recieveType
 }
 
-object PayingPersonStopAuditQuery {
+object WorkingPersonStopAuditQuery {
   def apply(
       idCard: String = "",
       auditState: String = "0",
@@ -51,8 +51,8 @@ object PayingPersonStopAuditQuery {
       startAuditDate: String = "",
       endAuditDate: String = "",
       recieveType: String = "1"
-  ): PayingPersonStopAuditQuery =
-    new PayingPersonStopAuditQuery(
+  ): WorkingPersonStopAuditQuery =
+    new WorkingPersonStopAuditQuery(
       idCard,
       auditState,
       operator,

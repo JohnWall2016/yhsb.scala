@@ -80,8 +80,18 @@ object YearMonth extends Ordering[YearMonth] {
     (x.year * 12 + x.month) - (y.year * 12 + y.month)
 }
 
-case class YearMonthRange(start: YearMonth, end: YearMonth) {
-  require(start > end, "start must be less than or equal to end")
+/**
+ * A range of yearmonths
+ *
+ * @param start start yearmonth of the range
+ * @param end end yearmonth of the range which is inclusive
+ */
+case class YearMonthRange(start: YearMonth, end: YearMonth)
+  extends Iterable[YearMonth] {
+  require(
+    start <= end,
+    s"start must be less than or equal to end: $start, $end"
+  )
 
   def -(that: YearMonthRange): Seq[YearMonthRange] = {
     if (that.end < this.start || this.end < that.start) {
@@ -122,6 +132,21 @@ case class YearMonthRange(start: YearMonth, end: YearMonth) {
   }
 
   override def toString = s"$start-$end"
+
+  override def iterator: Iterator[YearMonth] = {
+    new Iterator[YearMonth]() {
+      private var cur = YearMonth.from(start.toYearMonth)
+      private val last = YearMonth.from(end.toYearMonth)
+
+      def hasNext: Boolean = cur <= last
+
+      def next(): YearMonth = {
+        val ret = YearMonth.from(cur.toYearMonth)
+        cur = cur.offset(1)
+        ret
+      }
+    }
+  }
 }
 
 object YearMonthRange {

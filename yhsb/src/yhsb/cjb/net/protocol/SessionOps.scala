@@ -36,7 +36,7 @@ object SessionOps {
         startAuditDate: String = "",
         endAuditDate: String = ""
     ) = session.requestOr(
-      PayingPersonStopAuditQuery(
+      WorkingPersonStopAuditQuery(
         idCard,
         auditState,
         operator,
@@ -44,7 +44,7 @@ object SessionOps {
         endAuditDate,
         recieveType = "1"
       ),
-      PayingPersonStopAuditQuery(
+      WorkingPersonStopAuditQuery(
         idCard,
         auditState,
         operator,
@@ -93,7 +93,7 @@ object SessionOps {
         )
       } else {
         val ppResult = session
-          .request(PayingPersonPauseAuditQuery(idCard, "1"))
+          .request(WorkingPersonPauseAuditQuery(idCard, "1"))
         if (ppResult.nonEmpty) {
           val it = ppResult.maxBy(_.auditDate)
           return Some(
@@ -149,7 +149,7 @@ object SessionOps {
           val bankName =
             if (additionalInfo) {
               session
-                .request(PayingPersonStopAuditDetailQuery(it))
+                .request(WorkingPersonStopAuditDetailQuery(it))
                 .headOption match {
                 case Some(item) => Option(item.bankType.name)
                 case _          => None

@@ -2,12 +2,12 @@ package yhsb
 package cjb.net.protocol
 
 /** 缴费人员暂停审核查询 */
-class PayingPersonPauseAuditQuery(
+class WorkingPersonPauseAuditQuery(
     idCard: String = "",
     auditState: String = "0",
     startAuditDate: String = "",
     endAuditDate: String = "",
-) extends PageRequest[PayingPersonPauseAuditQuery.Item](
+) extends PageRequest[WorkingPersonPauseAuditQuery.Item](
       "queryJfZtPersonInfosForAuditService",
       pageSize = 500
     ) {
@@ -39,14 +39,14 @@ class PayingPersonPauseAuditQuery(
   val aac009 = ""
 }
 
-object PayingPersonPauseAuditQuery {
+object WorkingPersonPauseAuditQuery {
   def apply(
     idCard: String = "",
     auditState: String = "0",
     startAuditDate: String = "",
     endAuditDate: String = "",
-  ): PayingPersonPauseAuditQuery =
-    new PayingPersonPauseAuditQuery(idCard, auditState, startAuditDate, endAuditDate)
+  ): WorkingPersonPauseAuditQuery =
+    new WorkingPersonPauseAuditQuery(idCard, auditState, startAuditDate, endAuditDate)
 
   case class Item(
       @JsonName("aac002")

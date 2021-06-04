@@ -2,20 +2,20 @@ package yhsb
 package cjb.net.protocol
 
 /** 缴费人员暂停审核查询 查看 */
-class PayingPersonPauseAuditDetailQuery(
-    item: PayingPersonPauseAuditQuery.Item
-) extends Request[PayingPersonPauseAuditDetailQuery.Item](
+class WorkingPersonPauseAuditDetailQuery(
+    item: WorkingPersonPauseAuditQuery.Item
+) extends Request[WorkingPersonPauseAuditDetailQuery.Item](
       "viewPauseInfoService"
     ) {
   @JsonName("id")
   val opId = s"${item.id}"
 }
 
-object PayingPersonPauseAuditDetailQuery {
+object WorkingPersonPauseAuditDetailQuery {
   def apply(
-      item: PayingPersonPauseAuditQuery.Item
-  ): PayingPersonPauseAuditDetailQuery =
-    new PayingPersonPauseAuditDetailQuery(item)
+      item: WorkingPersonPauseAuditQuery.Item
+  ): WorkingPersonPauseAuditDetailQuery =
+    new WorkingPersonPauseAuditDetailQuery(item)
 
   case class Item(
       @JsonName("aae160")
