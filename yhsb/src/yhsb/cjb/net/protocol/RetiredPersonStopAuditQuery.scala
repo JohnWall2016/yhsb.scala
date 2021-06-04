@@ -8,7 +8,7 @@ class RetiredPersonStopAuditQuery(
     operator: String = "",
     startAuditDate: String = "",
     endAuditDate: String = "",
-    recieveType: String = "1"
+    recieveType: String = "1" // 1: 本人, 2: 他人
 ) extends PageRequest[RetiredPersonStopAuditQuery.Item](
     "dyzzfhPerInfoList",
     pageSize = 500
