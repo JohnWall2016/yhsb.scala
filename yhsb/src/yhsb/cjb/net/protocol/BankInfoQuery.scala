@@ -17,6 +17,9 @@ object BankInfoQuery {
       countName: String,
       /** 卡号 */
       @JsonName("aae010")
-      cardNumber: String
+      cardNumber: String,
+      /** 开户时间: yyyy-mm-dd */
+      @JsonName("aae036")
+      registerTime: String
   )
 }
