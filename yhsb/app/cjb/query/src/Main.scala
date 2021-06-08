@@ -42,6 +42,7 @@ import yhsb.cjb.net.protocol.WorkingPersonStopAuditDetailQuery
 import yhsb.qb.net.protocol.RetiredPersonStopQuery
 import yhsb.qb.net.{Session => QBSession}
 import scala.collection.SeqMap
+import yhsb.cjb.net.protocol.PersonInfoTreatmentAdjustDetailQuery
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -784,7 +785,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                 None
               }
 
-              val (payAmount, payDetail, payCount, accountYearMonth) =
+              var (payAmount, payDetail, payCount, accountYearMonth) =
                 if (pInfo.isDefined) {
                   val payMap = TreeMap[YearMonth, BigDecimal]()
                   var accountYearMonth: Option[Int] = None
@@ -818,7 +819,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   (None, None, None, None)
                 }
 
-              val payStandard = if (pInfo.isDefined) {
+              var payStandard = if (pInfo.isDefined) {
                 val payMap = TreeMap[YearMonth, BigDecimal]()
                 for (
                   item <- session.request(PersonInfoPaylistQuery(pInfo.get))
@@ -850,6 +851,8 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   case _ => None
                 })
 
+              var memo: Option[String] = None
+
               var adjustTimeByCert: Option[YearMonthRange] = None
               var adjustTimeByAudit: Option[YearMonthRange] = None
               var adjustTimeByStop: Option[YearMonthRange] = None
@@ -868,6 +871,13 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                         YearMonth.from(it.endYearMonth)
                       )
                     )
+                    if (
+                      payDetail.isDefined &&
+                      payDetail.get.head._1.start.toYearMonth == it.startYearMonth &&
+                      accountYearMonth.get == it.endYearMonth
+                    ) {
+                      memo = Some("生存认证后系统自动补发之前未认证而停发的养老金")
+                    }
                   } else if (it.memo.contains("核定补发")) {
                     adjustTimeByAudit = Some(
                       YearMonthRange(
@@ -875,6 +885,13 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                         YearMonth.from(it.endYearMonth)
                       )
                     )
+                    if (
+                      payDetail.isDefined &&
+                      payDetail.get.head._1.start.toYearMonth == it.startYearMonth &&
+                      accountYearMonth.get == it.endYearMonth
+                    ) {
+                      memo = Some("待遇核定后系统补发从待遇领取月份开始时的养老金")
+                    }
                   } else if (it.memo.contains("待遇终止补发")) {
                     adjustTimeByStop = Some(
                       YearMonthRange(
@@ -882,6 +899,75 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                         YearMonth.from(it.endYearMonth)
                       )
                     )
+                    if (payDetail.isEmpty) {
+                      memo = Some("待遇终止后系统补发到终止月份为止未发放的养老金")
+
+                      payAmount = None
+                      payDetail = None
+                      payCount = None
+                      accountYearMonth = None
+
+                      val payMap = TreeMap[YearMonth, BigDecimal]()
+                      val stdMap = TreeMap[YearMonth, BigDecimal]()
+                      for (
+                        item <- session.request(
+                          PersonInfoTreatmentAdjustDetailQuery(it)
+                        )
+                        if item.adjustType.startsWith("001")
+                      ) {
+                        if (
+                          item.payYearMonth < startMonth() &&
+                          item.accountYearMonth >= startMonth() &&
+                          item.accountYearMonth <= endMonth()
+                        ) {
+                          accountYearMonth = Some(item.accountYearMonth)
+                          payAmount += item.amount
+
+                          val payYearMonth = YearMonth.from(item.payYearMonth)
+
+                          if (!payMap.contains(payYearMonth)) {
+                            payMap(payYearMonth) = item.amount
+                          } else {
+                            payMap(payYearMonth) += item.amount
+                          }
+                        } else if (
+                          item.payYearMonth >= startMonth() &&
+                          item.payYearMonth <= endMonth()
+                        ) {
+                          val payYearMonth = YearMonth.from(item.payYearMonth)
+
+                          if (!stdMap.contains(payYearMonth)) {
+                            stdMap(payYearMonth) = item.amount
+                          } else {
+                            stdMap(payYearMonth) += item.amount
+                          }
+                        }
+                      }
+                      payDetail = mergeYearMonthMap(payMap)
+                      payStandard = mergeYearMonthMap(stdMap)
+                      payCount = option(payMap.keySet.size)
+                      if (payDetail.isDefined && payStandard.isDefined) {
+                        adjustTimeByStop = Some(
+                          YearMonthRange(
+                            payDetail.get.head._1.start,
+                            payStandard.get.last._1.end
+                          )
+                        )
+                      }
+                    }
+                  } else if (
+                    bankCardTime.isDefined && accountYearMonth.isDefined
+                  ) {
+                    val bankYearMonth = YearMonth.from(bankCardTime.get / 100)
+                    val accYearMonth = YearMonth.from(accountYearMonth.get)
+
+                    if (
+                      bankYearMonth == accYearMonth && bankYearMonth.offset(
+                        1
+                      ) == accYearMonth
+                    ) {
+                      memo = Some("绑定银行卡后系统自动补发未绑卡时支付失败月份的养老金")
+                    }
                   }
                 }
               }
@@ -904,9 +990,10 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               row.getOrCreateCell("Z").value = strAdjustTimeByCert
               row.getOrCreateCell("AA").value = strAdjustTimeByAudit
               row.getOrCreateCell("AB").value = strAdjustTimeByStop
+              row.getOrCreateCell("AC").value = memo
 
               println(
-                s"${i + 1} $idCard $name $cbState $startTreatmentTime $endTreatmentTime " +
+                s"${i + 1} $memo $idCard $name $cbState $startTreatmentTime $endTreatmentTime " +
                   s"$payAmount $payCount $accountYearMonth $bankCardTime $strAdjustTimeByCert " +
                   s"$strAdjustTimeByAudit $strAdjustTimeByStop $strPayDetail $strPayStandard"
               )
