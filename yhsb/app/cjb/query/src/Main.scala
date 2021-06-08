@@ -858,13 +858,16 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               var adjustTimeByStop: Option[YearMonthRange] = None
 
               if (pInfo.isDefined) {
+                var done = false
+
                 for {
                   it <- session.request(
                     PersonInfoTreatmentAdjustQuery(pInfo.get)
                   )
+                  if !done
                   if it.endYearMonth >= startMonth() && it.endYearMonth <= endMonth()
                 } {
-                  if (it.memo.contains("生存认证触发")) {
+                  if (!done && it.memo.contains("生存认证触发")) {
                     adjustTimeByCert = Some(
                       YearMonthRange(
                         YearMonth.from(it.startYearMonth),
@@ -877,8 +880,33 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                       accountYearMonth.get == it.endYearMonth
                     ) {
                       memo = Some("生存认证后系统自动补发之前未认证而停发的养老金")
+                      done = true
+                    } else if (
+                      payDetail.isDefined &&
+                      accountYearMonth.get == it.endYearMonth
+                    ) {
+                      session
+                        .request(PersonInfoTreatmentAdjustDetailQuery(it))
+                        .filter(_.adjustType.startsWith("001"))
+                        .map(_.payYearMonth)
+                        .minOption match {
+                        case Some(ym) =>
+                          if (payDetail.get.head._1.start.toYearMonth == ym) {
+                            adjustTimeByCert = Some(
+                              YearMonthRange(
+                                YearMonth.from(ym),
+                                YearMonth.from(it.endYearMonth)
+                              )
+                            )
+                            memo = Some("生存认证后系统自动补发之前未认证而停发的养老金")
+                            done = true
+                          }
+                        case _ =>
+                      }
                     }
-                  } else if (it.memo.contains("核定补发")) {
+                  }
+
+                  if (!done && it.memo.contains("核定补发")) {
                     adjustTimeByAudit = Some(
                       YearMonthRange(
                         YearMonth.from(it.startYearMonth),
@@ -891,8 +919,11 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                       accountYearMonth.get == it.endYearMonth
                     ) {
                       memo = Some("待遇核定后系统补发从待遇领取月份开始时的养老金")
+                      done = true
                     }
-                  } else if (it.memo.contains("待遇终止补发")) {
+                  }
+
+                  if (!done && it.memo.contains("待遇终止补发")) {
                     adjustTimeByStop = Some(
                       YearMonthRange(
                         YearMonth.from(it.startYearMonth),
@@ -901,6 +932,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                     )
                     if (payDetail.isEmpty) {
                       memo = Some("待遇终止后系统补发到终止月份为止未发放的养老金")
+                      done = true
 
                       payAmount = None
                       payDetail = None
@@ -955,19 +987,23 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                         )
                       }
                     }
-                  } else if (
-                    bankCardTime.isDefined && accountYearMonth.isDefined
-                  ) {
-                    val bankYearMonth = YearMonth.from(bankCardTime.get / 100)
-                    val accYearMonth = YearMonth.from(accountYearMonth.get)
+                  }
+                }
 
-                    if (
-                      bankYearMonth == accYearMonth && bankYearMonth.offset(
-                        1
-                      ) == accYearMonth
-                    ) {
-                      memo = Some("绑定银行卡后系统自动补发未绑卡时支付失败月份的养老金")
-                    }
+                if (
+                  !done &&
+                  bankCardTime.isDefined && accountYearMonth.isDefined
+                ) {
+                  val bankYearMonth = YearMonth.from(bankCardTime.get / 100)
+                  val accYearMonth = YearMonth.from(accountYearMonth.get)
+
+                  if (
+                    bankYearMonth == accYearMonth || bankYearMonth.offset(
+                      1
+                    ) == accYearMonth
+                  ) {
+                    memo = Some("绑定银行卡后系统自动补发未绑卡时支付失败月份的养老金")
+                    done = true
                   }
                 }
               }
