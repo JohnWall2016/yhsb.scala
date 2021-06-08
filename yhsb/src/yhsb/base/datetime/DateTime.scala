@@ -78,6 +78,11 @@ object YearMonth extends Ordering[YearMonth] {
 
   override def compare(x: YearMonth, y: YearMonth): Int =
     (x.year * 12 + x.month) - (y.year * 12 + y.month)
+    
+  implicit object Ordering extends Ordering[YearMonth] {
+    override def compare(x: YearMonth, y: YearMonth): Int =
+      YearMonth.compare(x, y)
+  }
 }
 
 /**

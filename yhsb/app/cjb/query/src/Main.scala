@@ -1,9 +1,15 @@
 import java.io.OutputStream
 import java.nio.file.Files
 
+import scala.collection.SortedMap
+import scala.collection.mutable.LinkedHashMap
+import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.TreeMap
+
 import yhsb.base.command._
 import yhsb.base.datetime.Formatter
 import yhsb.base.datetime.YearMonth
+import yhsb.base.datetime.YearMonthRange
 import yhsb.base.excel.Excel._
 import yhsb.base.io.Path._
 import yhsb.base.math.Number.OptionBigDecimalOps
@@ -13,33 +19,29 @@ import yhsb.base.util.Config
 import yhsb.base.util.OptionalOps
 import yhsb.base.util.UtilOps
 import yhsb.cjb.net.Session
+import yhsb.cjb.net.protocol.BankInfoQuery
 import yhsb.cjb.net.protocol.CBState
+import yhsb.cjb.net.protocol.JoinStopReason
+import yhsb.cjb.net.protocol.JoinTerminateQuery
 import yhsb.cjb.net.protocol.PayStopReason
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.PayInfoRecord
 import yhsb.cjb.net.protocol.PayingInfoInProvinceQuery.PayInfoTotalRecord
-import yhsb.cjb.net.protocol.WorkingPersonStopAuditDetailQuery
+import yhsb.cjb.net.protocol.PaymentQuery
 import yhsb.cjb.net.protocol.PaymentTerminateQuery
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
 import yhsb.cjb.net.protocol.PersonInfoQuery
+import yhsb.cjb.net.protocol.PersonInfoTreatmentAdjustQuery
 import yhsb.cjb.net.protocol.RefundQuery
 import yhsb.cjb.net.protocol.Result
+import yhsb.cjb.net.protocol.RetiredPersonStopAuditDetailQuery
 import yhsb.cjb.net.protocol.SessionOps.PersonStopAuditQuery
 import yhsb.cjb.net.protocol.TreatmentReviewQuery
-import yhsb.cjb.net.protocol.JoinTerminateQuery
-import yhsb.cjb.net.protocol.JoinStopReason
-import yhsb.qb.net.{Session => QBSession}
+import yhsb.cjb.net.protocol.WorkingPersonStopAuditDetailQuery
 import yhsb.qb.net.protocol.RetiredPersonStopQuery
-import yhsb.cjb.net.protocol.RetiredPersonStopAuditDetailQuery
-import yhsb.base.datetime.YearMonthRange
-import yhsb.cjb.net.protocol.PaymentQuery
-import scala.collection.mutable.LinkedHashMap
-import org.apache.poi.hpsf.Decimal
-import io.getquill.ast.AggregationOperator
-import scala.collection.mutable.ListBuffer
-import yhsb.cjb.net.protocol.BankInfoQuery
-import yhsb.cjb.net.protocol.PersonInfoTreatmentAdjustQuery
+import yhsb.qb.net.{Session => QBSession}
+import scala.collection.SeqMap
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -684,6 +686,56 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       val startMonth = trailArg[Int](descr = "开始发放月份, 如: 202001")
       val endMonth = trailArg[Int](descr = "结束发放月份, 如: 202012")
 
+      def mergeYearMonthMap(map: SortedMap[YearMonth, BigDecimal]) = {
+        var startYearMonth: Option[YearMonth] = None
+        var endYearMonth: Option[YearMonth] = None
+        var amount: Option[BigDecimal] = None
+        var resultMap = LinkedHashMap[YearMonthRange, BigDecimal]()
+        for ((yearMonth, value) <- map) {
+          if (startYearMonth.isEmpty) {
+            startYearMonth = Some(yearMonth)
+            endYearMonth = Some(yearMonth)
+            amount = Some(value)
+          } else if (
+            yearMonth.offset(-1) == startYearMonth.get &&
+            value == amount.get
+          ) {
+            endYearMonth = Some(yearMonth)
+          } else {
+            resultMap(YearMonthRange(startYearMonth.get, endYearMonth.get)) =
+              amount.get
+            startYearMonth = Some(yearMonth)
+            endYearMonth = Some(yearMonth)
+            amount = Some(value)
+          }
+        }
+        resultMap(YearMonthRange(startYearMonth.get, endYearMonth.get)) =
+          amount.get
+        resultMap
+      }
+
+      def normalize(dec: BigDecimal): String = {
+        if (dec.isValidInt) s"${dec.toBigInt}"
+        else f"$dec%.2f"
+      }
+
+      def normalize(map: SortedMap[YearMonth, BigDecimal]): Option[String] = {
+        if (map.isEmpty) {
+          None
+        } else {
+          Some(
+            mergeYearMonthMap(map)
+              .map { case (k, v) =>
+                if (k.start == k.end) s"${k.start}: ${normalize(v)}"
+                else s"$k-$v: ${normalize(v)}"
+              }
+              .mkString("|")
+          )
+        }
+      }
+
+      def option(i: Int) = if (i == 0) None else Some(i)
+
       def execute(): Unit = {
         val workbook = Excel.load(inputFile())
         val sheet = workbook.getSheetAt(0)
@@ -696,15 +748,18 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               idCard = row("E").value.trim()
             } {
               val pInfo = session.request(PersonInfoQuery(idCard)).headOption
+
               val cbState =
                 pInfo match {
                   case None        => CBState.NoJoined
                   case Some(value) => value.cbState
                 }
+
               val startTreatmentTime = session
                 .request(TreatmentReviewQuery(idCard, reviewState = "1"))
                 .lastOption
                 .map(_.payMonth)
+
               val endTreatmentTime = if (cbState == CBState.Stopped) {
                 session
                   .retiredPersonStopAuditQuery(idCard, "1")
@@ -713,16 +768,12 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               } else {
                 None
               }
-              def normalize(dec: BigDecimal) = {
-                if (dec.isValidInt) s"${dec.toBigInt}"
-                else f"$dec%.2f"
-              }
+
               val (payAmount, payDetail, payCount, accountYearMonth) =
                 if (pInfo.isDefined) {
-                  var (minYearMonth, maxYearMonth) = (startMonth(), 0)
-                  val payMap = LinkedHashMap[Int, BigDecimal]()
+                  val payMap = TreeMap[YearMonth, BigDecimal]()
                   var accountYearMonth: Option[Int] = None
-                  var payAmount = BigDecimal(0)
+                  var payAmount: Option[BigDecimal] = None
                   for (
                     item <- session.request(PersonInfoPaylistQuery(pInfo.get))
                     if item.accountYearMonth >= startMonth() &&
@@ -734,9 +785,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                     accountYearMonth = Some(item.accountYearMonth)
                     payAmount += item.amount
 
-                    val payYearMonth = item.payYearMonth
-                    minYearMonth = minYearMonth.min(payYearMonth)
-                    maxYearMonth = maxYearMonth.max(payYearMonth)
+                    val payYearMonth = YearMonth.from(item.payYearMonth)
 
                     if (!payMap.contains(payYearMonth)) {
                       payMap(payYearMonth) = item.amount
@@ -744,72 +793,45 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                       payMap(payYearMonth) += item.amount
                     }
                   }
-
-                  if (minYearMonth <= maxYearMonth) {
-                    val buf = ListBuffer[String]()
-                    var startYearMonth: Option[YearMonth] = None
-                    var endYearMonth: Option[YearMonth] = None
-                    var amount: Option[BigDecimal] = None
-                    for (
-                      ym <- YearMonthRange(
-                        YearMonth.from(minYearMonth),
-                        YearMonth.from(maxYearMonth)
-                      )
-                    ) {
-                      //println(ym)
-                      val yearMonth = ym.toYearMonth
-                      if (payMap.contains(yearMonth)) {
-                        if (startYearMonth.isEmpty) {
-                          startYearMonth = Some(ym)
-                          endYearMonth = Some(ym)
-                          amount = Some(payMap(yearMonth))
-                        } else if (
-                          ym.offset(-1) == endYearMonth.get &&
-                          amount.get == payMap(yearMonth)
-                        ) {
-                          endYearMonth = Some(ym)
-                        } else {
-                          buf.addOne(
-                            if (startYearMonth.get == endYearMonth.get) {
-                              s"${startYearMonth.get}:${normalize(amount.get)}"
-                            } else {
-                              s"${startYearMonth.get}-${endYearMonth.get}:${normalize(amount.get)}"
-                            }
-                          )
-                          startYearMonth = Some(ym)
-                          endYearMonth = Some(ym)
-                          amount = Some(payMap(yearMonth))
-                        }
-                      }
-                    }
-                    if (startYearMonth.isDefined) {
-                      buf.addOne(
-                        if (startYearMonth.get == endYearMonth.get) {
-                          s"${startYearMonth.get}:${normalize(amount.get)}"
-                        } else {
-                          s"${startYearMonth.get}-${endYearMonth.get}:${normalize(amount.get)}"
-                        }
-                      )
-                    }
-                    (
-                      Some(payAmount),
-                      Some(buf.mkString("|")),
-                      Some(payMap.keySet.size),
-                      accountYearMonth
-                    )
-                  } else {
-                    (None, None, None, None)
-                  }
+                  (
+                    payAmount,
+                    normalize(payMap),
+                    option(payMap.keySet.size),
+                    accountYearMonth
+                  )
                 } else {
                   (None, None, None, None)
                 }
+
+              val payStandard = if (pInfo.isDefined) {
+                val payMap = TreeMap[YearMonth, BigDecimal]()
+                for (
+                  item <- session.request(PersonInfoPaylistQuery(pInfo.get))
+                  if item.payYearMonth >= startMonth() &&
+                    item.payYearMonth <= endMonth() &&
+                    item.payItem.startsWith("基础养老金") &&
+                    item.payState == "已支付"
+                ) {
+                  val payYearMonth = YearMonth.from(item.payYearMonth)
+
+                  if (!payMap.contains(payYearMonth)) {
+                    payMap(payYearMonth) = item.amount
+                  } else {
+                    payMap(payYearMonth) += item.amount
+                  }
+                }
+                normalize(payMap)
+              } else {
+                None
+              }
 
               val reg = """(\d\d\d\d)-(\d\d)-(\d\d)""".r
               val bankCardTime = session
                 .request(BankInfoQuery(idCard))
                 .headOption
-                .flatMap ( _.registerTime match {
-                  case reg(y, m, d) => Some(y.toInt * 10000 + m.toInt * 100 + d.toInt)
+                .flatMap(_.registerTime match {
+                  case reg(y, m, d) =>
+                    Some(y.toInt * 10000 + m.toInt * 100 + d.toInt)
                   case _ => None
                 })
 
@@ -843,6 +865,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               row.getOrCreateCell("T").value = payAmount
               row.getOrCreateCell("U").value = payCount
               row.getOrCreateCell("V").value = payDetail
+              row.getOrCreateCell("W").value = payStandard
               row.getOrCreateCell("X").value = accountYearMonth
               row.getOrCreateCell("Y").value = bankCardTime
               row.getOrCreateCell("Z").value = adjustTimeByCert
@@ -850,8 +873,9 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               row.getOrCreateCell("AB").value = adjustTimeByStop
 
               println(
-                s"${i + 1} $idCard $name $cbState $startTreatmentTime $endTreatmentTime $payAmount $payCount " +
-                  s"$accountYearMonth $bankCardTime $adjustTimeByCert $adjustTimeByAudit $adjustTimeByStop $payDetail"
+                s"${i + 1} $idCard $name $cbState $startTreatmentTime $endTreatmentTime " +
+                s"$payAmount $payCount $accountYearMonth $bankCardTime $adjustTimeByCert " +
+                s"$adjustTimeByAudit $adjustTimeByStop $payDetail $payStandard"
               )
             }
           }
