@@ -686,32 +686,38 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       val startMonth = trailArg[Int](descr = "开始发放月份, 如: 202001")
       val endMonth = trailArg[Int](descr = "结束发放月份, 如: 202012")
 
-      def mergeYearMonthMap(map: SortedMap[YearMonth, BigDecimal]) = {
-        var startYearMonth: Option[YearMonth] = None
-        var endYearMonth: Option[YearMonth] = None
-        var amount: Option[BigDecimal] = None
-        var resultMap = LinkedHashMap[YearMonthRange, BigDecimal]()
-        for ((yearMonth, value) <- map) {
-          if (startYearMonth.isEmpty) {
-            startYearMonth = Some(yearMonth)
-            endYearMonth = Some(yearMonth)
-            amount = Some(value)
-          } else if (
-            yearMonth.offset(-1) == startYearMonth.get &&
-            value == amount.get
-          ) {
-            endYearMonth = Some(yearMonth)
-          } else {
-            resultMap(YearMonthRange(startYearMonth.get, endYearMonth.get)) =
-              amount.get
-            startYearMonth = Some(yearMonth)
-            endYearMonth = Some(yearMonth)
-            amount = Some(value)
+      def mergeYearMonthMap(
+          map: SortedMap[YearMonth, BigDecimal]
+      ): Option[SeqMap[YearMonthRange, BigDecimal]] = {
+        if (map.isEmpty) {
+          None
+        } else {
+          var startYearMonth: Option[YearMonth] = None
+          var endYearMonth: Option[YearMonth] = None
+          var amount: Option[BigDecimal] = None
+          var resultMap = LinkedHashMap[YearMonthRange, BigDecimal]()
+          for ((yearMonth, value) <- map) {
+            if (startYearMonth.isEmpty) {
+              startYearMonth = Some(yearMonth)
+              endYearMonth = Some(yearMonth)
+              amount = Some(value)
+            } else if (
+              yearMonth.offset(-1) == endYearMonth.get &&
+              value == amount.get
+            ) {
+              endYearMonth = Some(yearMonth)
+            } else {
+              resultMap(YearMonthRange(startYearMonth.get, endYearMonth.get)) =
+                amount.get
+              startYearMonth = Some(yearMonth)
+              endYearMonth = Some(yearMonth)
+              amount = Some(value)
+            }
           }
+          resultMap(YearMonthRange(startYearMonth.get, endYearMonth.get)) =
+            amount.get
+          Some(resultMap)
         }
-        resultMap(YearMonthRange(startYearMonth.get, endYearMonth.get)) =
-          amount.get
-        resultMap
       }
 
       def normalize(dec: BigDecimal): String = {
@@ -719,19 +725,28 @@ class Query(args: collection.Seq[String]) extends Command(args) {
         else f"$dec%.2f"
       }
 
-      def normalize(map: SortedMap[YearMonth, BigDecimal]): Option[String] = {
+      def normalize(
+          map: SeqMap[YearMonthRange, BigDecimal]
+      ): Option[String] = {
         if (map.isEmpty) {
           None
         } else {
           Some(
-            mergeYearMonthMap(map)
+            map
               .map { case (k, v) =>
-                if (k.start == k.end) s"${k.start}: ${normalize(v)}"
-                else s"$k-$v: ${normalize(v)}"
+                if (k.start == k.end) s"${k.start}:${normalize(v)}"
+                else s"$k:${normalize(v)}"
               }
               .mkString("|")
           )
         }
+      }
+
+      def normalize(range: YearMonthRange): Option[String] = {
+        Some(
+          if (range.start == range.end) s"${range.start}"
+          else s"${range.start}-${range.end}"
+        )
       }
 
       def option(i: Int) = if (i == 0) None else Some(i)
@@ -795,7 +810,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   }
                   (
                     payAmount,
-                    normalize(payMap),
+                    mergeYearMonthMap(payMap),
                     option(payMap.keySet.size),
                     accountYearMonth
                   )
@@ -820,7 +835,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                     payMap(payYearMonth) += item.amount
                   }
                 }
-                normalize(payMap)
+                mergeYearMonthMap(payMap)
               } else {
                 None
               }
@@ -835,9 +850,9 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   case _ => None
                 })
 
-              var adjustTimeByCert: Option[String] = None
-              var adjustTimeByAudit: Option[String] = None
-              var adjustTimeByStop: Option[String] = None
+              var adjustTimeByCert: Option[YearMonthRange] = None
+              var adjustTimeByAudit: Option[YearMonthRange] = None
+              var adjustTimeByStop: Option[YearMonthRange] = None
 
               if (pInfo.isDefined) {
                 for {
@@ -847,35 +862,53 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   if it.endYearMonth >= startMonth() && it.endYearMonth <= endMonth()
                 } {
                   if (it.memo.contains("生存认证触发")) {
-                    adjustTimeByCert =
-                      Some(s"${it.startYearMonth}-${it.endYearMonth}")
+                    adjustTimeByCert = Some(
+                      YearMonthRange(
+                        YearMonth.from(it.startYearMonth),
+                        YearMonth.from(it.endYearMonth)
+                      )
+                    )
                   } else if (it.memo.contains("核定补发")) {
-                    adjustTimeByAudit =
-                      Some(s"${it.startYearMonth}-${it.endYearMonth}")
+                    adjustTimeByAudit = Some(
+                      YearMonthRange(
+                        YearMonth.from(it.startYearMonth),
+                        YearMonth.from(it.endYearMonth)
+                      )
+                    )
                   } else if (it.memo.contains("待遇终止补发")) {
-                    adjustTimeByStop =
-                      Some(s"${it.startYearMonth}-${it.endYearMonth}")
+                    adjustTimeByStop = Some(
+                      YearMonthRange(
+                        YearMonth.from(it.startYearMonth),
+                        YearMonth.from(it.endYearMonth)
+                      )
+                    )
                   }
                 }
               }
+
+              val strPayDetail = payDetail.flatMap(normalize)
+              val strPayStandard = payStandard.flatMap(normalize)
+              val strAdjustTimeByCert = adjustTimeByCert.flatMap(normalize)
+              val strAdjustTimeByAudit = adjustTimeByAudit.flatMap(normalize)
+              val strAdjustTimeByStop = adjustTimeByStop.flatMap(normalize)
 
               row.getOrCreateCell("Q").value = cbState.toString()
               row.getOrCreateCell("R").value = startTreatmentTime
               row.getOrCreateCell("S").value = endTreatmentTime
               row.getOrCreateCell("T").value = payAmount
               row.getOrCreateCell("U").value = payCount
-              row.getOrCreateCell("V").value = payDetail
-              row.getOrCreateCell("W").value = payStandard
+              row.getOrCreateCell("V").value = strPayDetail
+              row.getOrCreateCell("W").value = strPayStandard
               row.getOrCreateCell("X").value = accountYearMonth
               row.getOrCreateCell("Y").value = bankCardTime
-              row.getOrCreateCell("Z").value = adjustTimeByCert
-              row.getOrCreateCell("AA").value = adjustTimeByAudit
-              row.getOrCreateCell("AB").value = adjustTimeByStop
+              row.getOrCreateCell("Z").value = strAdjustTimeByCert
+              row.getOrCreateCell("AA").value = strAdjustTimeByAudit
+              row.getOrCreateCell("AB").value = strAdjustTimeByStop
 
               println(
                 s"${i + 1} $idCard $name $cbState $startTreatmentTime $endTreatmentTime " +
-                s"$payAmount $payCount $accountYearMonth $bankCardTime $adjustTimeByCert " +
-                s"$adjustTimeByAudit $adjustTimeByStop $payDetail $payStandard"
+                  s"$payAmount $payCount $accountYearMonth $bankCardTime $strAdjustTimeByCert " +
+                  s"$strAdjustTimeByAudit $strAdjustTimeByStop $strPayDetail $strPayStandard"
               )
             }
           }
