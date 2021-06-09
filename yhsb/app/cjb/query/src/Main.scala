@@ -1041,6 +1041,36 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val statics =
+    new Subcommand("statics") with InputFile with RowRange {
+      descr("根据行政区划进行统计")
+
+      val divisionRow = trailArg[String](descr = "行政区划所在列", required = false, default = Some("A"))
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        import yhsb.cjb.net.protocol.Division._
+
+        val groups = (for (index <- (startRow() - 1) until endRow())
+          yield (sheet.getRow(index)(divisionRow()).value, index))
+          .groupByDwAndCsName()
+
+        var total = 0
+
+        for ((dw, groups) <- groups) {
+          val count = groups.values.foldLeft(0)(_ + _.size)
+          println(s"\r\n${(dw + ":").padRight(11)}   ${count}")
+          total += count
+          for ((cs, indexes) <- groups) {
+            println(s"  ${(cs + ":").padRight(11)} ${indexes.size}")
+          }
+        }
+        println(s"\r\n${"合计:".padRight(11)} $total")
+      }
+    }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(payInfo)
@@ -1050,6 +1080,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(division)
   addSubCommand(payment)
   addSubCommand(delayPay)
+  addSubCommand(statics)
 }
 
 object Main {
