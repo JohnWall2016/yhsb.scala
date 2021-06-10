@@ -28,10 +28,16 @@ class Treatment(args: collection.Seq[String]) extends Command(args) {
   banner("信息核对报告表、养老金计算表生成、待遇认证表格、待遇人员公示表格等相关程序")
   addSubCommand(new Download)
   addSubCommand(new Split)
+
   addSubCommand(new PayFailedList)
-  addSubCommand(new UncertPauseList)
-  addSubCommand(new UncertList)
+  
+  // addSubCommand(new UncertPauseList)
+  // addSubCommand(new UncertList)
+
+  addSubCommand(new UncertRetiringList)
+
   addSubCommand(new ArrearList)
+
   addSubCommand(new PaymentDownload)
   addSubCommand(new PaymentSplit)
 }
@@ -50,7 +56,7 @@ class Download extends Subcommand("download") with ReportDate {
   val template = "信息核对报告表模板.xlsx"
 
   override def execute(): Unit = {
-    val result = Session.use() { session =>
+    val result = Session.use("003") { session =>
       session.request(TreatmentReviewQuery(reviewState = "0"))
     }
 
@@ -142,7 +148,7 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
     }
 
     println("\n按分组生成养老金养老金计算表")
-    Session.use() { session =>
+    Session.use("003") { session =>
       for ((dw, csMap) <- map) {
         for ((cs, indexes) <- csMap) {
           indexes.foreach { index =>
@@ -260,7 +266,7 @@ class PayFailedList extends Subcommand("failList") {
   override def execute(): Unit = {
     val (year, month, _) = Formatter.splitDate(yearMonth())
 
-    val items = Session.use() { session =>
+    val items = Session.use("006") { session =>
       session
         .request(PayListQuery(yearMonth(), PayState.Wait))
         .filter(_.objectType == "1")
@@ -303,6 +309,7 @@ class PayFailedList extends Subcommand("failList") {
   }
 }
 
+/*
 class UncertPauseList extends Subcommand("pauseList") {
   descr("从业务系统导出未认证已停保人员名单")
 
@@ -340,7 +347,9 @@ class UncertPauseList extends Subcommand("pauseList") {
     println("结束导出数据")
   }
 }
+*/
 
+/*
 class UncertList extends Subcommand("uncertList") {
   descr("从业务系统下载未认证人员名单")
 
@@ -380,6 +389,51 @@ class UncertList extends Subcommand("uncertList") {
       val dateRange = Formatter.normalizeSpan(startDate(), endDate())
       outputDir / s"${dateRange}认证即将到期的待遇人员名单${Formatter.formatDate()}.xls"
     } { path =>
+      println(s"保存: $path")
+    }
+
+    println("结束导出数据")
+  }
+}
+*/
+
+class UncertRetiringList extends Subcommand("uncertRList") {
+  descr("从业务系统下载需认证的新增待遇人员名单")
+
+  val retireDate = trailArg[String](
+    descr = "预算到龄日期, 格式: YYYYMMDD, 例如: 20210131"
+  )
+
+  val outputDir = """D:\待遇核定"""
+
+  override def execute(): Unit = {
+    println("开始导出数据")
+
+    val exportFile = Files.createTempFile("yhsb", ".xls").toString
+    Session.use() {
+      _.exportAllTo(
+        RetiringPersonQuery(
+          retireDate = Formatter.toDashedDate(retireDate()),
+          inArrear = "2",
+          cbState = "1",
+          lifeCert = "2",
+        ),
+        RetiringPersonQuery.columnMap
+      )(
+        exportFile
+      )
+    }
+
+    val workbook = Excel.load(exportFile)
+    val sheet = workbook.getSheetAt(0)
+    sheet.setColumnWidth(0, 35 * 256)
+    sheet.setColumnWidth(2, 8 * 256)
+    sheet.setColumnWidth(3, 20 * 256)
+    sheet.setColumnWidth(2, 30 * 256)
+
+    workbook.saveAfter(
+      outputDir / s"截至月底需认证的新增待遇人员名单${Formatter.formatDate()}.xls"
+    ) { path =>
       println(s"保存: $path")
     }
 

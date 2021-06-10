@@ -7,7 +7,7 @@ import yhsb.base.io.AutoClose.use
 import yhsb.base.util.Config
 import yhsb.cjb.net
 
-/** 待遇复核查询 */
+/** 到龄待遇审核 查询 */
 class TreatmentReviewQuery(
     idCard: String = "",
     reviewState: String = "0",

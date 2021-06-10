@@ -8,6 +8,7 @@ class RetiringPersonQuery(
     inArrear: String = "1",
     idCard: String = "",
     cbState: String = "1",
+    lifeCert: String = "",
     sortOptions: Map[String, String] = Map(
       "dataKey" -> "xzqh",
       "sortDirection" -> "ascending"
@@ -16,7 +17,9 @@ class RetiringPersonQuery(
     "dyryQuery",
     sortOptions = sortOptions
   ) {
+  /** 乡镇（街道） */
   val aaf013 = ""
+  /** 村（社区） */
   val aaf030 = ""
 
   /** 
@@ -35,6 +38,7 @@ class RetiringPersonQuery(
   /**
    * 是否欠费
    * 1: 欠费
+   * 2: 不欠费
    */
   @JsonName("qfbz")
   val inArrear_ = inArrear
@@ -42,12 +46,27 @@ class RetiringPersonQuery(
   @JsonName("aac002")
   val idCard_ = idCard
 
-  /** 参保状态 */
+  /**
+   * 参保状态
+   * 1: 正常参保
+   * 2: 暂停参保
+   */
   @JsonName("aac008")
   val cbState_ = cbState
 
-  /** 是否和社保比对 */
+  /** 
+   * 是否和社保比对
+   * 1: 是
+   * 2: 否
+   */
   val sb_type = "1"
+
+  /** 
+   * 是否生存认证
+   * 1: 是
+   * 2: 否
+   */
+  val scrz_type = lifeCert
 }
 
 object RetiringPersonQuery {
@@ -56,11 +75,13 @@ object RetiringPersonQuery {
     inArrear: String = "1",
     idCard: String = "",
     cbState: String = "1",
+    lifeCert: String = "",
   ) = new RetiringPersonQuery(
     retireDate,
     inArrear,
     idCard,
-    cbState
+    cbState,
+    lifeCert
   )
 
   case class Item()
@@ -79,5 +100,6 @@ object RetiringPersonQuery {
     "lqny" -> "待遇领取年月",
     "bz" -> "备注",
     "qysb_type" -> "是否在社保参保",
+    "scrz" -> "是否生存认证"
   )
 }
