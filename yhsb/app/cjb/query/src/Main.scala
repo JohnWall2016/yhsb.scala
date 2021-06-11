@@ -1,6 +1,7 @@
 import java.io.OutputStream
 import java.nio.file.Files
 
+import scala.collection.SeqMap
 import scala.collection.SortedMap
 import scala.collection.mutable.LinkedHashMap
 import scala.collection.mutable.ListBuffer
@@ -32,6 +33,7 @@ import yhsb.cjb.net.protocol.PaymentTerminateQuery
 import yhsb.cjb.net.protocol.PersonInfoInProvinceQuery
 import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
 import yhsb.cjb.net.protocol.PersonInfoQuery
+import yhsb.cjb.net.protocol.PersonInfoTreatmentAdjustDetailQuery
 import yhsb.cjb.net.protocol.PersonInfoTreatmentAdjustQuery
 import yhsb.cjb.net.protocol.RefundQuery
 import yhsb.cjb.net.protocol.Result
@@ -41,8 +43,6 @@ import yhsb.cjb.net.protocol.TreatmentReviewQuery
 import yhsb.cjb.net.protocol.WorkingPersonStopAuditDetailQuery
 import yhsb.qb.net.protocol.RetiredPersonStopQuery
 import yhsb.qb.net.{Session => QBSession}
-import scala.collection.SeqMap
-import yhsb.cjb.net.protocol.PersonInfoTreatmentAdjustDetailQuery
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -106,22 +106,24 @@ class Query(args: collection.Seq[String]) extends Command(args) {
 
             println(idCard)
 
-            val result = session.request(PersonInfoInProvinceQuery(idCard))
-            result.map(item => {
-              row
-                .getOrCreateCell(updateRow())
-                .setCellValue(item.jbState)
-              if (neighborhoodRow.isDefined) {
+            if (idCard != "") {
+              val result = session.request(PersonInfoInProvinceQuery(idCard))
+              result.map(item => {
                 row
-                  .getOrCreateCell(neighborhoodRow())
-                  .setCellValue(item.dwName.get)
-              }
-              if (nameComparedRow.isDefined && item.name != name) {
-                row
-                  .getOrCreateCell(nameComparedRow())
-                  .setCellValue(item.name)
-              }
-            })
+                  .getOrCreateCell(updateRow())
+                  .setCellValue(item.jbState)
+                if (neighborhoodRow.isDefined) {
+                  row
+                    .getOrCreateCell(neighborhoodRow())
+                    .setCellValue(item.dwName.getOrElse(""))
+                }
+                if (nameComparedRow.isDefined && item.name != name) {
+                  row
+                    .getOrCreateCell(nameComparedRow())
+                    .setCellValue(item.name)
+                }
+              })
+            }
           }
         }
         workbook.save(inputFile().insertBeforeLast(".upd"))
