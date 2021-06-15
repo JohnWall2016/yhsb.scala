@@ -1,9 +1,11 @@
 import yhsb.base.command._
 import yhsb.base.excel.Excel._
 import yhsb.base.text.String._
-
 import yhsb.qb.net.Session
+import yhsb.qb.net.protocol.AgencyCodeQuery
 import yhsb.qb.net.protocol.CompanyInfoQuery
+import yhsb.qb.net.protocol.JoinedPersonInProvinceQuery
+import yhsb.qb.net.protocol.RetiredPersonQuery
 
 object Main {
   def main(args: Array[String]) = new Query(args).runCommand()
@@ -37,7 +39,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                 .map(_.companyName)
                 .getOrElse("")
 
-              println(f"${index+1}%-3d $code $name")
+              println(f"${index + 1}%-3d $code $name")
 
               row(codeCol()).setBlank()
               row(titleCol()).value = s"$name\n$title"
@@ -49,5 +51,41 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val retired =
+    new Subcommand("retired") {
+      descr("退休人员信息查询")
+
+      val idCard = trailArg[String](descr = "身份证号码")
+
+      def execute() = {
+        Session.use() { session =>
+          val result = session.request(AgencyCodeQuery())
+
+          def getAgencyCode(name: String) =
+            result.resultSet.find(_.name == name).get.code
+
+          session
+            .request(
+              JoinedPersonInProvinceQuery(idCard())
+            )
+            .resultSet
+            .foreach { it =>
+              println(it)
+
+              session
+                .request(
+                  RetiredPersonQuery(
+                    it.idCard,
+                    getAgencyCode(it.agencyName)
+                  )
+                )
+                .resultSet
+                .foreach(println)
+            }
+        }
+      }
+    }
+
   addSubCommand(doc)
+  addSubCommand(retired)
 }
