@@ -84,7 +84,10 @@ object RetiringPersonQuery {
     lifeCert
   )
 
-  case class Item()
+  case class Item(
+    @JsonName("bz")
+    memo: String,
+  )
 
   val columnMap = SeqMap(
     "xzqh" -> "行政区划",

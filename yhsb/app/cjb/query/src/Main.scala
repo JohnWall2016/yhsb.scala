@@ -43,6 +43,11 @@ import yhsb.cjb.net.protocol.TreatmentReviewQuery
 import yhsb.cjb.net.protocol.WorkingPersonStopAuditDetailQuery
 import yhsb.qb.net.protocol.RetiredPersonStopQuery
 import yhsb.qb.net.{Session => QBSession}
+import yhsb.cjb.net.protocol.RetiringPersonQuery
+import yhsb.cjb.net.protocol.PayListQuery
+import yhsb.cjb.net.protocol.PayState
+import yhsb.cjb.net.protocol.PayListPersonalDetailQuery
+import yhsb.cjb.net.protocol.CertedPersonQuery
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -1047,7 +1052,11 @@ class Query(args: collection.Seq[String]) extends Command(args) {
     new Subcommand("statics") with InputFile with RowRange {
       descr("根据行政区划进行统计")
 
-      val divisionRow = trailArg[String](descr = "行政区划所在列", required = false, default = Some("A"))
+      val divisionRow = trailArg[String](
+        descr = "行政区划所在列",
+        required = false,
+        default = Some("A")
+      )
 
       def execute(): Unit = {
         val workbook = Excel.load(inputFile())
@@ -1073,6 +1082,114 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val payState =
+    new Subcommand("payState") with InputFile with RowRange {
+      descr("查询参保人员待遇情况")
+
+      val endDate = trailArg[String](descr = "截止日期, 如: 20210531")
+      val nameCol = trailArg[String](descr = "姓名列")
+      val idCardCol = trailArg[String](descr = "身份证列")
+      val memoCol = trailArg[String](descr = "备注列")
+
+      def execute(): Unit = {
+        val month = endDate().substring(0, 6)
+
+        lazy val payFailedMap = Session.use("006") { session =>
+          session
+            .request(PayListQuery(month, PayState.Wait))
+            .filter(_.objectType == "1")
+            .flatMap(it => session.request(PayListPersonalDetailQuery(it)))
+            .filter(_.idCard.nonNullAndEmpty)
+            .map(e => (e.idCard, e.name))
+            .toMap
+        }
+
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        Session.use() { session =>
+          for (index <- (startRow() - 1) until endRow()) {
+            val row = sheet.getRow(index)
+            val name = row(nameCol()).value
+            var idCard = row(idCardCol()).value.toUpperCase.trim
+            var memo = ""
+            val len = idCard.length()
+            if (len < 18) {
+              memo = "身份证号码有误"
+            } else {
+              if (len > 18) idCard = idCard.substring(0, 18)
+              session
+                .request(PersonInfoInProvinceQuery(idCard))
+                .headOption match {
+                case None => memo = "未参加城居保"
+                case Some(item) => {
+                  if (item.agency != "湘潭市雨湖区") {
+                    memo = s"未在我区参保(${item.agency})"
+                  } else {
+                    item.jbState match {
+                      case "正常缴费" =>
+                        session
+                          .request(
+                            RetiringPersonQuery(
+                              retireDate = Formatter.toDashedDate(endDate()),
+                              idCard = idCard,
+                              inArrear = "",
+                              cbState = ""
+                            )
+                          )
+                          .headOption match {
+                          case None => memo = "未达到享待年龄"
+                          case Some(item) => {
+                            if (item.memo.contains("欠费")) {
+                              memo = "因欠费无法享待"
+                            } else {
+                              memo = "未知原因的正常缴费人员"
+                            }
+                          }
+                        }
+                      case "正常待遇" =>
+                        if (
+                          session
+                            .request(
+                              PaymentQuery(
+                                startYearMonth = month,
+                                idCard = idCard
+                              )
+                            )
+                            .head
+                            .amount > 0
+                        ) {
+                          memo = s"已支付到${month}"
+                        } else if (payFailedMap.contains(idCard)) {
+                          memo = "银行代发支付失败"
+                        } else {
+                          val item = session
+                            .request(CertedPersonQuery(idCard))
+                            .headOption
+                          if (
+                            item.isDefined && YearMonth.from(
+                              item.get.certedDate.toInt
+                            ) >= YearMonth.from(month.toInt)
+                          ) {
+                            memo = "补认证人员本月补发"
+                          } else {
+                            memo = "未知原因的正常待遇人员"
+                          }
+                        }
+                      case s => memo = s"不可发放($s)"
+                    }
+                  }
+                }
+              }
+            }
+            println(s"$index $idCard $name $memo")
+            row.getOrCreateCell(memoCol()).value = memo
+          }
+        }
+        workbook.save(inputFile().insertBeforeLast(".up"))
+      }
+    }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(payInfo)
@@ -1083,6 +1200,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(payment)
   addSubCommand(delayPay)
   addSubCommand(statics)
+  addSubCommand(payState)
 }
 
 object Main {

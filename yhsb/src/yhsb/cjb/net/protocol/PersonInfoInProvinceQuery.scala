@@ -19,9 +19,8 @@ object PersonInfoInProvinceQuery {
       @JsonName("aac066") jbKind: JBKind,
       @JsonName("aaa129") agency: String,
       @JsonName("aae036") opTime: String,
-      //@JsonName("aaf101") xzqhCode: String,
-      @JsonName("aaf102") czName: String
-      //@JsonName("aaf103") csName: String
+      @JsonName("aaf102") czName: String,
+      @JsonName("aac010") hkAddress: String
   ) extends Jsonable
        with JBState
        with DivisionName

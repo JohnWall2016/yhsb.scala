@@ -5,14 +5,15 @@ import scala.collection.SeqMap
 /**
   * 待遇发放情况查询
   *
-  * @param startYearMonth
+  * @param startYearMonth "yyyyMM"
   * @param endYearMonth
   * @param payState
   */
 class PaymentQuery(
     startYearMonth: String,
     endYearMonth: String,
-    payState: PayState = PayState.Sucess
+    payState: PayState = PayState.Sucess,
+    idCard: String = ""
 ) extends PageRequest[PaymentQuery.Item](
     "executePayffqkcxQuery",
     1,
@@ -26,7 +27,7 @@ class PaymentQuery(
   val aaf030 = ""
 
   @JsonName("aac002")
-  val idCard = ""
+  val idCard_ = idCard
 
   @JsonName("aae002str")
   val startYearMonth_ = startYearMonth
@@ -45,11 +46,13 @@ object PaymentQuery {
   def apply(
       startYearMonth: String,
       endYearMonth: String = null,
-      payState: PayState = PayState.Sucess
+      payState: PayState = PayState.Sucess,
+      idCard: String = ""
   ) = new PaymentQuery(
     startYearMonth,
     if (endYearMonth == null) startYearMonth else endYearMonth,
-    payState
+    payState,
+    idCard
   )
 
   case class Item(
