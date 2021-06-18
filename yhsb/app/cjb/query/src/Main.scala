@@ -48,6 +48,7 @@ import yhsb.cjb.net.protocol.PayListQuery
 import yhsb.cjb.net.protocol.PayState
 import yhsb.cjb.net.protocol.PayListPersonalDetailQuery
 import yhsb.cjb.net.protocol.CertedPersonQuery
+import scala.collection.mutable.ArrayBuffer
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -1190,6 +1191,62 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val paySum =
+    new Subcommand("paySum") {
+      descr("按年龄阶段统计特定月份发放金额")
+
+      val month = trailArg[Int](descr = "发放月份, 例如: 202101")
+
+      val range = Seq(
+        60 -> 64,
+        65 -> 74,
+        75 -> Int.MaxValue
+      )
+
+      def execute(): Unit = {
+        println(s"开始下载${month()}发放数据")
+
+        val exportFile = Files.createTempFile("yhsb", ".xls").toString
+        Session.use() {
+          _.exportAllTo(
+            PaymentQuery(
+              f"${month()}%06d",
+              f"${month()}%06d"
+            ),
+            PaymentQuery.columnMap
+          )(
+            exportFile
+          )
+        }
+
+        println("开始统计发放数据")
+
+        val result = range.map(_ => (0, BigDecimal(0))).to(ArrayBuffer)
+        val workbook = Excel.load(exportFile)
+        val sheet = workbook.getSheetAt(0)
+        for (row <- sheet.rowIterator(1)) {
+          val idCard = row("B").value
+          if (idCard.length() == 18) {
+            val amount = BigDecimal(row("H").value)
+            val birthMonth = idCard.substring(6, 12).toInt
+            val thisMonth = month().toInt
+
+            val old =
+              (((thisMonth / 100) * 12 + (thisMonth % 100)) - ((birthMonth / 100) * 12 + (birthMonth % 100))) / 12
+            var continue = true
+            for (((l, u), i) <- range.zipWithIndex if continue) {
+              if (old >= l && old <= u) {
+                result(i) = (result(i)._1 + 1, result(i)._2 + amount)
+                continue = false
+              }
+            }
+          }
+        }
+
+        println(result.map(r => f"${r._1} ${r._2}%.2f").mkString(" | "))
+      }
+    }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(payInfo)
@@ -1201,6 +1258,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(delayPay)
   addSubCommand(statics)
   addSubCommand(payState)
+  addSubCommand(paySum)
 }
 
 object Main {

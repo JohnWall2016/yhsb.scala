@@ -199,6 +199,13 @@ object Excel {
       }
     }
 
+    /**
+      * Get an iterator of rows.
+      *
+      * @param start the first row index from 0
+      * @param end the last inclusive row index
+      * @return
+      */
     def rowIterator(start: Int, end: Int = -1): Iterator[Row] = {
       new Iterator[Row]() {
         private var index = Math.max(0, start)
