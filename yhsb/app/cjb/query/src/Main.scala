@@ -628,7 +628,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               i <- (startRow() - 1) until endRow()
               row = sheet.getRow(i)
               name = row("C").value.trim()
-              idCard_ = row("F").value.trim()
+              idCard_ = row("B").value.trim()
             } {
               print(s"$i $idCard_ $name ")
 
@@ -647,8 +647,11 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                     println(
                       s"${it.dwName.getOrElse("")} ${it.csName.getOrElse("")}"
                     )
-                    row.getOrCreateCell("K").value = it.dwName
-                    row.getOrCreateCell("L").value = it.csName
+                    if (name == "") {
+                      row.getOrCreateCell("C").value = it.name
+                    }
+                    row.getOrCreateCell("D").value = it.dwName
+                    row.getOrCreateCell("E").value = it.csName
                 }
               } else {
                 println("身份证号码有误")
