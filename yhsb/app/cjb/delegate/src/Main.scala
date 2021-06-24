@@ -181,7 +181,7 @@ class PaymentList extends Subcommand("paymentList") {
     var total = BigDecimal(0)
     val payType = DFPayType(dfPayType())
 
-    Session.use() { session =>
+    Session.use("006") { session =>
       session
         .request(DelegatePaymentQuery(dfPayType(), yearMonth()))
         .foreach { list =>

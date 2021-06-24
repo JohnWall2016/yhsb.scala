@@ -35,7 +35,7 @@ class Payment(args: collection.Seq[String]) extends Command(args) {
     val dateCH = Formatter.formatDate("yyyy年M月d日")
     sheet("H2").value = s"制表时间：$dateCH"
 
-    Session.use() { session =>
+    Session.use("006") { session =>
       val startRow = 4
       var currentRow = startRow
       var sum: BigDecimal = 0
