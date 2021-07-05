@@ -347,3 +347,29 @@ object PayState extends MapField.Val[PayState] {
   val Fail = Val("2")
   val Cancel = Val("3")
 }
+
+/** 认证方式  */
+class CertType extends MapField {
+  override def valueMap = {
+    case "02" => "手机"
+    case "04" => "自助终端"
+  }
+}
+
+object CertType extends MapField.Val[CertType] {
+  val Phone = Val("02")
+  val AutoTerm = Val("04")
+}
+
+/** 认证标志  */
+class CertFlag extends MapField {
+  override def valueMap = {
+    case "0" => "未认证"
+    case "1" => "已认证"
+  }
+}
+
+object CertFlag extends MapField.Val[CertFlag] {
+  val UnCerted = Val("0")
+  val Certed = Val("1")
+}

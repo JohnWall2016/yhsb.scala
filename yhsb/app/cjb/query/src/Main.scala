@@ -49,6 +49,8 @@ import yhsb.cjb.net.protocol.PayState
 import yhsb.cjb.net.protocol.PayListPersonalDetailQuery
 import yhsb.cjb.net.protocol.CertedPersonQuery
 import scala.collection.mutable.ArrayBuffer
+import yhsb.cjb.net.protocol.CertFlag
+import yhsb.cjb.net.protocol.CertType
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -1250,6 +1252,54 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val cert =
+    new Subcommand("cert") with InputFile with RowRange {
+      descr("查询认证情况")
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        try {
+          Session.use() { session =>
+            for {
+              i <- (startRow() - 1) until endRow()
+              row = sheet.getRow(i)
+              name = row("F").value.trim()
+              idCard = row("E").value.trim()
+            } {
+              print(s"$i $idCard $name")
+
+              session
+                .request(PersonInfoQuery(idCard))
+                .headOption match {
+                case None =>
+                case Some(it) =>
+                  print(s" ${it.jbState}")
+                  row.getOrCreateCell("G").value = it.jbState
+
+                  session
+                    .request(CertedPersonQuery(idCard))
+                    .headOption match {
+                      case None => 
+                      case Some(it) => 
+                        if (it.certType == CertType.Phone || it.certType == CertType.AutoTerm) {
+                          print(s" ${it.certType} ${it.certedDate} ${it.certedOpTime}")
+                          row.getOrCreateCell("H").value = it.certType.toString()
+                          row.getOrCreateCell("I").value = it.certedDate
+                          row.getOrCreateCell("J").value = it.certedOpTime
+                        }
+                    }
+              }
+              println()
+            }
+          }
+        } finally {
+          workbook.save(inputFile().insertBeforeLast(".upd"))
+        }
+      }
+    }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(payInfo)
@@ -1262,6 +1312,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(statics)
   addSubCommand(payState)
   addSubCommand(paySum)
+  addSubCommand(cert)
 }
 
 object Main {

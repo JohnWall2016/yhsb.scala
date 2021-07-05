@@ -67,10 +67,10 @@ object CertedPersonQuery {
       certedOpTime: String,
       /** 认证标志 */
       @JsonName("aac097")
-      certFlag: String,
+      certFlag: CertFlag,
       /** 认证方式 */
       @JsonName("aac098")
-      certType: String
+      certType: CertType
   ) extends DivisionName
 
   val columnMap = SeqMap(
