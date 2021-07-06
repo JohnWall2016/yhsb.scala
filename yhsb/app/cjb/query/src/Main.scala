@@ -666,33 +666,6 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
-  val payment =
-    new Subcommand("payment") {
-      descr("按月统计待遇发放情况")
-
-      val startMonth = trailArg[Int](descr = "开始月份, 如: 202001")
-      val endMonth = trailArg[Int](descr = "结束行, 如: 202001")
-
-      def execute(): Unit = {
-        Session.use() { session =>
-          for (
-            ym <- YearMonthRange(
-              YearMonth.from(startMonth()),
-              YearMonth.from(endMonth())
-            )
-          ) {
-            val total = session
-              .request(PaymentQuery(ym.toString()))
-              .last
-            val totalOfPeople = total.idCard.toInt
-            val totalOfMoney = total.amount
-            val average = totalOfMoney / totalOfPeople
-            println(f"$ym ${totalOfPeople} ${totalOfMoney}%.2f ${average}%.2f")
-          }
-        }
-      }
-    }
-
   val delayPay =
     new Subcommand("delayPay") with InputFile with RowRange {
       descr("查询补发基础养老金情况")
@@ -1252,6 +1225,87 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val payment =
+    new Subcommand("payment") {
+      descr("按月统计待遇发放情况")
+
+      val startMonth = trailArg[Int](descr = "开始月份, 如: 202001")
+      val endMonth = trailArg[Int](descr = "结束行, 如: 202001")
+
+      def execute(): Unit = {
+        Session.use() { session =>
+          for (
+            ym <- YearMonthRange(
+              YearMonth.from(startMonth()),
+              YearMonth.from(endMonth())
+            )
+          ) {
+            val total = session
+              .request(PaymentQuery(ym.toString()))
+              .last
+            val totalOfPeople = total.idCard.toInt
+            val totalOfMoney = total.amount
+            val average = totalOfMoney / totalOfPeople
+            println(f"$ym ${totalOfPeople} ${totalOfMoney}%.2f ${average}%.2f")
+          }
+        }
+      }
+    }
+
+  val payAvg =
+    new Subcommand("payAvg") {
+      descr("按月统计待遇发放人数、金额、均值")
+
+      val startMonth = trailArg[Int](descr = "开始月份, 如: 202001")
+      val endMonth = trailArg[Int](descr = "结束行, 如: 202001")
+
+      def execute(): Unit = {
+        var (totalCount, totalSum) = (0, BigDecimal(0))
+        Session.use() { session =>
+          for (
+            ym <- YearMonthRange(
+              YearMonth.from(startMonth()),
+              YearMonth.from(endMonth())
+            )
+          ) {
+            println(s"开始下载${ym}发放数据")
+
+            val exportFile = Files.createTempFile("yhsb", ".xls").toString
+
+            session.exportAllTo(
+              PaymentQuery(ym.toString),
+              PaymentQuery.columnMap
+            )(
+              exportFile
+            )
+
+            println(s"开始统计${ym}发放数据")
+
+            var (count, sum) = (0, BigDecimal(0))
+            val workbook = Excel.load(exportFile)
+            val sheet = workbook.getSheetAt(0)
+            for (row <- sheet.rowIterator(1)) {
+              val idCard = row("B").value
+              val centralPersion = BigDecimal(row("I").value)
+              if (idCard.length() == 18 && centralPersion > 0) {
+                val amount = BigDecimal(row("H").value)
+                count += 1
+                sum += amount
+              }
+            }
+
+            println(f"${ym}: ${count} ${sum}%.2f ${sum / count}%.2f\n")
+            totalCount += count
+            totalSum += sum
+          }
+        }
+        println(
+          f"${startMonth()}-${endMonth()}:  ${totalCount} ${totalSum}%.2f ${if (totalCount > 0) totalSum / totalCount
+          else BigDecimal(0)}%.2f"
+        )
+      }
+    }
+
   val cert =
     new Subcommand("cert") with InputFile with RowRange {
       descr("查询认证情况")
@@ -1281,15 +1335,19 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   session
                     .request(CertedPersonQuery(idCard))
                     .headOption match {
-                      case None => 
-                      case Some(it) => 
-                        if (it.certType == CertType.Phone || it.certType == CertType.AutoTerm) {
-                          print(s" ${it.certType} ${it.certedDate} ${it.certedOpTime}")
-                          row.getOrCreateCell("H").value = it.certType.toString()
-                          row.getOrCreateCell("I").value = it.certedDate
-                          row.getOrCreateCell("J").value = it.certedOpTime
-                        }
-                    }
+                    case None =>
+                    case Some(it) =>
+                      if (
+                        it.certType == CertType.Phone || it.certType == CertType.AutoTerm
+                      ) {
+                        print(
+                          s" ${it.certType} ${it.certedDate} ${it.certedOpTime}"
+                        )
+                        row.getOrCreateCell("H").value = it.certType.toString()
+                        row.getOrCreateCell("I").value = it.certedDate
+                        row.getOrCreateCell("J").value = it.certedOpTime
+                      }
+                  }
               }
               println()
             }
@@ -1312,6 +1370,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(statics)
   addSubCommand(payState)
   addSubCommand(paySum)
+  addSubCommand(payAvg)
   addSubCommand(cert)
 }
 
