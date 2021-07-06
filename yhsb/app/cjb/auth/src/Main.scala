@@ -510,7 +510,7 @@ class ImportDisability extends Subcommand("cjry") with ImportCommand {
       neighborhood = "E",
       community = "F",
       address = Some("G"),
-      personType = Some("O")
+      personType = Some("K")
     ) { item =>
       item.detail = item.personType
       item.personType = item.personType match {
