@@ -11,7 +11,7 @@ class DelegatePersonQuery(
     /** 代发发放状态: 1 - 正常发放, 2 - 暂停发放, 3 - 终止发放 */
     dfState: String,
     page: Int = 1,
-    pageSize: Int = 100
+    pageSize: Int = 1000
 ) extends PageRequest[DelegatePersonQuery.Item](
       "executeDfrymdQuery",
       page,
@@ -48,7 +48,7 @@ object DelegatePersonQuery {
     /** 代发发放状态: 1 - 正常发放, 2 - 暂停发放, 3 - 终止发放 */
     dfState: String,
     page: Int = 1,
-    pageSize: Int = 100
+    pageSize: Int = 1000
   ) = new DelegatePersonQuery(dfType, cbState, dfState, page, pageSize)
 
   case class Item(
@@ -83,6 +83,6 @@ object DelegatePersonQuery {
       endYearMonth: Int,
       /** 代发截至成功发放金额 */
       @JsonName("aae019jz")
-      totalPayed: JBigDecimal
+      totalPayed: BigDecimal
   ) extends IdCardValid
 }

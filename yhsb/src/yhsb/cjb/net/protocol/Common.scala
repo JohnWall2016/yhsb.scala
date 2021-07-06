@@ -117,7 +117,7 @@ object JBState {
 trait IdCardValid {
   val idCard: String
 
-  def valid = idCard != null && idCard.nonEmpty
+  def valid = idCard != null && idCard.trim().length() == 18
 
   def invalid = !valid
 }
@@ -274,6 +274,12 @@ class DFState extends MapField {
     case "2" => "暂停发放"
     case "3" => "终止发放"
   }
+}
+
+object DFState extends MapField.Val[DFState] {
+  val Normal = Val("1")
+  val Paused = Val("2")
+  val Stopped = Val("3")
 }
 
 /** 暂停参保原因 */

@@ -15,7 +15,8 @@ import yhsb.cjb.net.protocol.DelegatePaymentDetailQuery
 import yhsb.cjb.net.protocol.DelegatePaymentPersonalDetailQuery
 import java.text.Collator
 import java.util.Locale
-
+import yhsb.cjb.net.protocol.DFState
+import yhsb.cjb.net.protocol.CBState
 
 class Delegate(args: collection.Seq[String]) extends Command(args) {
   banner("代发数据导出制表程序")
@@ -62,68 +63,72 @@ class PersonList extends Subcommand("personList") {
 
     val date = Formatter.formatDate("yyyyMMdd")
     val dateCH = Formatter.formatDate("yyyy年M月d日")
-    sheet("G2").value = "制表时间：$dateCH"
+    sheet("G2").value = s"制表时间：$dateCH"
 
     Session.use() { session =>
       session
         .request(DelegatePersonQuery(dfType(), "1", ""))
         .foreach { it =>
-          if (it.invalid) return
+          if (it.valid) {
+            println(s"${it.name.padRight(8)}${it.idCard}")
 
-          println(s"${it.name.padRight(8)}${it.idCard}")
-          if (!exportAll() && it.dfState.value != "1") return
+            if (
+              it.dfState == DFState.Normal ||
+              (exportAll() && it.dfState == DFState.Paused && it.cbState == CBState.Normal)
+            ) {
+              if (
+                it.standard != null ||
+                !(dfType() == "801" && it.totalPayed == BigDecimal(5000))
+              ) {
+                var payAmount: Option[BigDecimal] = None
+                if (it.standard != null && estimate()) {
+                  var startYear = it.startYearMonth / 100
+                  var startMonth = it.startYearMonth % 100
+                  startMonth -= 1
+                  if (startMonth == 0) {
+                    startYear -= 1
+                    startMonth = 12
+                  }
+                  if (it.endYearMonth != 0) {
+                    startYear = it.endYearMonth / 100
+                    startMonth = it.endYearMonth % 100
+                  }
+                  val m =
+                    """^(\d\d\d\d)(\d\d)$""".r.findFirstMatchIn(yearMonth())
+                  m match {
+                    case Some(v) =>
+                      val endYear = v.group(1).toInt
+                      val endMonth = v.group(2).toInt
+                      payAmount = Some(BigDecimal(it.standard) *
+                        ((endYear - startYear) * 12 + endMonth - startMonth))
+                    case None =>
+                  }
+                }
 
-          if (
-            it.dfState.value != "1" &&
-            !(it.dfState.value == "2" && it.cbState.value == "1")
-          )
-            return
+                val row = sheet.getOrCopyRow(currentRow, startRow)
+                currentRow += 1
+                row("A").value = currentRow - startRow
+                row("B").value = it.csName
+                row("C").value = it.name
+                row("D").value = it.idCard
+                row("E").value = it.startYearMonth
+                row("F").value = it.standard
+                row("G").value = it.dfType
+                row("H").value = it.dfState.toString()
+                row("I").value = it.cbState.toString()
+                if (it.endYearMonth != 0) {
+                  row("J").value = it.endYearMonth
+                }
+                row("K").value = it.totalPayed
 
-          var payAmount = BigDecimal(0)
-          if (it.standard != null) {
-            var startYear = it.startYearMonth / 100
-            var startMonth = it.startYearMonth % 100
-            startMonth -= 1
-            if (startMonth == 0) {
-              startYear -= 1
-              startMonth = 12
+                payedSum += it.totalPayed ?: BigDecimal(0)
+                if (estimate()) row("L").value = payAmount
+                if (payAmount.isDefined) {
+                  sum += payAmount.get
+                }
+              }
             }
-            if (it.endYearMonth != 0) {
-              startYear = it.endYearMonth / 100
-              startMonth = it.endYearMonth % 100
-            }
-            val m = """^(\d\d\d\d)(\d\d)$""".r.findFirstMatchIn(yearMonth())
-            m match {
-              case Some(v) =>
-                val endYear = v.group(1).toInt
-                val endMonth = v.group(2).toInt
-                payAmount = BigDecimal(it.standard) *
-                  ((endYear - startYear) * 12 + endMonth - startMonth)
-              case None =>
-            }
-          } else if (
-            dfType() == "801" && it.totalPayed == new JBigDecimal(5000)
-          ) {
-            return
           }
-
-          val row = sheet.getOrCopyRow(currentRow, startRow)
-          currentRow += 1
-          row("A").value = currentRow - startRow
-          row("B").value = it.csName
-          row("C").value = it.name
-          row("D").value = it.idCard
-          row("E").value = it.startYearMonth
-          row("F").value = it.standard
-          row("G").value = it.dfType
-          row("H").value = it.dfState.toString()
-          row("I").value = it.cbState.toString()
-          row("J").value = it.endYearMonth
-          row("K").value = it.totalPayed
-
-          payedSum += it.totalPayed ?: BigDecimal(0)
-          if (estimate()) row("L").value = payedSum
-          sum += payAmount
         }
     }
     if (currentRow > startRow) {
@@ -136,7 +141,7 @@ class PersonList extends Subcommand("personList") {
       if (estimate()) row("L").value = sum
 
       val path = template.insertBeforeLast(
-        s"${DFType(dfType())}${if (exportAll()) "ALL" else ""}$date"
+        s"(${DFType(dfType())})${if (exportAll()) "ALL" else ""}$date"
       )
 
       println(s"保存: $path")
@@ -153,7 +158,8 @@ class PaymentList extends Subcommand("paymentList") {
   banner("代发支付明细导出")
 
   val dfPayType = trailArg[String](
-    descr = "业务类型: DF0001 - 独生子女, DF0002 - 乡村教师, DF0003 - 乡村医生, DF0007 - 电影放映员, DF0008 - 核工业"
+    descr =
+      "业务类型: DF0001 - 独生子女, DF0002 - 乡村教师, DF0003 - 乡村医生, DF0007 - 电影放映员, DF0008 - 核工业"
   )
 
   val yearMonth = trailArg[String](
@@ -163,15 +169,15 @@ class PaymentList extends Subcommand("paymentList") {
   val template = """D:\代发管理\雨湖区城乡居民基本养老保险代发人员支付明细.xlsx"""
 
   case class Item(
-    csName: String,
-    name: String,
-    idCard: String,
-    payType: String,
-    yearMonth: Int,
-    startDate: Option[Int],
-    endDate: Option[Int],
-    amount: BigDecimal,
-    memo: String
+      csName: String,
+      name: String,
+      idCard: String,
+      payType: String,
+      yearMonth: Int,
+      startDate: Option[Int],
+      endDate: Option[Int],
+      amount: BigDecimal,
+      memo: String
   )
 
   override def execute(): Unit = {
@@ -195,14 +201,16 @@ class PaymentList extends Subcommand("paymentList") {
                       .request(DelegatePaymentPersonalDetailQuery(detail))
                       .let { personDetail =>
                         val count = personDetail.size
-                        if (count > 0) {(
-                          Some(personDetail.head.date),
-                          if (count > 2) {
-                            Some(personDetail.apply(count - 2).date)
-                          } else {
-                            Some(personDetail.head.date)
-                          }
-                        )} else {
+                        if (count > 0) {
+                          (
+                            Some(personDetail.head.date),
+                            if (count > 2) {
+                              Some(personDetail.apply(count - 2).date)
+                            } else {
+                              Some(personDetail.head.date)
+                            }
+                          )
+                        } else {
                           (None, None)
                         }
                       }
