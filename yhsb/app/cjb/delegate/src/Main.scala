@@ -17,6 +17,7 @@ import java.text.Collator
 import java.util.Locale
 import yhsb.cjb.net.protocol.DFState
 import yhsb.cjb.net.protocol.CBState
+import yhsb.cjb.net.protocol.BankInfoQuery
 
 class Delegate(args: collection.Seq[String]) extends Command(args) {
   banner("代发数据导出制表程序")
@@ -29,10 +30,6 @@ class PersonList extends Subcommand("personList") {
 
   val dfType = trailArg[String](
     descr = "代发类型: 801 - 独生子女, 802 - 乡村教师, 803 - 乡村医生, 807 - 电影放映员, 808 - 核工业"
-  )
-
-  val yearMonth = trailArg[String](
-    descr = "代发年月: 格式 YYYYMM, 如 201901"
   )
 
   val exportAll = opt[Boolean](
@@ -89,10 +86,18 @@ class PersonList extends Subcommand("personList") {
                   row("J").value = it.endYearMonth
                 }
                 row("K").value = it.totalPayed
+
+                val bankResult = session.request(BankInfoQuery(it.idCard))
+                if (bankResult.isEmpty) {
+                  row("L").value = "否"
+                } else {
+                  row("L").value = "是"
+                }
+
                 if (it.cbState == CBState.Paused) {
-                  row("L").value = "居保是暂停状态，是否停发生活补贴"
+                  row("M").value = "居保是暂停状态，是否停发代发"
                 } else if (it.dfState == DFState.Paused && it.cbState == CBState.Normal) {
-                  row("L").value = "已补认证，需恢复代发"
+                  row("M").value = "居保是正常状态，是否恢复代发"
                 }
 
                 payedSum += it.totalPayed ?: BigDecimal(0)
