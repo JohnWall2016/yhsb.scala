@@ -42,11 +42,6 @@ class PersonList extends Subcommand("personList") {
     default = Some(false)
   )
 
-  val estimate = opt[Boolean](
-    descr = "是否测算代发金额",
-    default = Some(false)
-  )
-
   val template = """D:\代发管理\雨湖区城乡居民基本养老保险代发人员名单.xlsx"""
 
   override def execute(): Unit = {
@@ -58,7 +53,6 @@ class PersonList extends Subcommand("personList") {
     val startRow = 3
     var currentRow = startRow
 
-    var sum = BigDecimal(0)
     var payedSum = BigDecimal(0)
 
     val date = Formatter.formatDate("yyyyMMdd")
@@ -80,31 +74,6 @@ class PersonList extends Subcommand("personList") {
                 it.standard != null ||
                 !(dfType() == "801" && it.totalPayed == BigDecimal(5000))
               ) {
-                var payAmount: Option[BigDecimal] = None
-                if (it.standard != null && estimate()) {
-                  var startYear = it.startYearMonth / 100
-                  var startMonth = it.startYearMonth % 100
-                  startMonth -= 1
-                  if (startMonth == 0) {
-                    startYear -= 1
-                    startMonth = 12
-                  }
-                  if (it.endYearMonth != 0) {
-                    startYear = it.endYearMonth / 100
-                    startMonth = it.endYearMonth % 100
-                  }
-                  val m =
-                    """^(\d\d\d\d)(\d\d)$""".r.findFirstMatchIn(yearMonth())
-                  m match {
-                    case Some(v) =>
-                      val endYear = v.group(1).toInt
-                      val endMonth = v.group(2).toInt
-                      payAmount = Some(BigDecimal(it.standard) *
-                        ((endYear - startYear) * 12 + endMonth - startMonth))
-                    case None =>
-                  }
-                }
-
                 val row = sheet.getOrCopyRow(currentRow, startRow)
                 currentRow += 1
                 row("A").value = currentRow - startRow
@@ -120,12 +89,13 @@ class PersonList extends Subcommand("personList") {
                   row("J").value = it.endYearMonth
                 }
                 row("K").value = it.totalPayed
+                if (it.cbState == CBState.Paused) {
+                  row("L").value = "居保是暂停状态，是否停发生活补贴"
+                } else if (it.dfState == DFState.Paused && it.cbState == CBState.Normal) {
+                  row("L").value = "已补认证，需恢复代发"
+                }
 
                 payedSum += it.totalPayed ?: BigDecimal(0)
-                if (estimate()) row("L").value = payAmount
-                if (payAmount.isDefined) {
-                  sum += payAmount.get
-                }
               }
             }
           }
@@ -137,8 +107,6 @@ class PersonList extends Subcommand("personList") {
       row("D").value = currentRow - startRow
       row("J").value = "合计"
       row("K").value = payedSum
-
-      if (estimate()) row("L").value = sum
 
       val path = template.insertBeforeLast(
         s"(${DFType(dfType())})${if (exportAll()) "ALL" else ""}$date"
