@@ -20,9 +20,14 @@ class Session(
     ip: String,
     port: Int,
     private val userID: String,
-    private val password: String
+    private val password: String,
+    private val cxcookie: String,
+    private val jsessionid_ylzcbp: String,
 ) extends HttpSocket(ip, port, "UTF-8") {
-  private val cookies = mutable.Map[String, String]()
+  private val cookies = mutable.Map(
+    "cxcookie" -> cxcookie,
+    "jsessionid_ylzcbp" -> jsessionid_ylzcbp
+  )
 
   def createRequest: HttpRequest = {
     val request = new HttpRequest("/hncjb/reports/crud", "POST", charset)
@@ -97,7 +102,7 @@ class Session(
   }
 
   def login(): String = {
-    sendService("loadCurrentUser")
+    sendService("contentQuery")
 
     val header = readHeader()
     if (header.contains("set-cookie")) {
@@ -106,16 +111,19 @@ class Session(
         re.findFirstMatchIn(cookie)
           .foreach(m => cookies(m.group(1)) = m.group(2))
       })
+      println(jsessionid_ylzcbp)
+      println(cookies("jsessionid_ylzcbp"))
     }
     readBody(header)
 
-    sendService(SysLogin(userID, password))
+    sendService(SysLogin(userID+"|@|1", password))
     readBody()
   }
 
   def logout(): String = {
-    sendService("syslogout")
-    readBody()
+    //sendService("syslogout")
+    //readBody()
+    ""
   }
 
   private def urlEncode(s: String) = URLEncoder.encode(s, charset)
@@ -207,7 +215,9 @@ object Session {
         Config.cjbSession.getString("host"),
         Config.cjbSession.getInt("port"),
         usr.getString("id"),
-        usr.getString("pwd")
+        usr.getString("pwd"),
+        usr.getString("cxcookie"),
+        usr.getString("jsessionid_ylzcbp")
       )
     ) { sess =>
       if (autoLogin) sess.login()
