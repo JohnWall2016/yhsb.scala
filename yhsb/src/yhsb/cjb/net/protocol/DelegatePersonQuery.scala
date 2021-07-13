@@ -68,7 +68,7 @@ object DelegatePersonQuery {
       startYearMonth: Int,
       /** 代发标准 */
       @JsonName("aae019")
-      standard: JBigDecimal,
+      standard: BigDecimal,
       /** 代发类型 */
       @JsonName("aac066s")
       dfType: String,

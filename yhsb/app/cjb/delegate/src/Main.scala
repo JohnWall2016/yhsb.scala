@@ -68,7 +68,6 @@ class PersonList extends Subcommand("personList") {
               (exportAll() && it.dfState == DFState.Paused && it.cbState == CBState.Normal)
             ) {
               if (
-                it.standard != null ||
                 !(dfType() == "801" && it.totalPayed == BigDecimal(5000))
               ) {
                 val row = sheet.getOrCopyRow(currentRow, startRow)
