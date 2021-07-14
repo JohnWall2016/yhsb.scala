@@ -11,9 +11,42 @@ import yhsb.base.json.Jsonable
 import yhsb.base.net.HttpRequest
 import yhsb.base.net.HttpSocket
 import yhsb.cjb.net.protocol._
+import yhsb.cjb.db.CjbSession
 
 object Config {
   val cjbSession = yhsb.base.util.Config.load("cjb.session")
+
+  def getSession(userID: String) = {
+    import yhsb.cjb.db.YhsbDB._
+    val session: List[CjbSession] = run(
+      cjbSessionData.filter(_.user == lift(userID))
+    )
+    if (session.isEmpty) None
+    else Some(session(0))
+  }
+
+  def updateSession(userID: String, cxcookie: String, jsessionid: String) = {
+    import yhsb.cjb.db.YhsbDB._
+    val session: List[CjbSession] = run(
+      cjbSessionData.filter(_.user == lift(userID))
+    )
+    if (session.isEmpty) {
+      run(
+        cjbSessionData.insert(
+          CjbSession(lift(userID), Some(lift(cxcookie)), Some(lift(jsessionid)))
+        )
+      )
+    } else {
+      run(
+        cjbSessionData
+          .filter(_.user == lift(userID))
+          .update(
+            _.cxcookie -> Some(lift(cxcookie)),
+            _.jsessionid -> Some(lift(jsessionid))
+          )
+      )
+    }
+  }
 }
 
 class Session(
@@ -22,12 +55,23 @@ class Session(
     private val userID: String,
     private val password: String,
     private val cxcookie: String,
-    private val jsessionid_ylzcbp: String,
+    private val jsessionid_ylzcbp: String
 ) extends HttpSocket(ip, port, "UTF-8") {
-  private val cookies = mutable.Map(
-    "cxcookie" -> cxcookie,
-    "jsessionid_ylzcbp" -> jsessionid_ylzcbp
-  )
+  private val cookies = {
+    val sess = Config.getSession(userID)
+    mutable.Map(
+      "cxcookie" -> {
+        sess
+          .flatMap(_.cxcookie)
+          .getOrElse(cxcookie)
+      },
+      "jsessionid_ylzcbp" -> {
+        sess
+          .flatMap(_.jsessionid)
+          .getOrElse(jsessionid_ylzcbp)
+      }
+    )
+  }
 
   def createRequest: HttpRequest = {
     val request = new HttpRequest("/hncjb/reports/crud", "POST", charset)
@@ -106,17 +150,22 @@ class Session(
 
     val header = readHeader()
     if (header.contains("set-cookie")) {
+      println(s"${cookies("cxcookie")}|${cookies("jsessionid_ylzcbp")}")
       val re = "([^=]+?)=(.+?);".r
       header("set-cookie").foreach(cookie => {
         re.findFirstMatchIn(cookie)
           .foreach(m => cookies(m.group(1)) = m.group(2))
       })
-      println(jsessionid_ylzcbp)
-      println(cookies("jsessionid_ylzcbp"))
+      println(s"${cookies("cxcookie")}|${cookies("jsessionid_ylzcbp")}")
+      Config.updateSession(
+        userID,
+        cookies("cxcookie"),
+        cookies("jsessionid_ylzcbp")
+      )
     }
     readBody(header)
 
-    sendService(SysLogin(userID+"|@|1", password))
+    sendService(SysLogin(userID + "|@|1", password))
     readBody()
   }
 
@@ -129,10 +178,10 @@ class Session(
   private def urlEncode(s: String) = URLEncoder.encode(s, charset)
 
   def exportTo(
-    req: PageRequest[_],
-    columnHeaders: SeqMap[String, String]
+      req: PageRequest[_],
+      columnHeaders: SeqMap[String, String]
   )(
-    filePath: String
+      filePath: String
   ) = {
     val args = mutable.LinkedHashMap[String, String]()
     args("serviceid") = "exportexecl"
@@ -186,10 +235,10 @@ class Session(
   }
 
   def exportAllTo(
-    req: PageRequest[_],
-    columnHeaders: SeqMap[String, String]
+      req: PageRequest[_],
+      columnHeaders: SeqMap[String, String]
   )(
-    filePath: String
+      filePath: String
   ) = {
     import yhsb.base.util._
 

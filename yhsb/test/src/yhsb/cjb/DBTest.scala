@@ -3,6 +3,8 @@ package yhsb.cjb
 import utest.{TestSuite, Tests, test}
 import yhsb.cjb.db.FullCover.{fc2Stxfsj, fullcover}
 import yhsb.cjb.db.RawItem
+import yhsb.cjb.db.CjbSession
+import yhsb.cjb.db.CjbSessionData
 
 object DBTest extends TestSuite {
   def tests =
@@ -36,6 +38,17 @@ object DBTest extends TestSuite {
           it.personType == lift(item.personType)
         })
         result.foreach(println)
+      }
+
+      test("yhsbdb") {
+        import yhsb.cjb.db.YhsbDB._
+
+        println(cjbSessionData.quoted.name)
+
+        run(cjbSessionData.insert(CjbSession("000", None, Some("1111111111111111"))))
+      
+        val result = run(cjbSessionData.filter(_.user == "000"))
+        println(result)
       }
     }
 }

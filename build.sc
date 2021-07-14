@@ -28,6 +28,7 @@ object yhsb extends CustomModule {
       ivy"org.apache.poi:poi:4.1.2",
       ivy"org.apache.poi:poi-ooxml:4.1.2",
       ivy"mysql:mysql-connector-java:8.0.17",
+      ivy"org.xerial:sqlite-jdbc:3.28.0",
       ivy"io.getquill:quill-jdbc_2.13:3.5.2",
       ivy"org.apache.logging.log4j:log4j-slf4j-impl:2.13.3",
       ivy"org.rogach:scallop_2.13:3.5.0",
