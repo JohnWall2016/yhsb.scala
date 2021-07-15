@@ -379,3 +379,14 @@ object CertFlag extends MapField.Val[CertFlag] {
   val UnCerted = Val("0")
   val Certed = Val("1")
 }
+
+/** 职保状态 */
+class ZbState extends MapField {
+  override def valueMap = {
+    case "1" => "正常参保"
+    case "2" => "正常待遇"
+    case "3" => "参保暂停"
+    case "4" => "一次性退休"
+    case "5" => "待遇暂停"
+  }
+}

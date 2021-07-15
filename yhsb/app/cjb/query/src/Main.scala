@@ -51,6 +51,9 @@ import yhsb.cjb.net.protocol.CertedPersonQuery
 import scala.collection.mutable.ArrayBuffer
 import yhsb.cjb.net.protocol.CertFlag
 import yhsb.cjb.net.protocol.CertType
+import yhsb.cjb.net.protocol.RetiredPersonPauseAuditQuery
+import yhsb.cjb.net.protocol.SuspectedDeathQuery
+import yhsb.cjb.net.protocol.DataCompareQuery
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -1358,6 +1361,88 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  var inherit = new Subcommand("inherit") with InputFile with RowRange {
+    descr("死亡继承数据比对")
+
+    def execute(): Unit = {
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+
+      try {
+        Session.use() { session =>
+          for {
+            i <- (startRow() - 1) until endRow()
+            row = sheet.getRow(i)
+            idCard = row("B").value.trim()
+            deathYearMonth = row("D").value.trim().toInt
+          } {
+            print(s"${i + 2 - startRow()} $idCard ")
+            session
+              .request(PersonInfoQuery(idCard))
+              .headOption match {
+              case None =>
+                print("未查到我区参保记录")
+              case Some(it) =>
+                print(s"${it.name} ${it.jbState} ")
+                row.getOrCreateCell("C").value = it.name
+                row.getOrCreateCell("E").value = it.czName
+                row.getOrCreateCell("F").value = it.dwName
+                row.getOrCreateCell("G").value = it.jbState
+
+                session
+                  .request(RetiredPersonPauseAuditQuery(idCard, "1"))
+                  .headOption match {
+                    case None =>
+                    case Some(it) =>
+                      row.getOrCreateCell("H").value = "暂停"
+                      val pauseYearMonth = it.pauseYearMonth
+                      row.getOrCreateCell("I").value = pauseYearMonth
+                      row.getOrCreateCell("J").value = {
+                        val deathYear = deathYearMonth / 100
+                        val deathMonth = deathYearMonth % 100
+                        val pauseYear = pauseYearMonth / 100
+                        val pauseMonth = pauseYearMonth % 100
+
+                        (pauseYear - deathYear) * 12 + pauseMonth - deathMonth - 1
+                      }
+                      row.getOrCreateCell("K").value = it.reason.toString
+                      row.getOrCreateCell("L").value = it.memo
+                  }
+              
+                session
+                  .request(SuspectedDeathQuery(idCard))
+                  .headOption match {
+                    case None =>
+                    case Some(it) =>
+                      row.getOrCreateCell("M").value = it.deathDate
+                      val suspectedDeathYearMonth = it.deathDate / 100
+                      row.getOrCreateCell("N").value = {
+                        val deathYear = deathYearMonth / 100
+                        val deathMonth = deathYearMonth % 100
+                        val suspectedDeathYear = suspectedDeathYearMonth / 100
+                        val suspectedDeathMonth = suspectedDeathYearMonth % 100
+                        (deathYear - suspectedDeathYear) * 12 + deathMonth - suspectedDeathMonth
+                      }
+                  }
+
+                session
+                  .request(DataCompareQuery(idCard))
+                  .headOption match {
+                    case None =>
+                    case Some(it) =>
+                      row.getOrCreateCell("O").value = it.zbState.toString()
+                      row.getOrCreateCell("P").value = it.pensionDate
+                  }
+            }
+            println()
+          }
+        }
+      } finally {
+        workbook.save(inputFile().insertBeforeLast(".upd"))
+      }
+    }
+  }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(payInfo)
@@ -1372,6 +1457,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(paySum)
   addSubCommand(payAvg)
   addSubCommand(cert)
+  addSubCommand(inherit)
 }
 
 object Main {
