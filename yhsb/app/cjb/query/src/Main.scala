@@ -54,6 +54,7 @@ import yhsb.cjb.net.protocol.CertType
 import yhsb.cjb.net.protocol.RetiredPersonPauseAuditQuery
 import yhsb.cjb.net.protocol.SuspectedDeathQuery
 import yhsb.cjb.net.protocol.DataCompareQuery
+import scala.collection.mutable.HashMap
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -632,8 +633,8 @@ class Query(args: collection.Seq[String]) extends Command(args) {
             for {
               i <- (startRow() - 1) until endRow()
               row = sheet.getRow(i)
-              name = row("C").value.trim()
-              idCard_ = row("B").value.trim()
+              name = row("F").value.trim()
+              idCard_ = row("E").value.trim()
             } {
               print(s"$i $idCard_ $name ")
 
@@ -652,11 +653,12 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                     println(
                       s"${it.dwName.getOrElse("")} ${it.csName.getOrElse("")}"
                     )
-                    if (name == "") {
+                    /*if (name == "") {
                       row.getOrCreateCell("C").value = it.name
-                    }
-                    row.getOrCreateCell("D").value = it.dwName
-                    row.getOrCreateCell("E").value = it.csName
+                    }*/
+                    row.getOrCreateCell("B").value = it.dwName
+                    row.getOrCreateCell("C").value = it.csName
+                    row.getOrCreateCell("D").value = it.czName
                 }
               } else {
                 println("身份证号码有误")
@@ -1364,34 +1366,37 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   var inherit = new Subcommand("inherit") with InputFile with RowRange {
     descr("死亡继承数据比对")
 
+    val outsideData = opt[Boolean](required = false, descr = "比对外部数据")
+
     def execute(): Unit = {
       val workbook = Excel.load(inputFile())
       val sheet = workbook.getSheetAt(0)
 
       try {
-        Session.use() { session =>
-          for {
-            i <- (startRow() - 1) until endRow()
-            row = sheet.getRow(i)
-            idCard = row("B").value.trim()
-            deathYearMonth = row("D").value.trim().toInt
-          } {
-            print(s"${i + 2 - startRow()} $idCard ")
-            session
-              .request(PersonInfoQuery(idCard))
-              .headOption match {
-              case None =>
-                print("未查到我区参保记录")
-              case Some(it) =>
-                print(s"${it.name} ${it.jbState} ")
-                row.getOrCreateCell("C").value = it.name
-                row.getOrCreateCell("E").value = it.czName
-                row.getOrCreateCell("F").value = it.dwName
-                row.getOrCreateCell("G").value = it.jbState
+        if (!outsideData()) {
+          Session.use() { session =>
+            for {
+              i <- (startRow() - 1) until endRow()
+              row = sheet.getRow(i)
+              idCard = row("B").value.trim()
+              deathYearMonth = row("D").value.trim().toInt
+            } {
+              print(s"${i + 2 - startRow()} $idCard ")
+              session
+                .request(PersonInfoQuery(idCard))
+                .headOption match {
+                case None =>
+                  print("未查到我区参保记录")
+                case Some(it) =>
+                  print(s"${it.name} ${it.jbState} ")
+                  row.getOrCreateCell("C").value = it.name
+                  row.getOrCreateCell("E").value = it.czName
+                  row.getOrCreateCell("F").value = it.dwName
+                  row.getOrCreateCell("G").value = it.jbState
 
-                session
-                  .request(RetiredPersonPauseAuditQuery(idCard, "1"))
-                  .headOption match {
+                  session
+                    .request(RetiredPersonPauseAuditQuery(idCard, "1"))
+                    .headOption match {
                     case None =>
                     case Some(it) =>
                       row.getOrCreateCell("H").value = "暂停"
@@ -1408,10 +1413,10 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                       row.getOrCreateCell("K").value = it.reason.toString
                       row.getOrCreateCell("L").value = it.memo
                   }
-              
-                session
-                  .request(SuspectedDeathQuery(idCard))
-                  .headOption match {
+
+                  session
+                    .request(SuspectedDeathQuery(idCard))
+                    .headOption match {
                     case None =>
                     case Some(it) =>
                       row.getOrCreateCell("M").value = it.deathDate
@@ -1425,14 +1430,42 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                       }
                   }
 
-                session
-                  .request(DataCompareQuery(idCard))
-                  .headOption match {
+                  session
+                    .request(DataCompareQuery(idCard))
+                    .headOption match {
                     case None =>
                     case Some(it) =>
                       row.getOrCreateCell("O").value = it.zbState.toString()
                       row.getOrCreateCell("P").value = it.pensionDate
                   }
+              }
+              println()
+            }
+          }
+        } else {
+          println(s"导入 $outsideDataFile")
+          val map = loadOutsideData()
+          println("结束导入")
+          for {
+            i <- (startRow() - 1) until endRow()
+            row = sheet.getRow(i)
+            idCard = row("B").value.trim()
+            deathYearMonth = row("D").value.trim().toInt
+          } {
+            print(s"${i + 2 - startRow()} $idCard ")
+            if (map.contains(idCard)) {
+              val (source, outsideDeathYearMonth) = map(idCard)
+              val deltaMonths = {
+                val deathYear = deathYearMonth / 100
+                val deathMonth = deathYearMonth % 100
+                val outsideDeathYear = outsideDeathYearMonth / 100
+                val outsideDeathMonth = outsideDeathYearMonth % 100
+                (deathYear - outsideDeathYear) * 12 + deathMonth - outsideDeathMonth
+              }
+              print(s"$deathYearMonth $source $deltaMonths")
+              row.getOrCreateCell("Q").value = source
+              row.getOrCreateCell("R").value = outsideDeathYearMonth
+              row.getOrCreateCell("S").value = deltaMonths
             }
             println()
           }
@@ -1440,6 +1473,28 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       } finally {
         workbook.save(inputFile().insertBeforeLast(".upd"))
       }
+    }
+
+    val outsideDataFile = """D:\数据核查\20210719\雨湖区死亡冒领下发数据.xls"""
+
+    def loadOutsideData(): HashMap[String, (String, Int)] = {
+      val workbook = Excel.load(outsideDataFile)
+      val sheet = workbook.getSheetAt(0)
+      val map = HashMap[String, (String, Int)]()
+      for (row <- sheet.rowIterator(1)) {
+        val idCard = row("E").value
+        val source = row("L").value
+        val deathYearMonth = row("G").value.toInt
+        if (map.contains(idCard)) {
+          val (oldSource, oldDeathYearMonth) = map(idCard)
+          if (deathYearMonth < oldDeathYearMonth) {
+            map(idCard) = (source, deathYearMonth)
+          }
+        } else {
+          map(idCard) = (source, deathYearMonth)
+        }
+      }
+      map
     }
   }
 
