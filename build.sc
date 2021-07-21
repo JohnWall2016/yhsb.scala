@@ -53,6 +53,7 @@ object yhsb extends CustomModule {
       object treatment extends YhsbModule
       object auth extends YhsbModule
       object compare extends YhsbModule
+      object lookback extends YhsbModule
     }
     object qb extends CustomModule {
       object spancalc extends YhsbModule
