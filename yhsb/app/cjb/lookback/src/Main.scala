@@ -6,8 +6,15 @@ import yhsb.base.command.RowRange
 import yhsb.base.excel.Excel._
 import yhsb.base.io.Path._
 
+import yhsb.base.zip
+
 import yhsb.cjb.net.protocol.Division.GroupOps
+
 import java.nio.file.Files
+import java.nio.file.Paths
+import java.io.File
+import java.nio.file.Path
+import yhsb.base.datetime.Formatter
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -16,6 +23,25 @@ object Main {
 class Lookback(args: collection.Seq[String]) extends Command(args) {
 
   banner("回头看数据处理程序")
+
+  val zipSubDir = new Subcommand("zip") with InputFile {
+    descr("打包子目录")
+
+    val fileNameTemplate = trailArg[String](
+      descr = "生成文件名模板"
+    )
+
+    def execute(): Unit = {
+      new File(inputFile()).listFiles.foreach { f =>
+        if (f.isDirectory()) {
+          zip.packDir(
+            f,
+            inputFile() / s"${fileNameTemplate()}(${f.getName()})${Formatter.formatDate()}.zip"
+          )
+        }
+      }
+    }
+  }
 
   val retiredTables = new Subcommand("dyhcb") with InputFile with RowRange {
     descr("生成待遇人员核查表")
@@ -42,12 +68,15 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
       }
       Files.createDirectory(destDir)
 
+      var total = 0
       for ((dw, csMap) <- map) {
-        println(s"$dw:")
+        val subTotal = csMap.foldLeft(0)(_ + _._2.size)
+        total += subTotal
+        println(s"\n$dw: ${subTotal}")
         Files.createDirectory(destDir / dw)
 
         for ((cs, indexes) <- csMap) {
-          println(s"  $cs: ${indexes.mkString(",")}")
+          println(s"  $cs: ${indexes.size}")
           Files.createDirectory(destDir / dw / cs)
 
           val outWorkbook = Excel.load(template)
@@ -59,12 +88,12 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             val index = currentRow - startRow + 1
             val inRow = sheet.getRow(rowIndex)
 
-            println(s"    $index ${inRow("C").value} ${inRow("D").value}")
+            //println(s"    $index ${inRow("C").value} ${inRow("D").value}")
 
             val outRow = outSheet.getOrCopyRow(currentRow, startRow)
             currentRow += 1
             outRow("A").value = index
-            outRow("B").value = inRow("B").value
+            //outRow("B").value = inRow("B").value
             outRow("C").value = inRow("D").value
             outRow("D").value = inRow("C").value
             outRow("E").value = inRow("E").value
@@ -79,9 +108,11 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           outWorkbook.save(destDir / dw / cs / s"${cs}待遇人员入户核查表.xlsx")
         }
       }
+      println(s"\n共计: ${total}")
     }
   }
 
   addSubCommand(retiredTables)
+  addSubCommand(zipSubDir)
 
 }
