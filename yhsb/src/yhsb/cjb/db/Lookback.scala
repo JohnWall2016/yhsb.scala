@@ -11,6 +11,7 @@ case class LBTable1(
   dataType: String,
   reserve1: String,
   reserve2: String,
+  reserve3: String,
 )
 
 trait CardsData { this: MysqlJdbcContext[_] =>
@@ -25,6 +26,7 @@ trait CardsData { this: MysqlJdbcContext[_] =>
       _.dataType -> "data_type",
       _.reserve1 -> "reserve1",
       _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
     )
   }
 }
@@ -41,6 +43,7 @@ trait JbData { this: MysqlJdbcContext[_] =>
       _.dataType -> "data_type",
       _.reserve1 -> "reserve1",
       _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
     )
   }
 }
@@ -57,6 +60,7 @@ trait QmcbData { this: MysqlJdbcContext[_] =>
       _.dataType -> "data_type",
       _.reserve1 -> "reserve1",
       _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
     )
   }
 }

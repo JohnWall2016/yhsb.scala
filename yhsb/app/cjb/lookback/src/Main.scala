@@ -137,7 +137,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           cardData.quoted,
           f.toString(),
           2,
-          fields = Seq("C", "B", "D", "I", "J", "社保卡", "", "")
+          fields = Seq("C", "B", "D", "I", "J", "社保卡", "", "", "")
         )
       }
     }
@@ -163,9 +163,33 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           jbData.quoted,
           f.toString(),
           2,
-          fields = Seq("F", "D", "A", "", "", "居保", "", "")
+          fields = Seq("F", "D", "A", "", "", "居保", "", "", "")
         )
       }
+    }
+  }
+
+  val loadQmcbData = new Subcommand("ldqmcb") with InputFile {
+    descr("导入全民参保数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(qmcbData.delete)
+        println("结束清除数据")
+      }
+
+      println(s"导入 ${inputFile()}")
+      Lookback2021.loadExcel(
+        qmcbData.quoted,
+        inputFile(),
+        3,
+        fields = Seq("C", "B", "D", "", "", "全民参保", "K", "L", "M")
+      )
     }
   }
 
@@ -173,4 +197,5 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(zipSubDir)
   addSubCommand(loadCardsData)
   addSubCommand(loadJbData)
+  addSubCommand(loadQmcbData)
 }
