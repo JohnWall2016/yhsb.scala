@@ -13,8 +13,8 @@ object Context {
         entity: Entity,
         excel: T,
         startRow: Int,
-        endRow: Int,
-        fields: Seq[String],
+        endRow: Int = -1,
+        fields: Seq[String] = Seq(),
         noQuoted: Seq[String] = null,
         printSql: Boolean = false,
         ident: String = "",
@@ -29,7 +29,9 @@ object Context {
 
       val builder = new StringBuilder()
 
-      for (index <- (startRow - 1) until endRow) {
+      val endRow_ = if (endRow == -1) sheet.getLastRowNum() + 1 else endRow
+
+      for (index <- (startRow - 1) until endRow_) {
         try {
           val values = mutable.ArrayBuffer[String]()
           for (row <- fields) {

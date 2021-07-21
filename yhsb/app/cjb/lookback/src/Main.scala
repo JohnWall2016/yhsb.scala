@@ -14,7 +14,12 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.io.File
 import java.nio.file.Path
+
 import yhsb.base.datetime.Formatter
+import yhsb.base.command.InputDir
+import yhsb.cjb.db.Lookback2021
+
+import yhsb.base.db.Context.JdbcContextOps
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -24,7 +29,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
   banner("回头看数据处理程序")
 
-  val zipSubDir = new Subcommand("zip") with InputFile {
+  val zipSubDir = new Subcommand("zip") with InputDir {
     descr("打包子目录")
 
     val fileNameTemplate = trailArg[String](
@@ -32,11 +37,11 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     )
 
     def execute(): Unit = {
-      new File(inputFile()).listFiles.foreach { f =>
+      new File(inputDir()).listFiles.foreach { f =>
         if (f.isDirectory()) {
           zip.packDir(
             f,
-            inputFile() / s"${fileNameTemplate()}(${f.getName()})${Formatter.formatDate()}.zip"
+            inputDir() / s"${fileNameTemplate()}(${f.getName()})${Formatter.formatDate()}.zip"
           )
         }
       }
@@ -112,7 +117,33 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val loadCardsData = new Subcommand("ldcards") with InputDir {
+    descr("生成待遇人员核查表")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(cardData.delete)
+        println("结束清除数据")
+      }
+
+      new File(inputDir()).listFiles.foreach { f =>
+        println(s"导入 $f")
+        Lookback2021.loadExcel(
+          cardData.quoted,
+          f.toString(),
+          2,
+          fields = Seq("C", "B", "D", "I", "J", "社保卡", "", "")
+        )
+      }
+    }
+  }
+
   addSubCommand(retiredTables)
   addSubCommand(zipSubDir)
-
+  addSubCommand(loadCardsData)
 }
