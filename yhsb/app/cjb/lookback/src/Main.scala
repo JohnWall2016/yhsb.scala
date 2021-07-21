@@ -118,7 +118,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   }
 
   val loadCardsData = new Subcommand("ldcards") with InputDir {
-    descr("生成待遇人员核查表")
+    descr("导入社保卡数据")
 
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
@@ -143,7 +143,34 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val loadJbData = new Subcommand("ldjb") with InputDir {
+    descr("导入居保数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(jbData.delete)
+        println("结束清除数据")
+      }
+
+      new File(inputDir()).listFiles.foreach { f =>
+        println(s"导入 $f")
+        Lookback2021.loadExcel(
+          jbData.quoted,
+          f.toString(),
+          2,
+          fields = Seq("F", "D", "A", "", "", "居保", "", "")
+        )
+      }
+    }
+  }
+
   addSubCommand(retiredTables)
   addSubCommand(zipSubDir)
   addSubCommand(loadCardsData)
+  addSubCommand(loadJbData)
 }
