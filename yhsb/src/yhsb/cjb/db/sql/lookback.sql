@@ -59,3 +59,38 @@ create table union_data(
     reserve2 varchar(32),
     reserve3 varchar(32)
 );
+
+create table retired_data(
+    area_code varchar(32),
+    idcard varchar(32) primary key,
+    name varchar(32),
+    address varchar(128),
+    card_number varchar(32),
+    bank_name varchar(32),
+    card_type varchar(32),
+    retired_type varchar(32),
+    stop_time varchar(32),
+    phone varchar(32),
+    old_address varchar(128)
+);
+
+
+insert into union_data select * from jb_data;
+
+insert into union_data select * from cards_data where idcard not in (select idcard from jb_data);
+
+insert into union_data select * from qmcb_data on duplicate key update union_data.idcard=union_data.idcard;
+
+select count(*) from union_data;
+
+select count(*) from retired_data;
+
+select * from retired_data limit 100;
+
+select * from union_data where address like '%雨湖路街道%大埠桥社区%';
+
+select count(*) from union_data where reserve1 is not null and reserve1<>'';
+
+select data_type, count(*) from union_data where reserve1 is not null and reserve1<>'' group by data_type;
+
+select reserve1, reserve2, count(*) from union_data where reserve1 is not null and reserve1<>'' group by reserve1, reserve2;

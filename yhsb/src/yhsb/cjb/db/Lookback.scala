@@ -65,8 +65,60 @@ trait QmcbData { this: MysqlJdbcContext[_] =>
   }
 }
 
+trait UnionData { this: MysqlJdbcContext[_] =>
+  val unionData = quote {
+    querySchema[LBTable1](
+      "union_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.address -> "address",
+      _.bankName -> "bank_name",
+      _.cardNumber -> "card_number",
+      _.dataType -> "data_type",
+      _.reserve1 -> "reserve1",
+      _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
+    )
+  }
+}
+
+case class RetiredTable(
+  idCard: String,
+  name: String,
+  areaCode: String,
+  address: String,
+  bankName: String,
+  cardNumber: String,
+  cardType: String,
+  retiredType: String,
+  stopTime: String,
+  phone: String,
+  oldAddress: String,
+)
+
+trait RetiredData { this: MysqlJdbcContext[_] =>
+  val retiredData = quote {
+    querySchema[RetiredTable](
+      "retired_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.address -> "address",
+      _.bankName -> "bank_name",
+      _.cardNumber -> "card_number",
+      _.areaCode -> "area_code",
+      _.cardType -> "card_type",
+      _.retiredType -> "retired_type",
+      _.stopTime -> "stop_time",
+      _.phone -> "phone",
+      _.oldAddress -> "old_address"
+    )
+  }
+}
+
 object Lookback2021
   extends MysqlJdbcContext(LowerCase, "lookback2021")
      with CardsData
      with JbData
      with QmcbData
+     with UnionData
+     with RetiredData
