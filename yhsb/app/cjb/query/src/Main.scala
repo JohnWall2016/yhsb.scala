@@ -1474,27 +1474,64 @@ class Query(args: collection.Seq[String]) extends Command(args) {
         workbook.save(inputFile().insertBeforeLast(".upd"))
       }
     }
+  }
 
-    val outsideDataFile = """D:\数据核查\20210719\雨湖区死亡冒领下发数据.xls"""
+  val outsideDataFile = """D:\数据核查\20210719\雨湖区死亡冒领下发数据.xls"""
 
-    def loadOutsideData(): HashMap[String, (String, Int)] = {
-      val workbook = Excel.load(outsideDataFile)
-      val sheet = workbook.getSheetAt(0)
-      val map = HashMap[String, (String, Int)]()
-      for (row <- sheet.rowIterator(1)) {
-        val idCard = row("E").value
-        val source = row("L").value
-        val deathYearMonth = row("G").value.toInt
-        if (map.contains(idCard)) {
-          val (oldSource, oldDeathYearMonth) = map(idCard)
-          if (deathYearMonth < oldDeathYearMonth) {
-            map(idCard) = (source, deathYearMonth)
-          }
-        } else {
+  def loadOutsideData(): HashMap[String, (String, Int)] = {
+    val workbook = Excel.load(outsideDataFile)
+    val sheet = workbook.getSheetAt(0)
+    val map = HashMap[String, (String, Int)]()
+    for (row <- sheet.rowIterator(1)) {
+      val idCard = row("E").value
+      val source = row("L").value
+      val deathYearMonth = row("G").value.toInt
+      if (map.contains(idCard)) {
+        val (oldSource, oldDeathYearMonth) = map(idCard)
+        if (deathYearMonth < oldDeathYearMonth) {
           map(idCard) = (source, deathYearMonth)
         }
+      } else {
+        map(idCard) = (source, deathYearMonth)
       }
-      map
+    }
+    map
+  }
+
+  val outside = new Subcommand("outside") with InputFile with RowRange {
+    descr("查询外部死亡数据")
+
+    def execute(): Unit = {
+      println(s"导入 $outsideDataFile")
+      val map = loadOutsideData()
+      println("结束导入")
+
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+      for {
+        i <- (startRow() - 1) until endRow()
+        row = sheet.getRow(i)
+        idCard = row("E").value.trim()
+        deathYearMonth = row("I").value.trim().toInt
+      } {
+        print(s"${i + 2 - startRow()} $idCard ")
+        if (map.contains(idCard)) {
+          val (source, outsideDeathYearMonth) = map(idCard)
+          val deltaMonths = {
+            val deathYear = deathYearMonth / 100
+            val deathMonth = deathYearMonth % 100
+            val outsideDeathYear = outsideDeathYearMonth / 100
+            val outsideDeathMonth = outsideDeathYearMonth % 100
+            (deathYear - outsideDeathYear) * 12 + deathMonth - outsideDeathMonth
+          }
+          print(s"$deathYearMonth $source $deltaMonths")
+          row.getOrCreateCell("V").value = source
+          row.getOrCreateCell("W").value = outsideDeathYearMonth
+          row.getOrCreateCell("X").value = deltaMonths
+        }
+        println()
+      }
+      workbook.save(inputFile().insertBeforeLast(".upd"))
     }
   }
 
@@ -1513,6 +1550,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(payAvg)
   addSubCommand(cert)
   addSubCommand(inherit)
+  addSubCommand(outside)
 }
 
 object Main {
