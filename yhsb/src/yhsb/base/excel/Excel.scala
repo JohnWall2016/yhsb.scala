@@ -26,7 +26,10 @@ object Excel {
 
   import ExcelType._
 
-  def load[T : PathConvertible](file: T, excelType: ExcelType = Auto): Workbook = {
+  def load[T: PathConvertible](
+      file: T,
+      excelType: ExcelType = Auto
+  ): Workbook = {
     val path: Path = file
     val fileName = path.toString()
     val ty = excelType match {
@@ -54,6 +57,63 @@ object Excel {
     }
   }
 
+  def create(
+      templateFilePath: String = null,
+      excelType: ExcelType = Auto
+  ): Workbook = {
+    if (templateFilePath != null) {
+      load(templateFilePath)
+    } else {
+      if (excelType == Auto || excelType == Xls) new HSSFWorkbook()
+      else new XSSFWorkbook()
+    }
+  }
+
+  def export[T](
+      items: Seq[T],
+      filePath: String,
+      writeRow: (Int, Row, T) => Unit,
+      writeFirstRow: Row => Unit = null,
+      limitPerSheet: Int = 3000
+  ) = {
+    val ty = {
+      val fn = filePath.toLowerCase()
+      if (fn.endsWith(".xls")) {
+        Xls
+      } else if (fn.endsWith(".xlsx")) {
+        Xlsx
+      } else {
+        Xlsx
+      }
+    }
+    val workbook = Excel.create(excelType = ty)
+
+    val total = items.size
+    val limit = if (writeFirstRow != null) limitPerSheet - 1 else limitPerSheet
+
+    val sheetCount = (total + limit) / limit
+
+    var itemIndex = 0
+    for (sheetIndex <- 0 until sheetCount) {
+      val sheet = workbook.createSheet()
+      var rowIndex = 0
+      if (writeFirstRow != null) {
+        writeFirstRow(sheet.createRow(rowIndex))
+        rowIndex += 1
+      }
+      var index = itemIndex
+      while(index < Math.min(total, itemIndex + limit)) {
+        val row = sheet.createRow(rowIndex)
+        rowIndex += 1
+        writeRow(index, row, items(index))
+        index += 1
+      }
+      itemIndex = index
+    }
+
+    workbook.save(filePath)
+  }
+
   sealed trait Loadable[T] {
     def apply(loadable: T): Workbook
   }
@@ -69,14 +129,16 @@ object Excel {
   }
 
   implicit class WorkbookOps(val book: Workbook) extends AnyVal {
-    def save[T : PathConvertible](file: T): Unit = {
+    def save[T: PathConvertible](file: T): Unit = {
       use(Files.newOutputStream(file)) { out =>
         book.write(out)
       }
     }
 
-    def saveIf[T : PathConvertible](condition: => Boolean)(
-      file: T, ifTrue: String => Unit, ifFalse: String => Unit
+    def saveIf[T: PathConvertible](condition: => Boolean)(
+        file: T,
+        ifTrue: String => Unit,
+        ifFalse: String => Unit
     ) = {
       val path: Path = file
       if (condition) {
@@ -87,7 +149,9 @@ object Excel {
       }
     }
 
-    def saveAfter[T : PathConvertible](file: T)(afterAction: String => Unit): Unit = {
+    def saveAfter[T: PathConvertible](
+        file: T
+    )(afterAction: String => Unit): Unit = {
       val path: Path = file
       book.save(path)
       afterAction(path.toString())
@@ -116,7 +180,7 @@ object Excel {
       if (newRow == null) {
         newRow = sheet.createRow(targetRowIndex)
       }
-      
+
       newRow.setHeight(srcRow.getHeight)
 
       for (index <- srcRow.getFirstCellNum until srcRow.getLastCellNum()) {
@@ -200,12 +264,12 @@ object Excel {
     }
 
     /**
-      * Get an iterator of rows.
-      *
-      * @param start the first row index from 0
-      * @param end the last inclusive row index
-      * @return
-      */
+     * Get an iterator of rows.
+     *
+     * @param start the first row index from 0
+     * @param end the last inclusive row index
+     * @return
+     */
     def rowIterator(start: Int, end: Int = -1): Iterator[Row] = {
       new Iterator[Row]() {
         private var index = Math.max(0, start)
@@ -242,15 +306,20 @@ object Excel {
           if (row != null) sheet.removeRow(row)
         }
         if (endRowIndex < lastRowNum) {
-          sheet.shiftRows(endRowIndex + 1, lastRowNum, rowIndex - endRowIndex - 1)
+          sheet.shiftRows(
+            endRowIndex + 1,
+            lastRowNum,
+            rowIndex - endRowIndex - 1
+          )
         }
       }
     }
 
     def deleteRow(rowIndex: Int) = deleteRows(rowIndex, 1)
 
-    def deleteRowIf(startRow: Int, endRow: Int = sheet.getLastRowNum() + 1)
-      (cond: Row => Boolean) = {
+    def deleteRowIf(startRow: Int, endRow: Int = sheet.getLastRowNum() + 1)(
+        cond: Row => Boolean
+    ) = {
       var startIndex = startRow
       var endRowIndex = endRow
       while (startIndex < endRowIndex) {
@@ -320,7 +389,10 @@ object Excel {
       row(colName).value = value
     }
 
-    def setCellValue[T: ValidateCellValue](colName: String, value: Option[T]) = {
+    def setCellValue[T: ValidateCellValue](
+        colName: String,
+        value: Option[T]
+    ) = {
       row(colName).value = value
     }
 
@@ -374,13 +446,14 @@ object Excel {
     def setValue(value: Any): Unit = {
       if (cell != null) {
         value match {
-          case null => cell.setBlank()
+          case null      => cell.setBlank()
           case v: Double => cell.value_=(v)(ValidateCellValue.DoubleCellValue)
-          case v: BigDecimal => cell.value_=(v)(ValidateCellValue.BigDecimalCellValue)
-          case v: Int => cell.value_=(v)(ValidateCellValue.IntCellValue)
-          case v: String => cell.value_=(v)(ValidateCellValue.StringCellValue)
+          case v: BigDecimal =>
+            cell.value_=(v)(ValidateCellValue.BigDecimalCellValue)
+          case v: Int       => cell.value_=(v)(ValidateCellValue.IntCellValue)
+          case v: String    => cell.value_=(v)(ValidateCellValue.StringCellValue)
           case v: Option[_] => if (v.isDefined) setValue(v.get)
-          case v => throw new Exception(s"unsupported cell value: $v")
+          case v            => throw new Exception(s"unsupported cell value: $v")
         }
       }
     }
@@ -404,7 +477,8 @@ object Excel {
         else cell.setBlank()
       }
     }
-    implicit object JBigDecimalCellValue extends ValidateCellValue[java.math.BigDecimal] {
+    implicit object JBigDecimalCellValue
+      extends ValidateCellValue[java.math.BigDecimal] {
       def setCellValue(cell: Cell, value: java.math.BigDecimal): Unit = {
         if (cell == null) return
         if (value != null) cell.setCellValue(BigDecimal(value).toDouble)

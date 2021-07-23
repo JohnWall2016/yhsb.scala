@@ -270,6 +270,77 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val loadPoliceData = new Subcommand("ldpolice") with InputFile {
+    descr("导入公安数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+      import scala.jdk.CollectionConverters._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(policeData.delete)
+        println("结束清除数据")
+      }
+
+      println(s"导入 ${inputFile()}")
+      val workbook = Excel.load(inputFile())
+      for (sheet <- workbook.sheetIterator().asScala) {
+        println(s"  导入表: ${sheet.getSheetName()}")
+        Lookback2021.loadSheet(
+          policeData.quoted,
+          sheet,
+          2,
+          fields = Seq("B", "A", "C", "", "", "公安", "", "", "")
+        )
+      }
+    }
+  }
+
+  val exportPoliceData = new Subcommand("expolice") with InputFile {
+    descr("导出公安数据")
+
+    val condition = trailArg[String](descr = "查询条件")
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+      import scala.jdk.CollectionConverters._
+
+      val items: List[LBTable1] = run {
+        quote {
+          infix"$policeData #${condition()}".as[Query[LBTable1]]
+        }
+      }
+
+      /*
+      val items: List[LBTable1] = run {
+        policeData.filter(d => infix"REGEXP_LIKE(${d.address}, ${lift(condition())}".as[Boolean])
+      }
+       */
+      println(items.size)
+
+      Excel.export[LBTable1](
+        items,
+        inputFile(),
+        (index, row, item) => {
+          row.getOrCreateCell("A").value = item.name
+          row.getOrCreateCell("B").value = item.idCard
+          row.getOrCreateCell("C").value = item.address
+          row.getOrCreateCell("D").value = "430302"
+        },
+        (row) => {
+          row.getOrCreateCell("A").value = "姓名"
+          row.getOrCreateCell("B").value = "身份证号码"
+          row.getOrCreateCell("C").value = "地址"
+          row.getOrCreateCell("D").value = "行政区划"
+        },
+        60000
+      )
+    }
+  }
+
   val deleteRetired = new Subcommand("delretire") {
     descr("删除合并数据中的待遇人员")
 
@@ -333,11 +404,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             case _ =>
           }
         }
-
-        //val (matchDwName, matchCsName) = Division.getDwAndCsName(division).get
-        //if (dwName.isEmpty()) dwName = matchDwName
-        //if (csName.isEmpty()) csName = matchCsName
-        //list.addOne(XzqhInfo(matchDwName, matchCsName, dwName, csName))
       }
       list
     }
@@ -390,7 +456,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
       var dwName = ""
       var total = 0
-      for ((dw, cs, size) <- groups/*.take(4)*/) {
+      for ((dw, cs, size) <- groups /*.take(4)*/ ) {
         if (dwName != dw) {
           val subTotal =
             groups.foldLeft(0)((n, e) => if (e._1 == dw) n + e._3.toInt else n)
@@ -446,6 +512,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(loadJbData)
   addSubCommand(loadQmcbData)
   addSubCommand(loadRetiredData)
+  addSubCommand(loadPoliceData)
+  addSubCommand(exportPoliceData)
   addSubCommand(unionAllData)
   addSubCommand(deleteRetired)
   addSubCommand(updateDwAndCs)
