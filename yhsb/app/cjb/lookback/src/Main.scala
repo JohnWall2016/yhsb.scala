@@ -6,6 +6,8 @@ import yhsb.base.command.RowRange
 import yhsb.base.excel.Excel._
 import yhsb.base.io.Path._
 
+import yhsb.base.text.String._
+
 import yhsb.base.zip
 
 import yhsb.cjb.net.protocol.Division.GroupOps
@@ -314,11 +316,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
         }
       }
 
-      /*
-      val items: List[LBTable1] = run {
-        policeData.filter(d => infix"REGEXP_LIKE(${d.address}, ${lift(condition())}".as[Boolean])
-      }
-       */
       println(items.size)
 
       Excel.export[LBTable1](
@@ -506,16 +503,226 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val generateAddressTable = new Subcommand("gencomp") {
+    descr("自动生成部分户籍地址到行政区划匹配表")
+
+    case class XzqhInfo(
+        matchDwName: String,
+        matchCsName: String,
+        dwName: String,
+        csName: String
+    )
+    val xzqhExcel = """D:\数据核查\待遇核查回头看\行政区划对照表.xls"""
+
+    val regExps = Seq[Regex](
+      "湘潭市雨湖区(((.*?)乡)((.*?)社区)).*".r,
+      "湘潭市雨湖区(((.*?)乡)((.*?)村)).*".r,
+      "湘潭市雨湖区(((.*?)乡)((.*?政府机关))).*".r,
+      "湘潭市雨湖区(((.*?)街道)办事处((.*?)社区)).*".r,
+      "湘潭市雨湖区(((.*?)街道)办事处((.*?政府机关))).*".r,
+      "湘潭市雨湖区(((.*?)镇)((.*?)社区)).*".r,
+      "湘潭市雨湖区(((.*?)镇)((.*?)居委会)).*".r,
+      "湘潭市雨湖区(((.*?)镇)((.*?)村)).*".r,
+      "湘潭市雨湖区(((.*?)街道)办事处((.*?)村)).*".r,
+      "湘潭市雨湖区(((.*?)镇)((.*?政府机关))).*".r
+    )
+
+    def loadXzqhTable(): collection.Seq[XzqhInfo] = {
+      val workbook = Excel.load(xzqhExcel)
+      val sheet = workbook.getSheetAt(0)
+
+      val list = ListBuffer[XzqhInfo]()
+      for (row <- sheet.rowIterator(1)) {
+        val division = row("B").value
+        var dwName = row("C").value
+        var csName = row("D").value
+
+        for (r <- regExps) {
+          division match {
+            case r(_, dw, dwMatch, cs, csMatch) =>
+              list.addOne(
+                XzqhInfo(
+                  dwMatch,
+                  csMatch,
+                  if (dwName.isEmpty()) dw else dwName,
+                  if (csName.isEmpty()) cs else csName
+                )
+              )
+            case _ =>
+          }
+        }
+      }
+      list
+    }
+
+    val addressTable = """D:\数据核查\待遇核查回头看\公安数据\户籍地址到行政区划匹配表.xlsx"""
+
+    def execute(): Unit = {
+      val list = loadXzqhTable()
+      val workbook = Excel.load(addressTable)
+      val sheet = workbook.getSheetAt(0)
+      var rowIndex = 1
+      for (info <- list) {
+        val row = sheet.createRow(rowIndex)
+        rowIndex += 1
+        row.getOrCreateCell("A").value = rowIndex - 1
+        row.getOrCreateCell("B").value = info.matchDwName
+        row.getOrCreateCell("C").value = info.matchCsName
+        row.getOrCreateCell("D").value = ""
+        row.getOrCreateCell("E").value = info.dwName
+        row.getOrCreateCell("F").value = info.csName
+        row.getOrCreateCell("G").value = ""
+        row.getOrCreateCell("H").value = ""
+      }
+      workbook.save(addressTable.insertBeforeLast("up"))
+    }
+  }
+
+  val unionTable1Data = new Subcommand("untable1") {
+    descr("合并公安、居保参保数据数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(table1Data.delete)
+        println("结束清除数据")
+      }
+
+      def unionTable(tableName: String, cond: String = "") = {
+        println(s"开始合并 $tableName")
+        val unionTable = table1Data.quoted.name
+        Lookback2021.execute(
+          s"insert into $unionTable " +
+            s"(select * from $tableName $cond) " +
+            s"on duplicate key update ${unionTable}.idcard=${unionTable}.idcard;",
+          true
+        )
+        println(s"结束合并 $tableName")
+      }
+
+      unionTable(
+        policeData.quoted.name,
+        "where address not like '%响水乡%' and address not like '%和平街道%' and address not like '%雨湖区红旗社区%' and address not like '%九华%' and address not like '%雨湖区响水%' and address not like '%科大%' and address not like '%石马头%' and address not like '%雨湖区石码头%' and address not like '%雨湖区合山社区%' and address not like '%雨湖区吉利社区%' and address not like '雨湖区将军渡社区' and address not like '%雨湖区杉山社区%' ORDER BY CONVERT( address USING gbk )"
+      )
+      unionTable(jbData.quoted.name)
+    }
+  }
+
+  val mapTable1Data = new Subcommand("mptable1")
+    with InputFile
+    with RowRange {
+    descr("将附表1数据分到乡镇(街道)、村(社区)")
+
+    case class AddressMapInfo(
+        matchField1: String,
+        matchField2: String,
+        matchField3: String,
+        countryName: String,
+        villageName: String,
+        groupName: String
+    )
+
+    def loadAddressTable(): Seq[AddressMapInfo] = {
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+
+      for (index <- (startRow() - 1) until endRow()) yield {
+        val row = sheet.getRow(index)
+        AddressMapInfo(
+          row("B").value,
+          row("C").value,
+          row("D").value,
+          row("E").value,
+          row("F").value,
+          row("G").value
+        )
+      }
+    }
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      val list = loadAddressTable()
+
+      val table1 = table1Data.quoted.name
+
+      for (info <- list) {
+        Lookback2021.execute(
+          s"update $table1 " +
+            s"set reserve1='${info.countryName}', reserve2='${info.villageName}', reserve3='${info.groupName}' " +
+            s"where reserve1='' and address like '%${info.matchField1}%${info.matchField2}%${info.matchField3}%';",
+          true
+        )
+      }
+    }
+  }
+
+  val exportTable1Data = new Subcommand("extable1") with InputFile {
+    descr("导出附表1数据")
+
+    val condition = trailArg[String](descr = "查询条件")
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+      import scala.jdk.CollectionConverters._
+
+      val items: List[LBTable1] = run {
+        quote {
+          infix"$table1Data #${condition()}".as[Query[LBTable1]]
+        }
+      }
+
+      println(items.size)
+
+      Excel.export[LBTable1](
+        items,
+        inputFile(),
+        (index, row, item) => {
+          row.getOrCreateCell("A").value = item.name
+          row.getOrCreateCell("B").value = item.idCard
+          row.getOrCreateCell("C").value = item.address
+          row.getOrCreateCell("D").value = "430302"
+          row.getOrCreateCell("E").value = item.reserve1
+          row.getOrCreateCell("F").value = item.reserve2
+        },
+        (row) => {
+          row.getOrCreateCell("A").value = "姓名"
+          row.getOrCreateCell("B").value = "身份证号码"
+          row.getOrCreateCell("C").value = "地址"
+          row.getOrCreateCell("D").value = "行政区划"
+          row.getOrCreateCell("E").value = "乡镇（街道）"
+          row.getOrCreateCell("F").value = "村（社区）"
+        },
+        60000
+      )
+    }
+  }
+
   addSubCommand(retiredTables)
+
   addSubCommand(zipSubDir)
+
   addSubCommand(loadCardsData)
   addSubCommand(loadJbData)
   addSubCommand(loadQmcbData)
   addSubCommand(loadRetiredData)
   addSubCommand(loadPoliceData)
   addSubCommand(exportPoliceData)
+
   addSubCommand(unionAllData)
+
   addSubCommand(deleteRetired)
   addSubCommand(updateDwAndCs)
+
   addSubCommand(cbckTables)
+
+  addSubCommand(generateAddressTable)
+
+  addSubCommand(unionTable1Data)
+  addSubCommand(mapTable1Data)
+  addSubCommand(exportTable1Data)
 }

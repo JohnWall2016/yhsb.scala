@@ -86,6 +86,17 @@ create table retired_data(
     old_address varchar(128)
 );
 
+create table table1_data(
+    idcard varchar(32) primary key,
+    name varchar(32),
+    address varchar(128),
+    bank_name varchar(32),
+    card_number varchar(32),
+    data_type varchar(32),
+    reserve1 varchar(32),
+    reserve2 varchar(32),
+    reserve3 varchar(32)
+);
 
 insert into union_data select * from jb_data;
 
@@ -115,7 +126,7 @@ select count(*) from police_data as a, cards_data as b where a.idcard=b.idcard;
 
 select count(*) from police_data as a where a.address like '%雨湖区%';
 
-select count(*) from police_data where address like '%响水乡%' or address like '%和平街道%' or address like '%雨湖区红旗社区%' or address like '%九华%';
+select count(*) from police_data where address like '%响水乡%' or address like '%和平街道%' or address like '%雨湖区红旗社区%' or address like '%九华%' or address like '%石马头%' or address like '%科大%';
 
 select count(*) from police_data as a where a.address like '%雨湖区红旗社区%' or a.address like '%九华%';
 
@@ -126,3 +137,11 @@ select * from police_data as a where a.address like '%响水%' and a.address not
 
 select * from police_data as a where a.address like '%响水乡%' or a.address like '%和平
 街道%' into outfile 'outfile.csv' fields terminated by ',';
+
+where address not like '%响水乡%' and address not like '%和平街道%' and address not like '%雨湖区红旗社区%' and address not like '%九华%' and address not like '%石马头%' and address not like '%科大%' ORDER BY CONVERT( address USING gbk )
+
+mill -i yhsb.app.cjb.lookback expolice D:\数据核查\待遇核查回头看\九华公安比对未参保数据.xls  "where address like '%响水乡%' or address like '%和平街道%' or address like '%雨湖区红旗社区%' or address like '%九华%' or address like '%雨湖区响水%' or address like '%科大%' or address like '%石马头%' or address like '%雨湖区石码头%' or address like '%雨湖区合山社区%' or address like '%雨湖区吉利社区%' or address like '雨湖区将军渡社区' or address like '%雨湖区杉山社区%' ORDER BY CONVERT( address USING gbk )"
+
+mill -i yhsb.app.cjb.lookback expolice D:\数据核查\待遇核查回头看\雨湖区公安比对未参保数据.xls  "where address not like '%响水乡%' and address not like '%和平街道%' and address not like '%雨湖区红旗社区%' and address not like '%九华%' and address not like '%雨湖区响水%' and address not like '%科大%' and address not like '%石马头%' and address not like '%雨湖区石码头%' and address not like '%雨湖区合山社区%' and address not like '%雨湖区吉利社区%' and address not like '雨湖区将军渡社区' and address not like '%雨湖区杉山社区%' ORDER BY CONVERT( address USING gbk )"
+
+select data_type, count(*) from table1_data group by data_type;

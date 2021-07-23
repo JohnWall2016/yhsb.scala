@@ -99,6 +99,23 @@ trait PoliceData { this: MysqlJdbcContext[_] =>
   }
 }
 
+trait Table1Data { this: MysqlJdbcContext[_] =>
+  val table1Data = quote {
+    querySchema[LBTable1](
+      "table1_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.address -> "address",
+      _.bankName -> "bank_name",
+      _.cardNumber -> "card_number",
+      _.dataType -> "data_type",
+      _.reserve1 -> "reserve1",
+      _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
+    )
+  }
+}
+
 case class RetiredTable(
   idCard: String,
   name: String,
@@ -140,3 +157,4 @@ object Lookback2021
      with UnionData
      with RetiredData
      with PoliceData
+     with Table1Data
