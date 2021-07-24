@@ -129,6 +129,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
+    val reserve1 = opt[String](descr = "reserve1字段设置内容", default = Some(""))
+
     def execute(): Unit = {
       import yhsb.cjb.db.Lookback2021._
 
@@ -144,7 +146,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           cardData.quoted,
           f.toString(),
           2,
-          fields = Seq("C", "B", "D", "I", "J", "社保卡", "", "", "")
+          fields = Seq("C", "B", "D", "I", "J", "社保卡", reserve1(), "", "")
         )
       }
     }
@@ -433,7 +435,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     def execute(): Unit = {
       import yhsb.cjb.db.Lookback2021._
 
-      val destDir = outputDir / "参保与持卡情况表"
+      val destDir = outputDir / "参保与持卡情况表" / "第一批"
 
       println("生成参保和持卡情况核查表")
       if (Files.exists(destDir)) {
@@ -612,9 +614,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
-  val mapTable1Data = new Subcommand("mptable1")
-    with InputFile
-    with RowRange {
+  val mapTable1Data = new Subcommand("mptable1") with InputFile with RowRange {
     descr("将附表1数据分到乡镇(街道)、村(社区)")
 
     case class AddressMapInfo(
@@ -702,6 +702,140 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val updateTable1Data = new Subcommand("uptable1") with InputFile {
+    descr("更新附表1乡镇(街道)、村(社区)数据")
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      val file = new File(inputFile())
+
+      if (file.isDirectory()) {
+        file.listFiles.foreach { f =>
+          if (f.isFile()) {
+            updateFromFile(f)
+          }
+        }
+      } else {
+        updateFromFile(file)
+      }
+
+      def updateFromFile(file: File) = {
+        println(s"更新自 $file")
+        val workbook = Excel.load(file)
+        val sheet = workbook.getSheetAt(0)
+        transaction {
+          for (row <- sheet.rowIterator(1)) {
+            val idCard = row("B").value.trim()
+            val countryName = row("E").value.trim()
+            val villageName = row("F").value.trim()
+
+            if (idCard != "" && countryName != "" && villageName != "") {
+              println(s"$idCard $countryName $villageName")
+              run(
+                table1Data
+                  .filter(_.idCard == lift(idCard))
+                  .update(
+                    _.reserve1 -> lift(countryName),
+                    _.reserve2 -> lift(villageName)
+                  )
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+
+  val generateTable1Tables = new Subcommand("gntable1") {
+    descr("生成参保和持卡情况核查表")
+
+    val outputDir = """D:\数据核查\待遇核查回头看"""
+
+    val template = outputDir / """参保与持卡情况表.xlsx"""
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      val destDir = outputDir / "参保与持卡情况表" / "第二批"
+
+      println("生成参保和持卡情况核查表")
+      if (Files.exists(destDir)) {
+        Files.move(destDir, s"${destDir.toString}.orig")
+      }
+      Files.createDirectory(destDir)
+
+      val groups = run(
+        table1Data
+          .filter(d =>
+            d.reserve1 != "" && d.reserve2 != "" /*&& d.reserve2 == "羊牯塘社区"*/
+          )
+          .sortBy(d => (d.reserve1, d.reserve2))
+          .groupBy(d => (d.reserve1, d.reserve2))
+          .map { case (group, items) =>
+            (group._1, group._2, items.size)
+          }
+      )
+
+      transaction {
+        var dwName = ""
+        var total = 0
+        for ((dw, cs, size) <- groups /*.take(4)*/ ) {
+          if (dwName != dw) {
+            val subTotal =
+              groups.foldLeft(0)((n, e) =>
+                if (e._1 == dw) n + e._3.toInt else n
+              )
+            total += subTotal
+            println(s"\r\n$dw: $subTotal")
+            Files.createDirectory(destDir / dw)
+            dwName = dw
+          }
+          println(s"  $cs: $size")
+          Files.createDirectory(destDir / dw / cs)
+
+          val items: List[LBTable1] = run {
+            quote(
+              infix"${table1Data.filter(d => d.reserve1 == lift(dw) && d.reserve2 == lift(cs))} ORDER BY CONVERT( name USING gbk )"
+                .as[Query[LBTable1]]
+            )
+          }
+
+          val workbook = Excel.load(template)
+          val sheet = workbook.getSheetAt(0)
+
+          val startRow = 6
+          var currentRow = startRow
+
+          items.foreach { item =>
+            val index = currentRow - startRow + 1
+            val row = sheet.getOrCopyRow(currentRow, startRow)
+            currentRow += 1
+
+            //println(s"$index ${item.idCard}")
+
+            row("A").value = index
+            row("C").value = item.name
+            row("D").value = item.idCard
+            row("E").value = item.address
+            if (item.dataType == "居保") {
+              row("F").value = "√"
+              row("H").value = "√"
+            }
+            if (item.cardNumber != "") {
+              row("N").value = "√"
+              row("P").value = item.cardNumber
+              row("Q").value = item.bankName
+            }
+          }
+
+          workbook.save(destDir / dw / cs / s"${cs}参保和持卡情况核查表.xlsx")
+        }
+        println(s"\r\n共计: ${total}")
+      }
+    }
+  }
+
   addSubCommand(retiredTables)
 
   addSubCommand(zipSubDir)
@@ -725,4 +859,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(unionTable1Data)
   addSubCommand(mapTable1Data)
   addSubCommand(exportTable1Data)
+  addSubCommand(updateTable1Data)
+  addSubCommand(generateTable1Tables)
 }
