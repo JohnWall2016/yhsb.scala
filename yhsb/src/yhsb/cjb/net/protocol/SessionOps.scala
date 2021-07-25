@@ -6,7 +6,7 @@ object SessionOps {
   implicit class PersonStopAuditQuery(session: net.Session) {
     def retiredPersonStopAuditQuery(
         idCard: String = "",
-        auditState: String = "0",
+        auditState: String = "",
         operator: String = "",
         startAuditDate: String = "",
         endAuditDate: String = ""

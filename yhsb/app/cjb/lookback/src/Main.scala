@@ -27,6 +27,11 @@ import yhsb.cjb.net.protocol.Division
 import scala.util.matching.Regex
 import yhsb.cjb.db.LBTable1
 import io.getquill.Query
+import yhsb.cjb.net.Session
+import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
+import yhsb.cjb.net.protocol.PayStopReason
+import yhsb.cjb.net.protocol.RetiredPersonPauseQuery
+import yhsb.cjb.net.protocol.PauseReason
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -836,6 +841,73 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  var auditTable2 = new Subcommand("auditTable2") with InputFile with RowRange {
+    descr("审核附件2")
+
+    def execute(): Unit = {
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+
+      Session.use() { session =>
+        for (index <- (startRow() - 1) until endRow()) {
+          val row = sheet.getRow(index)
+          val name = row("B").value
+          val idCard = row("C").value
+          print(s"${index + 1} $idCard $name ")
+          val (error, reason, memo) =
+            if (row("D").value != "是") {
+              ("不健在", "", "")
+            } else if (row("D").value != "是") {
+              ("非本人持卡", "", "")
+            } else {
+              import yhsb.cjb.net.protocol.SessionOps.PersonStopAuditQuery
+
+              val result = session.retiredPersonStopAuditQuery(idCard)
+              if (result.nonEmpty) {
+                print("终止人员 ")
+                val item = result.head
+                //val stopTime = item.stopYearMonth
+                val reason = item.reason
+                print(s"${reason.toString} ")
+                if (reason != PayStopReason.JoinedEmployeeInsurance) {
+                  ("非职保退休", reason.toString(), item.memo)
+                } else {
+                  ("", "", "")
+                }
+              } else {
+                val result = session.request(
+                  RetiredPersonPauseQuery(idCard)
+                )
+                if (result.nonEmpty) {
+                  print("暂停人员 ")
+                  val item = result.head
+                  val reason = item.reason
+                  print(s"${reason.toString} ")
+                  if (reason != PauseReason.NoLifeCertified) {
+                    ("非未认证", reason.toString(), item.memo)
+                  } else {
+                    ("", "", "")
+                  }
+                } else {
+                  ("", "", "")
+                }
+              }
+            }
+
+          if (error != "") {
+            print(error)
+            row.getOrCreateCell("T").value = error
+            row.getOrCreateCell("U").value = reason
+            row.getOrCreateCell("V").value = memo
+          }
+          
+          println()
+        }
+      }
+      workbook.save(inputFile().insertBeforeLast(".au"))
+    }
+  }
+
   addSubCommand(retiredTables)
 
   addSubCommand(zipSubDir)
@@ -861,4 +933,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(exportTable1Data)
   addSubCommand(updateTable1Data)
   addSubCommand(generateTable1Tables)
+
+  addSubCommand(auditTable2)
 }

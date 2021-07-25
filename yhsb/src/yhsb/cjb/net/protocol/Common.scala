@@ -291,6 +291,10 @@ class PauseReason extends MapField {
   }
 }
 
+object PauseReason extends MapField.Val[PauseReason] {
+  val NoLifeCertified = Val("1201")
+}
+
 /** 审核状态 */
 class AuditState extends MapField {
   override def valueMap = {
@@ -317,13 +321,14 @@ class StopReason extends MapField {
 
 object PayStopReason extends MapField.Val[StopReason] {
   val Death = Val("1401")
-  val EnterpriseInsurance = Val("1407")
+  val JoinedEmployeeInsurance = Val("1407")
   val Other = Val("1499")
+  
 }
 
 object JoinStopReason extends MapField.Val[StopReason] {
   val Death = Val("6401")
-  val EnterpriseInsurance = Val("6407")
+  val JoinedEmployeeInsurance = Val("6407")
   val Other = Val("6499")
 }
 
