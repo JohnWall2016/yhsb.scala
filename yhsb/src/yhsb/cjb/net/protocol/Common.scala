@@ -285,6 +285,7 @@ object DFState extends MapField.Val[DFState] {
 /** 暂停参保原因 */
 class PauseReason extends MapField {
   override def valueMap = {
+    case "1200" => "养老保险待遇暂停"
     case "1201" => "养老待遇享受人员未提供生存证明"
     case "1299" => "其他原因暂停养老待遇"
     case "6399" => "其他原因中断缴费"
