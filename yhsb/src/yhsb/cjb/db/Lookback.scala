@@ -149,6 +149,57 @@ trait RetiredData { this: MysqlJdbcContext[_] =>
   }
 }
 
+case class VerifiedTable(
+  idCard: String,
+  name: String,
+  dataType: String,
+  reserve1: String,
+  reserve2: String,
+  reserve3: String,
+)
+
+trait FullCoverData { this: MysqlJdbcContext[_] =>
+  val fullcoverData = quote {
+    querySchema[VerifiedTable](
+      "fullcover_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.dataType -> "data_type",
+      _.reserve1 -> "reserve1",
+      _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
+    )
+  }
+}
+
+trait CollegeStudentData { this: MysqlJdbcContext[_] =>
+  val collegeStudentData = quote {
+    querySchema[VerifiedTable](
+      "college_student_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.dataType -> "data_type",
+      _.reserve1 -> "reserve1",
+      _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
+    )
+  }
+}
+
+trait VerifiedData { this: MysqlJdbcContext[_] =>
+  val verifiedData = quote {
+    querySchema[VerifiedTable](
+      "verified_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.dataType -> "data_type",
+      _.reserve1 -> "reserve1",
+      _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
+    )
+  }
+}
+
 object Lookback2021
   extends MysqlJdbcContext(LowerCase, "lookback2021")
      with CardsData
@@ -158,3 +209,6 @@ object Lookback2021
      with RetiredData
      with PoliceData
      with Table1Data
+     with FullCoverData
+     with CollegeStudentData
+     with VerifiedData

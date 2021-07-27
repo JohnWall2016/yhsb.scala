@@ -98,6 +98,33 @@ create table table1_data(
     reserve3 varchar(32)
 );
 
+create table fullcover_data(
+    idcard varchar(32) primary key,
+    name varchar(32),
+    data_type varchar(32), /* 全覆盖 */
+    reserve1 varchar(32),
+    reserve2 varchar(32),
+    reserve3 varchar(32)
+);
+
+create table college_student_data(
+    idcard varchar(32) primary key,
+    name varchar(32),
+    data_type varchar(32), /* 在校学生 */
+    reserve1 varchar(32),
+    reserve2 varchar(32),
+    reserve3 varchar(32)
+);
+
+create table verified_data(
+    idcard varchar(32) primary key,
+    name varchar(32),
+    data_type varchar(32), /* 全覆盖、在校学生 */
+    reserve1 varchar(32),
+    reserve2 varchar(32),
+    reserve3 varchar(32)
+);
+
 insert into union_data select * from jb_data;
 
 insert into union_data select * from cards_data where idcard not in (select idcard from jb_data);

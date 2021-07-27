@@ -908,6 +908,57 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val loadVerifiedData = new Subcommand("ldverified") {
+    descr("导入之前已核实数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    val fullcover = """D:\数据核查\待遇核查回头看\参保与持卡情况表\之前已核实的数据\全覆盖数据.xls"""
+    val collegeStudent = """D:\数据核查\待遇核查回头看\参保与持卡情况表\之前已核实的数据\大学生.xls"""
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+      import scala.jdk.CollectionConverters._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(verifiedData.delete)
+        println("结束清除数据")
+      }
+
+      println(s"导入在校学生数据 $collegeStudent")
+      Lookback2021.loadExcel(
+        collegeStudentData.quoted,
+        collegeStudent,
+        2,
+        fields = Seq("B", "C", "在校学生", "", "", "")
+      )
+
+      println(s"导入全覆盖数据 $fullcover")
+      Lookback2021.loadExcel(
+        fullcoverData.quoted,
+        fullcover,
+        2,
+        fields = Seq("D", "C", "全覆盖", "H", "T", "")
+      )
+
+      println(s"合并到已核实数据表")
+      def unionTable(tableName: String) = {
+        println(s"开始合并 $tableName")
+        val verifiedTable = verifiedData.quoted.name
+        Lookback2021.execute(
+          s"insert into $verifiedTable " +
+            s"select * from $tableName " +
+            s"on duplicate key update ${verifiedTable}.idcard=${verifiedTable}.idcard;",
+          true
+        )
+        println(s"结束合并 $tableName")
+      }
+      unionTable(collegeStudentData.quoted.name)
+      unionTable(fullcoverData.quoted.name)
+    }
+  }
+
   addSubCommand(retiredTables)
 
   addSubCommand(zipSubDir)
@@ -935,4 +986,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(generateTable1Tables)
 
   addSubCommand(auditTable2)
+
+  addSubCommand(loadVerifiedData)
 }
