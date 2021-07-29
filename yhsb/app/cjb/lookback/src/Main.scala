@@ -38,6 +38,8 @@ import yhsb.cjb.db.Table1Data
 import yhsb.cjb.db.JbStopTable
 import io.getquill.Ord
 
+import scala.collection.mutable
+
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
 }
@@ -510,6 +512,96 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
         }
 
         workbook.save(destDir / dw / cs / s"${cs}参保和持卡情况核查表.xlsx")
+      }
+      println(s"\r\n共计: ${total}")
+    }
+  }
+
+  val qbcbckTables = new Subcommand("qbcbck") with InputFile with RowRange {
+    descr("生成职保参保和持卡情况核查表")
+
+    val outputDir = """D:\数据核查\待遇核查回头看"""
+
+    val template = outputDir / """参保与持卡情况表.xlsx"""
+
+    def execute(): Unit = {
+      val destDir = outputDir / "职保参保与持卡情况表" / "第一批"
+
+      println("生成参保和持卡情况核查表")
+      if (Files.exists(destDir)) {
+        Files.move(destDir, s"${destDir.toString}.orig")
+      }
+      Files.createDirectory(destDir)
+
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+
+      val map = mutable
+        .LinkedHashMap[String, mutable.Map[String, mutable.ListBuffer[Int]]]()
+
+      for (index <- (startRow() - 1) until endRow()) {
+        val row = sheet.getRow(index)
+        val countryName = row("S").value.trim()
+        var villageName = row("T").value.trim()
+        villageName = if (villageName == "") "未分村社区" else villageName
+        val subMap = map.getOrElseUpdate(countryName, mutable.LinkedHashMap())
+        val list = subMap.getOrElseUpdate(villageName, mutable.ListBuffer())
+        list.addOne(index)
+      }
+
+      var total = 0
+      for ((dw, subMap) <- map) {
+        val subTotal = subMap.values.foldLeft(0)((n, l) => n + l.size)
+        total += subTotal
+        println(s"\r\n$dw: $subTotal")
+        Files.createDirectory(destDir / dw)
+        for ((cs, list) <- subMap) {
+          println(s"  $cs: ${list.size}")
+          Files.createDirectory(destDir / dw / cs)
+
+          val outWorkbook = Excel.load(template)
+          val outSheet = outWorkbook.getSheetAt(0)
+
+          val startRow = 6
+          var currentRow = startRow
+
+          list.foreach { rowIndex =>
+            val index = currentRow - startRow + 1
+            val sourceRow = sheet.getRow(rowIndex)
+            val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+            currentRow += 1
+            outRow("A").value = index
+            outRow("C").value = sourceRow("F").value
+            outRow("D").value = sourceRow("G").value
+            outRow("E").value = sourceRow("H").value
+            outRow("F").value = "√"
+            outRow("I").value = "√"
+            
+            val cardNumber = sourceRow("L").value.trim()
+            if (cardNumber != "") {
+              val cardType = sourceRow("K").value.trim()
+              if (cardType == "国家社保卡（新卡）") {
+                outRow("N").value = "√"
+              } else if (cardType == "湖南省社保卡（老卡）") {
+                outRow("O").value = "√"
+              }
+              outRow("P").value = cardNumber
+              outRow("R").value = sourceRow("M").value
+            }
+            outRow("U").value = sourceRow.getValues("N", "O", "P")
+              .foldLeft("")((p, v) => {
+                val v2 = v.trim()
+                if (v2 != "") {
+                  if (p != "") p + "/" + v2
+                  else v2
+                } else {
+                  p
+                }
+              })
+          }
+
+          outWorkbook.save(destDir / dw / cs / s"${cs}参保和持卡情况核查表.xlsx")
+        }
       }
       println(s"\r\n共计: ${total}")
     }
@@ -1237,6 +1329,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(updateDwAndCs)
 
   addSubCommand(cbckTables)
+
+  addSubCommand(qbcbckTables)
 
   addSubCommand(generateAddressTable)
 
