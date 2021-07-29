@@ -372,6 +372,11 @@ object Excel {
       }
     }
 
+    def getValues(fields: String*): Seq[String] = {
+      for (field <- fields) 
+        yield getCell(field).value
+    }
+
     def cellValue[T](
         colName: String,
         getValue: Cell => String = _.value

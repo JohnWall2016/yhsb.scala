@@ -34,6 +34,7 @@ import yhsb.cjb.net.protocol.RetiredPersonPauseQuery
 import yhsb.cjb.net.protocol.PauseReason
 import yhsb.cjb.db.RetiredTable
 import yhsb.base.datetime.YearMonth
+import yhsb.cjb.db.Table1Data
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -709,8 +710,47 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val insertTable1Data = new Subcommand("intable1")
+    with InputFile
+    with RowRange {
+    descr("新增附表1数据")
+
+    val batch = trailArg[String](descr = "注明批次")
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      transaction {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+        for (index <- (startRow() - 1) until endRow()) {
+          val row = sheet.getRow(index)
+          val Seq(name, idCard, address, countryName, villageName) =
+            row.getValues("A", "B", "C", "E", "F")
+          println(s"${index + 1} $idCard $name")
+          val data: List[LBTable1] =
+            run(table1Data.filter(_.idCard == lift(idCard)))
+          if (data.isEmpty) {
+            run {
+              table1Data.insert(
+                _.name -> lift(name),
+                _.idCard -> lift(idCard),
+                _.address -> lift(address),
+                _.reserve1 -> lift(countryName.trim()),
+                _.reserve2 -> lift(villageName.trim()),
+                _.reserve3 -> lift(batch())
+              )
+            }
+          }
+        }
+      }
+    }
+  }
+
   val updateTable1Data = new Subcommand("uptable1") with InputFile {
     descr("更新附表1乡镇(街道)、村(社区)数据")
+
+    val batch = opt[String](descr = "更新批次信息")
 
     def execute(): Unit = {
       import yhsb.cjb.db.Lookback2021._
@@ -737,16 +777,28 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             val countryName = row("E").value.trim()
             val villageName = row("F").value.trim()
 
-            if (idCard != "" && countryName != "" && villageName != "") {
-              println(s"$idCard $countryName $villageName")
-              run(
-                table1Data
-                  .filter(_.idCard == lift(idCard))
-                  .update(
-                    _.reserve1 -> lift(countryName),
-                    _.reserve2 -> lift(villageName)
-                  )
-              )
+            if (idCard != "" && countryName != "") {
+              println(s"$idCard $countryName $villageName ${batch()}")
+              if (batch.isEmpty) {
+                run(
+                  table1Data
+                    .filter(_.idCard == lift(idCard))
+                    .update(
+                      _.reserve1 -> lift(countryName),
+                      _.reserve2 -> lift(villageName)
+                    )
+                )
+              } else {
+                run(
+                  table1Data
+                    .filter(_.idCard == lift(idCard))
+                    .update(
+                      _.reserve1 -> lift(countryName),
+                      _.reserve2 -> lift(villageName),
+                      _.reserve3 -> lift(batch())
+                    )
+                )
+              }
             }
           }
         }
@@ -761,10 +813,12 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
     val template = outputDir / """参保与持卡情况表.xlsx"""
 
+    val batch = trailArg[String](descr = "对应批次信息")
+
     def execute(): Unit = {
       import yhsb.cjb.db.Lookback2021._
 
-      val destDir = outputDir / "参保与持卡情况表" / "第二批"
+      val destDir = outputDir / "参保与持卡情况表" / batch()
 
       println("生成参保和持卡情况核查表")
       if (Files.exists(destDir)) {
@@ -772,17 +826,20 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
       }
       Files.createDirectory(destDir)
 
-      val groups = run(
-        table1Data
-          .filter(d =>
-            d.reserve1 != "" && d.reserve2 != "" /*&& d.reserve2 == "羊牯塘社区"*/
-          )
-          .sortBy(d => (d.reserve1, d.reserve2))
-          .groupBy(d => (d.reserve1, d.reserve2))
-          .map { case (group, items) =>
-            (group._1, group._2, items.size)
-          }
-      )
+      val groups =
+        run(
+          table1Data
+            .filter(d =>
+              d.reserve1 != "" && d.reserve3 == lift(
+                batch()
+              )
+            )
+            .sortBy(d => (d.reserve1, d.reserve2))
+            .groupBy(d => (d.reserve1, d.reserve2))
+            .map { case (group, items) =>
+              (group._1, group._2, items.size)
+            }
+        )
 
       transaction {
         var dwName = ""
@@ -798,15 +855,17 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             Files.createDirectory(destDir / dw)
             dwName = dw
           }
-          println(s"  $cs: $size")
-          Files.createDirectory(destDir / dw / cs)
+          val dir = if (cs == "") "未分村社区" else cs
+          println(s"  $dir: $size")
+          Files.createDirectory(destDir / dw / dir)
 
-          val items: List[LBTable1] = run {
-            quote(
-              infix"${table1Data.filter(d => d.reserve1 == lift(dw) && d.reserve2 == lift(cs))} ORDER BY CONVERT( name USING gbk )"
-                .as[Query[LBTable1]]
-            )
-          }
+          val items: List[LBTable1] =
+            run {
+              quote(
+                infix"${table1Data.filter(d => d.reserve1 == lift(dw) && d.reserve2 == lift(cs) && d.reserve3 == lift(batch()))} ORDER BY CONVERT( name USING gbk )"
+                  .as[Query[LBTable1]]
+              )
+            }
 
           val workbook = Excel.load(template)
           val sheet = workbook.getSheetAt(0)
@@ -836,7 +895,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             }
           }
 
-          workbook.save(destDir / dw / cs / s"${cs}参保和持卡情况核查表.xlsx")
+          workbook.save(destDir / dw / dir / s"${dir}参保和持卡情况核查表.xlsx")
         }
         println(s"\r\n共计: ${total}")
       }
@@ -1052,6 +1111,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
   addSubCommand(unionTable1Data)
   addSubCommand(mapTable1Data)
+  addSubCommand(insertTable1Data)
   addSubCommand(exportTable1Data)
   addSubCommand(updateTable1Data)
   addSubCommand(generateTable1Tables)
