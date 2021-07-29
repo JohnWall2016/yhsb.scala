@@ -12,6 +12,8 @@ abstract class MapField {
 
   def value = _value
 
+  def setValue(value: String) = _value = value
+
   private[yhsb] def value_=(v: String) = _value = v
 
   def name = {

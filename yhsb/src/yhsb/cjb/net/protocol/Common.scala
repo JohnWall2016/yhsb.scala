@@ -295,6 +295,12 @@ class PauseReason extends MapField {
 
 object PauseReason extends MapField.Val[PauseReason] {
   val NoLifeCertified = Val("1201")
+
+  def apply(value: String) = {
+    val reason = new PauseReason
+    reason.setValue(value)
+    reason
+  }
 }
 
 /** 审核状态 */
@@ -326,6 +332,11 @@ object PayStopReason extends MapField.Val[StopReason] {
   val JoinedEmployeeInsurance = Val("1407")
   val Other = Val("1499")
   
+  def apply(value: String) = {
+    val reason = new StopReason
+    reason.setValue(value)
+    reason
+  }
 }
 
 object JoinStopReason extends MapField.Val[StopReason] {
