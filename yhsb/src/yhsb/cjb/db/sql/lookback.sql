@@ -125,6 +125,16 @@ create table verified_data(
     reserve3 varchar(32)
 );
 
+create table jb_retired_stop_data(
+    idcard varchar(32),
+    name varchar(32),
+    data_type varchar(32), /* 待遇终止、待遇暂停 */
+    stop_time varchar(32),
+    stop_reason varchar(32),
+    memo varchar(128),
+    audit_time varchar(32)
+)
+
 insert into union_data select * from jb_data;
 
 insert into union_data select * from cards_data where idcard not in (select idcard from jb_data);

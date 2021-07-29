@@ -1038,6 +1038,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  //val checkDeathDate = new Subcommand("")
+
   val loadVerifiedData = new Subcommand("ldverified") {
     descr("导入之前已核实数据")
 
@@ -1089,6 +1091,56 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val loadStopData = new Subcommand("ldjbstop") with InputFile {
+    descr("导入居保终止人员数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+      import scala.jdk.CollectionConverters._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(jbStopData.filter(_.dataType=="待遇终止").delete)
+        println("结束清除数据")
+      }
+
+      println(s"导入 ${inputFile()}")
+      Lookback2021.loadExcel(
+        jbStopData.quoted,
+        inputFile(),
+        2,
+        fields = Seq("E", "D", "待遇终止", "I", "J", "P", "N")
+      )
+    }
+  }
+
+  val loadPauseData = new Subcommand("ldjbpause") with InputFile {
+    descr("导入居保暂停人员数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+      import scala.jdk.CollectionConverters._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(jbStopData.filter(_.dataType=="待遇暂停").delete)
+        println("结束清除数据")
+      }
+
+      println(s"导入 ${inputFile()}")
+      Lookback2021.loadExcel(
+        jbStopData.quoted,
+        inputFile(),
+        2,
+        fields = Seq("C", "D", "待遇暂停", "F", "G", "H", "")
+      )
+    }
+  }
+
   addSubCommand(retiredTables)
 
   addSubCommand(zipSubDir)
@@ -1120,4 +1172,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(auditTable2Error)
 
   addSubCommand(loadVerifiedData)
+
+  addSubCommand(loadStopData)
+  addSubCommand(loadPauseData)
 }

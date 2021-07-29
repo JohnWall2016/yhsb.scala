@@ -200,6 +200,31 @@ trait VerifiedData { this: MysqlJdbcContext[_] =>
   }
 }
 
+case class JbStopTable(
+  idCard: String,
+  name: String,
+  dataType: String,
+  stopTime: String,
+  stopReason: String,
+  memo: String,
+  auditTime: String,
+)
+
+trait JbStopData { this: MysqlJdbcContext[_] =>
+  val jbStopData = quote {
+    querySchema[JbStopTable](
+      "jb_retired_stop_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.dataType -> "data_type",
+      _.stopTime -> "stop_time",
+      _.stopReason -> "stop_reason",
+      _.memo -> "memo",
+      _.auditTime -> "audit_time",
+    )
+  }
+}
+
 object Lookback2021
   extends MysqlJdbcContext(LowerCase, "lookback2021")
      with CardsData
@@ -212,3 +237,4 @@ object Lookback2021
      with FullCoverData
      with CollegeStudentData
      with VerifiedData
+     with JbStopData
