@@ -525,7 +525,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val template = outputDir / """参保与持卡情况表.xlsx"""
 
     def execute(): Unit = {
-      val destDir = outputDir / "职保参保与持卡情况表" / "第一批"
+      val destDir = outputDir / "职保参保与持卡情况表" / "第二批"
 
       println("生成参保和持卡情况核查表")
       if (Files.exists(destDir)) {
@@ -1087,8 +1087,46 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           print(s"${index + 1} $idCard $name ")
           val (error, reason, memo) =
             if (row("D").value != "是") {
-              ("不健在", "", "")
-            } else if (row("D").value != "是") {
+              val result: List[RetiredTable] = run(
+                retiredData.filter(_.idCard == lift(idCard))
+              )
+              val item = result.head
+
+              var (err, dtime) = ("", "")
+              val deathDate = row("F").value.trim()
+              if (deathDate != "") {
+                item.retiredType match {
+                  case "正常待遇" =>
+                    print("正常待遇 ")
+                    err = "死亡人员仍正常发放"
+                  case "待遇暂停" =>
+                    val stopTime = YearMonth.from(item.stopTime.toInt)
+                    val deathTime = YearMonth.from(deathDate.toInt)
+                    print(s"待遇暂停 $deathTime $stopTime ")
+                    if (deathTime < stopTime.offset(-1)) {
+                      err = "死亡时间早于暂停时间前一个月"
+                      dtime = stopTime.toString()
+                    }
+                  case "待遇终止" =>
+                    val stopTime = YearMonth.from(item.stopTime.toInt)
+                    val deathTime = YearMonth.from(deathDate.toInt)
+                    print(s"待遇终止 $deathTime $stopTime ")
+                    if (deathTime < stopTime) {
+                      err = "死亡时间早于终止时间"
+                      dtime = stopTime.toString()
+                    }
+                }
+              }
+              if (err != "") {
+                ("死亡时间早于系统时间", err, dtime)
+              } else {
+                if (row("H").value != "无异常") {
+                  ("异常情况", "", "")
+                } else {
+                  ("", "", "")
+                }
+              }
+            } else if (row("E").value != "是") {
               ("非本人持卡", "", "")
             } else {
               var result: List[JbStopTable] = run(
@@ -1102,7 +1140,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
                 val reason = PauseReason(item.stopReason)
                 print(s"${reason.toString} ")
                 if (reason != PauseReason.NoLifeCertified) {
-                  ("非未认证", reason.toString(), item.memo)
+                  ("非未认证停保", reason.toString(), item.memo)
                 } else {
                   ("", "", "")
                 }
@@ -1120,7 +1158,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
                   val reason = PayStopReason(item.stopReason)
                   print(s"${reason.toString} ")
                   if (reason != PayStopReason.JoinedEmployeeInsurance) {
-                    ("非职保退休", reason.toString(), item.memo)
+                    ("非职保退休终止", reason.toString(), item.memo)
                   } else {
                     ("", "", "")
                   }
@@ -1145,6 +1183,63 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  var checkDeathDate = new Subcommand("checkDeathDate")
+    with InputFile
+    with RowRange {
+
+    descr("检查死亡时间程序")
+
+    val idCardRow = trailArg[String]("身份证号码列")
+    val deathTimeRow = trailArg[String]("死亡时间列")
+    val resultRow = trailArg[String]("结果输出列")
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+      for (index <- (startRow() - 1) until endRow()) {
+        val row = sheet.getRow(index)
+        val idCard = row(idCardRow()).value.trim()
+        val deathDate = row(deathTimeRow()).value.trim()
+        var error = ""
+        if (!"""\d\d\d\d\d\d""".r.matches(deathDate)) {
+          error = "死亡日期格式有误"
+        } else {
+          val result: List[RetiredTable] = run(
+            retiredData.filter(_.idCard == lift(idCard))
+          )
+          if (result.isEmpty) {
+            error = "非底册中数据"
+          } else {
+            val item = result.head
+            item.retiredType match {
+              case "正常待遇" =>
+                println("正常待遇 ")
+                error = "死亡人员仍正常发放"
+              case "待遇暂停" =>
+                val stopTime = YearMonth.from(item.stopTime.toInt)
+                val deathTime = YearMonth.from(deathDate.toInt)
+                println(s"待遇暂停 $deathTime $stopTime ")
+                if (deathTime < stopTime.offset(-1)) {
+                  error = s"死亡时间早于暂停时间前一个月(${stopTime.offset(-1)})"
+                }
+              case "待遇终止" =>
+                val stopTime = YearMonth.from(item.stopTime.toInt)
+                val deathTime = YearMonth.from(deathDate.toInt)
+                println(s"待遇终止 $deathTime $stopTime ")
+                if (deathTime < stopTime) {
+                  error = s"死亡时间早于终止时间($stopTime)"
+                }
+            }
+          }
+        }
+        row.getOrCreateCell(resultRow()).value = error
+      }
+      workbook.save(inputFile().insertBeforeLast("(比对结果)"))
+    }
+  }
+
   var auditTable2Error = new Subcommand("auditTable2Error")
     with InputFile
     with RowRange {
@@ -1161,7 +1256,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           val idCard = row("C").value
           print(s"${index + 1} $idCard $name ")
           var error = ""
-          if (row("D").value == "是" && row("D").value != "是") {
+          if (row("D").value == "是" && row("E").value != "是") {
             error = "健在人员非本人领卡在手"
           } else if (row("D").value != "是") {
             val result: List[RetiredTable] = run(
@@ -1208,8 +1303,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
       }
     }
   }
-
-  //val checkDeathDate = new Subcommand("")
 
   val loadVerifiedData = new Subcommand("ldverified") {
     descr("导入之前已核实数据")
@@ -1343,6 +1436,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
   addSubCommand(auditTable2Alive)
   addSubCommand(auditTable2Error)
+  addSubCommand(checkDeathDate)
 
   addSubCommand(loadVerifiedData)
 
