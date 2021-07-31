@@ -39,6 +39,8 @@ import yhsb.cjb.db.JbStopTable
 import io.getquill.Ord
 
 import scala.collection.mutable
+import org.apache.poi.ss.usermodel.DataFormatter
+import org.apache.poi.ss.usermodel.FormulaEvaluator
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -1201,11 +1203,25 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
       for (index <- (startRow() - 1) until endRow()) {
         val row = sheet.getRow(index)
         val idCard = row(idCardRow()).value.trim()
-        val deathDate = row(deathTimeRow()).value.trim()
+        var deathDate = row(deathTimeRow()).value.trim()
         var error = ""
         if (!"""\d\d\d\d\d\d""".r.matches(deathDate)) {
-          error = "死亡日期格式有误"
-        } else {
+          if (deathDate == "") {
+            error = "死亡时间为空"
+          } else {
+            print(deathDate + " ")
+            val regex = """^([12]\d\d\d)[\.\-\,\n]?(\d{1,2})[\.\-]?""".r
+            regex.findFirstMatchIn(deathDate) match {
+              case Some(value) => 
+                val d = value.group(2)
+                deathDate = value.group(1) + (if (d.length < 2) "0" + d else d)
+                row(deathTimeRow()).value = deathDate
+              case None => 
+                error = "死亡日期格式有误"
+            }
+          }
+        }
+        if (error == "") {
           val result: List[RetiredTable] = run(
             retiredData.filter(_.idCard == lift(idCard))
           )

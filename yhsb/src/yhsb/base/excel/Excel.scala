@@ -15,6 +15,9 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import yhsb.base.io.AutoClose.use
 import yhsb.base.io.Path._
 import yhsb.base.math.Number.RichDouble
+import java.text.DateFormat
+import javax.swing.text.DateFormatter
+import java.text.SimpleDateFormat
 
 object Excel {
   val Excel = yhsb.base.excel.Excel
@@ -425,14 +428,20 @@ object Excel {
         typ match {
           case STRING => cell.getStringCellValue
           case NUMERIC =>
-            val v = cell.getNumericCellValue
-            if (v.isValidInt) v.toInt.toString
-            else if (v.isValidLong) v.toLong.toString
-            else v.toString
+            if (DateUtil.isCellDateFormatted(cell)) {
+              val format = new SimpleDateFormat("yyyyMMdd HH:mm:ss")
+              format.format(cell.getDateCellValue())
+            } else {
+              val v = cell.getNumericCellValue
+              if (v.isValidInt) v.toInt.toString
+              else if (v.isValidLong) v.toLong.toString
+              else v.toString
+            }
           case BLANK   => ""
           case BOOLEAN => cell.getBooleanCellValue.toString
           case ERROR   => ""
-          case FORMULA => getString(cell.getCachedFormulaResultType)
+          case FORMULA => 
+            getString(cell.getCachedFormulaResultType)
           case ty      => throw new Exception(s"unsupported type: $ty")
         }
       }
