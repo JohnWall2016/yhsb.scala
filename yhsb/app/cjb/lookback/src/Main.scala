@@ -1122,7 +1122,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
               if (err != "") {
                 ("死亡时间早于系统时间", err, dtime)
               } else {
-                if (row("H").value != "无异常") {
+                if (row("H").value != "" && row("H").value != "无异常") {
                   ("异常情况", "", "")
                 } else {
                   ("", "", "")
