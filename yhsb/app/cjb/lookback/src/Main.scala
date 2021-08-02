@@ -1507,7 +1507,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             row.getOrCreateCell("E").value = item.reserve1
             row.getOrCreateCell("F").value = item.reserve2
             row.getOrCreateCell("G").value = if (item.dataType == "居保") "是" else "否"
-            row.getOrCreateCell("H").value = "国家社保卡"
+            row.getOrCreateCell("H").value = if (item.bankName != "") "国家社保卡" else ""
             row.getOrCreateCell("J").value = item.bankName
             row.getOrCreateCell("K").value = item.cardNumber
             row.getOrCreateCell("L").value = if (item.resultDataType != "") "已参保人员" else ""
