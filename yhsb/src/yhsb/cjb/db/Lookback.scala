@@ -225,6 +225,70 @@ trait JbStopData { this: MysqlJdbcContext[_] =>
   }
 }
 
+case class SSCompareResult(
+  idCard: String,
+  name: String,
+  dataType: String,
+  resultName: String,
+  resultArea: String, // 行政区划名称
+  resultType: String, // 养老保险类型
+  resultMemo: String,
+)
+
+trait SSCompareData { this: MysqlJdbcContext[_] =>
+  val ssCompareData = quote {
+    querySchema[SSCompareResult](
+      "social_security_compare_result",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.dataType -> "data_type",
+      _.resultName -> "result_name",
+      _.resultArea -> "result_area",
+      _.resultType -> "result_type",
+      _.resultMemo -> "result_memo",
+    )
+  }
+}
+
+case class LBTable1CompareResult(
+  idCard: String,
+  name: String,
+  address: String,
+  bankName: String,
+  cardNumber: String,
+  dataType: String,
+  reserve1: String,
+  reserve2: String,
+  reserve3: String,
+  resultDataType: String,
+  resultName: String,
+  resultArea: String, // 行政区划名称
+  resultType: String, // 养老保险类型
+  resultMemo: String,
+)
+
+trait Table1CompareData { this: MysqlJdbcContext[_] =>
+  val table1CompareData = quote {
+    querySchema[LBTable1CompareResult](
+      "table1_data_with_compare_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.address -> "address",
+      _.bankName -> "bank_name",
+      _.cardNumber -> "card_number",
+      _.dataType -> "data_type",
+      _.reserve1 -> "reserve1",
+      _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
+      _.resultDataType -> "result_data_type",
+      _.resultName -> "result_name",
+      _.resultArea -> "result_area",
+      _.resultType -> "result_type",
+      _.resultMemo -> "result_memo",
+    )
+  }
+}
+
 object Lookback2021
   extends MysqlJdbcContext(LowerCase, "lookback2021")
      with CardsData
@@ -238,3 +302,6 @@ object Lookback2021
      with CollegeStudentData
      with VerifiedData
      with JbStopData
+     with SSCompareData
+     with Table1CompareData
+     

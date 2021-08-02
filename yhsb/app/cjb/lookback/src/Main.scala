@@ -41,6 +41,7 @@ import io.getquill.Ord
 import scala.collection.mutable
 import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.ss.usermodel.FormulaEvaluator
+import yhsb.cjb.db.LBTable1CompareResult
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -578,7 +579,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             outRow("E").value = sourceRow("H").value
             outRow("F").value = "√"
             outRow("I").value = "√"
-            
+
             val cardNumber = sourceRow("L").value.trim()
             if (cardNumber != "") {
               val cardType = sourceRow("K").value.trim()
@@ -590,7 +591,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
               outRow("P").value = cardNumber
               outRow("R").value = sourceRow("M").value
             }
-            outRow("U").value = sourceRow.getValues("N", "O", "P")
+            outRow("U").value = sourceRow
+              .getValues("N", "O", "P")
               .foldLeft("")((p, v) => {
                 val v2 = v.trim()
                 if (v2 != "") {
@@ -1212,11 +1214,11 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             print(deathDate + " ")
             val regex = """^([12]\d\d\d)[\.\-\,\n]?(\d{1,2})[\.\-]?""".r
             regex.findFirstMatchIn(deathDate) match {
-              case Some(value) => 
+              case Some(value) =>
                 val d = value.group(2)
                 deathDate = value.group(1) + (if (d.length < 2) "0" + d else d)
                 row(deathTimeRow()).value = deathDate
-              case None => 
+              case None =>
                 error = "死亡日期格式有误"
             }
           }
@@ -1421,6 +1423,120 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val loadSSCompareData = new Subcommand("ldsscomp") with InputFile {
+    descr("导入养老保险比对数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    val loadType = trailArg[String]("导入数据类型： 待遇人员、缴费人员")
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+      import scala.jdk.CollectionConverters._
+
+      val ltype = loadType()
+      if (clear()) {
+        println(s"开始清除${ltype}数据")
+        run(ssCompareData.filter(_.dataType == lift(ltype)).delete)
+        println(s"结束清除${ltype}数据")
+      }
+
+      if (ltype == "待遇人员") {
+        println(s"待遇人员导入 ${inputFile()}")
+        Lookback2021.loadExcel(
+          ssCompareData.quoted,
+          inputFile(),
+          4,
+          fields = Seq("A", "B", "待遇人员", "E", "I", "K", "L")
+        )
+      } else if (ltype == "缴费人员") {
+        println(s"缴费人员导入 ${inputFile()}")
+        Lookback2021.loadExcel(
+          ssCompareData.quoted,
+          inputFile(),
+          4,
+          fields = Seq("A", "B", "缴费人员", "E", "J", "L", "M")
+        )
+      }
+    }
+  }
+
+  val exportTable1DataByDw = new Subcommand("extable1dw") {
+    descr("生成参保和持卡情况核查表")
+
+    val outputDir = """D:\数据核查\待遇核查回头看"""
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      val destDir = outputDir / "参保与持卡情况表" / "汇总表"
+
+      println("生成参保和持卡情况核查汇总表")
+      if (Files.exists(destDir)) {
+        Files.move(destDir, s"${destDir.toString}.orig")
+      }
+      Files.createDirectory(destDir)
+
+      val groups =
+        run(
+          table1CompareData
+            .groupBy(d => (d.reserve1))
+            .map { case (group, items) =>
+              (group, items.size)
+            }
+        )
+
+      var total: Long = 0
+      for ((dw, size) <- groups) {
+        println(s"$dw: $size")
+        total += size
+        val items: List[LBTable1CompareResult] = run {
+          quote(
+            infix"${table1CompareData.filter(_.reserve1 == lift(dw))} ORDER BY CONVERT( reserve2 USING gbk ), CONVERT( name USING gbk )".as[Query[LBTable1CompareResult]]
+          )
+        }
+
+        Excel.export[LBTable1CompareResult](
+          items,
+          (destDir / s"${dw}居保附表1汇总表($size).xls").toString,
+          (index, row, item) => {
+            row.getOrCreateCell("A").value = item.name
+            row.getOrCreateCell("B").value = item.idCard
+            row.getOrCreateCell("C").value = item.address
+            row.getOrCreateCell("D").value = "430302"
+            row.getOrCreateCell("E").value = item.reserve1
+            row.getOrCreateCell("F").value = item.reserve2
+            row.getOrCreateCell("G").value = if (item.dataType == "居保") "是" else "否"
+            row.getOrCreateCell("H").value = "国家社保卡"
+            row.getOrCreateCell("J").value = item.bankName
+            row.getOrCreateCell("K").value = item.cardNumber
+            row.getOrCreateCell("L").value = if (item.resultDataType != "") "已参保人员" else ""
+            row.getOrCreateCell("M").value = if (item.resultDataType != "") 
+            {
+              s"${item.resultDataType},${item.resultType},${item.resultArea}" 
+            } else ""
+          },
+          (row) => {
+            row.getOrCreateCell("A").value = "姓名"
+            row.getOrCreateCell("B").value = "身份证号码"
+            row.getOrCreateCell("C").value = "地址"
+            row.getOrCreateCell("D").value = "行政区划"
+            row.getOrCreateCell("E").value = "乡镇（街道）"
+            row.getOrCreateCell("F").value = "村（社区）"
+            row.getOrCreateCell("G").value = "是否居保参保"
+            row.getOrCreateCell("H").value = "社保卡类型"
+            row.getOrCreateCell("J").value = "社保卡卡面银行"
+            row.getOrCreateCell("K").value = "社保卡卡号"
+            row.getOrCreateCell("L").value = "人员情况"
+            row.getOrCreateCell("M").value = "人员情况详细信息"
+          },
+          60000
+        )
+      }
+      println(s"合计: $total")
+    }
+  }
+
   addSubCommand(retiredTables)
 
   addSubCommand(zipSubDir)
@@ -1458,4 +1574,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
   addSubCommand(loadStopData)
   addSubCommand(loadPauseData)
+
+  addSubCommand(loadSSCompareData)
+  addSubCommand(exportTable1DataByDw)
 }

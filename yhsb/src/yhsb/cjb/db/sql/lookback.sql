@@ -133,7 +133,42 @@ create table jb_retired_stop_data(
     stop_reason varchar(32),
     memo varchar(128),
     audit_time varchar(32)
-)
+);
+
+create table social_security_compare_result(
+    idcard varchar(32),
+    name varchar(32),
+    data_type varchar(32), /* 待遇人员、待遇人员 */
+    result_name varchar(32),
+    result_area varchar(128), /* 行政区划名称 */
+    result_type varchar(128), /* 险种类型 */
+    result_memo varchar(128)
+);
+
+create table table1_data_with_compare_data(
+    idcard varchar(32) primary key,
+    name varchar(32),
+    address varchar(128),
+    bank_name varchar(32),
+    card_number varchar(32),
+    data_type varchar(32),
+    reserve1 varchar(32),
+    reserve2 varchar(32),
+    reserve3 varchar(32),
+    result_data_type varchar(32), /* 待遇人员、待遇人员 */
+    result_name varchar(32),
+    result_area varchar(128), /* 行政区划名称 */
+    result_type varchar(128), /* 险种类型 */
+    result_memo varchar(128)
+);
+
+insert into table1_data_with_compare_data 
+    (select a.*, b.data_type, b.result_name, b.result_area, b.result_type, b.result_memo from table1_data as a, social_security_compare_result as b where a.idcard=b.idcard)
+    on duplicate key update table1_data_with_compare_data.idcard=table1_data_with_compare_data.idcard;
+
+insert into table1_data_with_compare_data
+    (select *, '', '', '', '', '' from table1_data)
+    on duplicate key update table1_data_with_compare_data.idcard=table1_data_with_compare_data.idcard;
 
 insert into union_data select * from jb_data;
 
