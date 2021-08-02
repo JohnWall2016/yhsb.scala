@@ -1469,6 +1469,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     def execute(): Unit = {
       import yhsb.cjb.db.Lookback2021._
 
+      val template = outputDir / "参保与持卡情况表" / "居保附表1汇总表模板.xlsx"
+
       val destDir = outputDir / "参保与持卡情况表" / "汇总表"
 
       println("生成参保和持卡情况核查汇总表")
@@ -1488,6 +1490,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
       var total: Long = 0
       for ((dw, size) <- groups) {
+        Files.createDirectory(destDir / dw)
         println(s"$dw: $size")
         total += size
         val items: List[LBTable1CompareResult] = run {
@@ -1496,41 +1499,28 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           )
         }
 
-        Excel.export[LBTable1CompareResult](
+        Excel.exportWithTemplate[LBTable1CompareResult](
           items,
-          (destDir / s"${dw}居保附表1汇总表($size).xls").toString,
+          template.toString(),
+          1,
+          (destDir / dw / s"${dw}居保附表1汇总表($size).xlsx").toString,
           (index, row, item) => {
-            row.getOrCreateCell("A").value = index + 1
-            row.getOrCreateCell("B").value = item.name
-            row.getOrCreateCell("C").value = item.idCard
-            row.getOrCreateCell("D").value = item.address
-            row.getOrCreateCell("E").value = item.reserve1
-            row.getOrCreateCell("F").value = item.reserve2
-            row.getOrCreateCell("G").value = if (item.dataType == "居保") "是" else "否"
-            row.getOrCreateCell("H").value = if (item.bankName != "") "国家社保卡" else ""
-            row.getOrCreateCell("J").value = item.bankName
-            row.getOrCreateCell("K").value = item.cardNumber
-            row.getOrCreateCell("L").value = if (item.resultDataType != "") "已参保人员" else ""
-            row.getOrCreateCell("M").value = if (item.resultDataType != "") 
+            row("A").value = index
+            row("B").value = item.name
+            row("C").value = item.idCard
+            row("D").value = item.address
+            row("E").value = item.reserve1
+            row("F").value = item.reserve2
+            row("G").value = if (item.dataType == "居保") "是" else "否"
+            row("H").value = if (item.bankName != "") "国家社保卡" else ""
+            row("I").value = item.bankName
+            row("J").value = item.cardNumber
+            row("K").value = if (item.resultDataType != "") "已参保人员" else ""
+            row("L").value = if (item.resultDataType != "") 
             {
               s"${item.resultDataType},${item.resultType},${item.resultArea}" 
             } else ""
-          },
-          (row) => {
-            row.getOrCreateCell("A").value = "序号"
-            row.getOrCreateCell("B").value = "姓名"
-            row.getOrCreateCell("C").value = "身份证号码"
-            row.getOrCreateCell("D").value = "地址"
-            row.getOrCreateCell("E").value = "乡镇（街道）"
-            row.getOrCreateCell("F").value = "村（社区）"
-            row.getOrCreateCell("G").value = "是否居保参保"
-            row.getOrCreateCell("H").value = "社保卡类型"
-            row.getOrCreateCell("J").value = "社保卡卡面银行"
-            row.getOrCreateCell("K").value = "社保卡卡号"
-            row.getOrCreateCell("L").value = "人员情况"
-            row.getOrCreateCell("M").value = "人员情况详细信息"
-          },
-          60000
+          }
         )
       }
       println(s"合计: $total")

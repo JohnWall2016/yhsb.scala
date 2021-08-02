@@ -117,6 +117,28 @@ object Excel {
     workbook.save(filePath)
   }
 
+  def exportWithTemplate[T](
+      items: Seq[T],
+      template: String,
+      startRow: Int,
+      filePath: String,
+      writeRow: (Int, Row, T) => Unit,
+  ) = {
+    val workbook = Excel.load(template)
+    val sheet = workbook.getSheetAt(0)
+
+    var currentRow = startRow
+
+    items.foreach { item =>
+      val index = currentRow - startRow + 1
+      val row = sheet.getOrCopyRow(currentRow, startRow)
+      currentRow += 1
+
+      writeRow(index, row, item)
+    }
+    workbook.save(filePath)
+  }
+
   sealed trait Loadable[T] {
     def apply(loadable: T): Workbook
   }
