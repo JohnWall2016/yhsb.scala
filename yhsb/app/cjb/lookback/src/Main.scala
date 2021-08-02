@@ -1500,10 +1500,10 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           items,
           (destDir / s"${dw}居保附表1汇总表($size).xls").toString,
           (index, row, item) => {
-            row.getOrCreateCell("A").value = item.name
-            row.getOrCreateCell("B").value = item.idCard
-            row.getOrCreateCell("C").value = item.address
-            row.getOrCreateCell("D").value = "430302"
+            row.getOrCreateCell("A").value = index + 1
+            row.getOrCreateCell("B").value = item.name
+            row.getOrCreateCell("C").value = item.idCard
+            row.getOrCreateCell("D").value = item.address
             row.getOrCreateCell("E").value = item.reserve1
             row.getOrCreateCell("F").value = item.reserve2
             row.getOrCreateCell("G").value = if (item.dataType == "居保") "是" else "否"
@@ -1517,10 +1517,10 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             } else ""
           },
           (row) => {
-            row.getOrCreateCell("A").value = "姓名"
-            row.getOrCreateCell("B").value = "身份证号码"
-            row.getOrCreateCell("C").value = "地址"
-            row.getOrCreateCell("D").value = "行政区划"
+            row.getOrCreateCell("A").value = "序号"
+            row.getOrCreateCell("B").value = "姓名"
+            row.getOrCreateCell("C").value = "身份证号码"
+            row.getOrCreateCell("D").value = "地址"
             row.getOrCreateCell("E").value = "乡镇（街道）"
             row.getOrCreateCell("F").value = "村（社区）"
             row.getOrCreateCell("G").value = "是否居保参保"
