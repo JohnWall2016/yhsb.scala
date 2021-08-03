@@ -55,6 +55,8 @@ import yhsb.cjb.net.protocol.RetiredPersonPauseAuditQuery
 import yhsb.cjb.net.protocol.SuspectedDeathQuery
 import yhsb.cjb.net.protocol.DataCompareQuery
 import scala.collection.mutable.HashMap
+import yhsb.cjb.net.protocol.DivisionName
+import yhsb.cjb.net.protocol.Division
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -664,6 +666,35 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                 println("身份证号码有误")
               }
             }
+          }
+        } finally {
+          workbook.save(inputFile().insertBeforeLast(".upd"))
+        }
+      }
+    }
+
+  val divide =
+    new Subcommand("divide") with InputFile with RowRange {
+      descr("更新乡镇街道、村社区")
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        try {
+          for {
+            i <- (startRow() - 1) until endRow()
+            row = sheet.getRow(i)
+            name = row("F").value.trim()
+            idCard = row("E").value.trim()
+            division = row("D").value.trim()
+          } {
+            println(s"$i $idCard $name ")
+
+            val (dw, cs) = Division.getDwAndCsName(division).get
+
+            row.getOrCreateCell("B").value = dw
+            row.getOrCreateCell("C").value = cs
           }
         } finally {
           workbook.save(inputFile().insertBeforeLast(".upd"))
@@ -1542,6 +1573,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(refund)
   addSubCommand(audit)
   addSubCommand(division)
+  addSubCommand(divide)
   addSubCommand(payment)
   addSubCommand(delayPay)
   addSubCommand(statics)

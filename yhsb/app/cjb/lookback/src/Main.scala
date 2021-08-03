@@ -42,6 +42,7 @@ import scala.collection.mutable
 import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.ss.usermodel.FormulaEvaluator
 import yhsb.cjb.db.LBTable1CompareResult
+import yhsb.cjb.net.protocol.PersonInfoQuery
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -1495,7 +1496,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
         total += size
         val items: List[LBTable1CompareResult] = run {
           quote(
-            infix"${table1CompareData.filter(_.reserve1 == lift(dw))} ORDER BY CONVERT( reserve2 USING gbk ), CONVERT( name USING gbk )".as[Query[LBTable1CompareResult]]
+            infix"${table1CompareData.filter(_.reserve1 == lift(dw))} ORDER BY CONVERT( reserve2 USING gbk ), CONVERT( name USING gbk )"
+              .as[Query[LBTable1CompareResult]]
           )
         }
 
@@ -1516,14 +1518,157 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             row("I").value = item.bankName
             row("J").value = item.cardNumber
             row("K").value = if (item.resultDataType != "") "已参保人员" else ""
-            row("L").value = if (item.resultDataType != "") 
-            {
-              s"${item.resultDataType},${item.resultType},${item.resultArea}" 
+            row("L").value = if (item.resultDataType != "") {
+              s"${item.resultDataType},${item.resultType},${item.resultArea}"
             } else ""
           }
         )
       }
       println(s"合计: $total")
+    }
+  }
+
+  val table41Classify = new Subcommand("table41Classify")
+    with InputFile
+    with RowRange {
+    def execute(): Unit = {
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+      for {
+        index <- (startRow() - 1) until endRow()
+        row = sheet.getRow(index)
+      } {
+        val idCard = row("E").value
+        val name = row("F").value
+        val alive = row("N").value
+
+        var kind = ""
+
+        print(s"$index $idCard $name ")
+
+        // 1. 是否健在人员非本人持卡
+        if (kind == "") {
+          if (alive == "是") {
+            val keepCard = row("O").value
+            if (keepCard == "否") {
+              kind = "健在非本人持卡"
+            }
+          }
+        }
+
+        // 2. 死亡冒领
+        if (kind == "") {
+          if (alive == "否") {
+            val state = row("K").value
+            val relativeKeepCard = row("Q").value == "是"
+            state match {
+              case "正常待遇" =>
+                if (relativeKeepCard) {
+                  kind = "亲属持卡冒领"
+                } else {
+                  kind = "非亲属持卡冒领"
+                }
+              case "待遇暂停" =>
+                val stopTime = YearMonth.from(row("L").value.toInt)
+                val deathTime = YearMonth.from(row("P").value.toInt)
+                if (deathTime < stopTime.offset(-1)) {
+                  if (relativeKeepCard) {
+                    kind = "亲属持卡冒领"
+                  } else {
+                    kind = "非亲属持卡冒领"
+                  }
+                }
+              case "待遇终止" =>
+                val stopTime = YearMonth.from(row("L").value.toInt)
+                val deathTime = YearMonth.from(row("P").value.toInt)
+                if (deathTime < stopTime) {
+                  if (relativeKeepCard) {
+                    kind = "亲属持卡冒领"
+                  } else {
+                    kind = "非亲属持卡冒领"
+                  }
+                }
+            }
+          }
+        }
+
+        // 3. 异常人员
+        if (kind == "") {
+          val error = row("R").value
+          if (error != "" && error != "无异常") {
+            kind = "异常人员"
+          }
+        }
+
+        // 4. 正常人员
+        if (kind == "") {
+          kind = "正常人员"
+        }
+
+        println(kind)
+
+        row("X").value = kind
+      }
+      workbook.save(inputFile().insertBeforeLast(".up"))
+    }
+  }
+
+  val table41Refund = new Subcommand("table41Refund")
+    with InputFile
+    with RowRange {
+    def execute(): Unit = {
+      Session.use() { session =>
+        def getRefundData(
+            idCard: String,
+            deathTime: Option[String] = None
+        ): (String, Int) = {
+          session.request(PersonInfoQuery(idCard)).head
+          ???
+        }
+
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+        try {
+          for {
+            index <- (startRow() - 1) until endRow()
+            row = sheet.getRow(index)
+          } {
+            val idCard = row("E").value
+            val name = row("F").value
+            val kind = row("X").value
+
+            print(s"$index $idCard $name $kind ")
+
+            val refund = kind match {
+              case "健在非本人持卡" =>
+                val (refund, _) = getRefundData(idCard)
+                row("Y").value = refund
+                refund
+              case "亲属持卡冒领"  =>
+                val deathTime = row("P").value
+                val (refund, months) = getRefundData(idCard, Some(deathTime))
+                row("Z").value = months
+                row("AA").value = refund
+                refund
+              case "非亲属持卡冒领" =>
+                val deathTime = row("P").value
+                val (refund, months) = getRefundData(idCard, Some(deathTime))
+                row("Z").value = months
+                row("AB").value = refund
+                refund
+              case "异常人员" =>
+                val (refund, _) = getRefundData(idCard)
+                row("AB").value = refund
+                refund
+              case _ => ""
+            }
+
+            println(refund)
+          }
+        } finally {
+          workbook.save(inputFile().insertBeforeLast(".up"))
+        }
+      }
     }
   }
 
@@ -1567,4 +1712,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
   addSubCommand(loadSSCompareData)
   addSubCommand(exportTable1DataByDw)
+
+  addSubCommand(table41Classify)
 }
