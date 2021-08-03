@@ -19,6 +19,8 @@ import java.text.DateFormat
 import javax.swing.text.DateFormatter
 import java.text.SimpleDateFormat
 
+import yhsb.base.text.String._
+
 object Excel {
   val Excel = yhsb.base.excel.Excel
 
@@ -120,23 +122,40 @@ object Excel {
   def exportWithTemplate[T](
       items: Seq[T],
       template: String,
-      startRow: Int,
+      startIndex: Int,
       filePath: String,
       writeRow: (Int, Row, T) => Unit,
+      limitPerSheet: Int = 1000,
   ) = {
-    val workbook = Excel.load(template)
-    val sheet = workbook.getSheetAt(0)
+    val total = items.size
+    val limit = limitPerSheet
 
-    var currentRow = startRow
+    val workbookCount = (total + limit) / limit
 
-    items.foreach { item =>
-      val index = currentRow - startRow + 1
-      val row = sheet.getOrCopyRow(currentRow, startRow)
-      currentRow += 1
+    var itemIndex = 0
+    for (workbookIndex <- 0 until workbookCount) {
+      val workbook = Excel.load(template)
+      val sheet = workbook.getSheetAt(0)
 
-      writeRow(index, row, item)
+      val startIndex = 1
+      var rowIndex = startIndex
+
+      val startItemIndex = itemIndex
+
+      while(itemIndex < Math.min(total, startItemIndex + limit)) {
+        val index = rowIndex - startIndex + 1
+        val row = sheet.getOrCopyRow(rowIndex, startIndex)
+        rowIndex += 1
+        writeRow(index, row, items(itemIndex))
+        itemIndex += 1
+      }
+
+      if (workbookCount == 1) {
+        workbook.save(filePath)
+      } else {
+        workbook.save(filePath.insertBeforeLast(s".${workbookIndex+1}"))
+      }
     }
-    workbook.save(filePath)
   }
 
   sealed trait Loadable[T] {

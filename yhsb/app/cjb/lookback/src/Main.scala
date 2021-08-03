@@ -46,6 +46,7 @@ import yhsb.cjb.net.protocol.PersonInfoQuery
 import yhsb.cjb.net.protocol.CBState
 import yhsb.cjb.net.protocol.PaymentTerminateQuery
 import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
+import yhsb.cjb.db.LBTable1VerifiedAllData
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -1639,7 +1640,9 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
                     PayStopReason.Death
                   )
                 )
-                .headOption.map(_.auditAmount).getOrElse("")
+                .headOption
+                .map(_.auditAmount)
+                .getOrElse("")
             case _ => ""
           }
           var payAmount = BigDecimal(0)
@@ -1696,13 +1699,180 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
                 refund
               case _ => ""
             }
-            
+
             println(s"$index $idCard $name $kind $refund")
           }
         } finally {
           workbook.save(inputFile().insertBeforeLast(".up"))
         }
       }
+    }
+  }
+
+  val loadTable1VerifiedData = new Subcommand("loadTable1Verified")
+    with InputFile {
+    descr("导入附表1已核实数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(table1VerifiedData.delete)
+        println("结束清除数据")
+      }
+
+      println(s"导入 ${inputFile()}")
+      Lookback2021.loadExcel(
+        table1VerifiedData.quoted,
+        inputFile(),
+        2,
+        fields = Seq("D", "C", "B", "K", "J", "", "", "", "")
+      )
+    }
+  }
+
+  val exportTable1VerifiedAllData = new Subcommand("exportTable1Verifed") {
+    descr("生成参保和持卡情况核查表")
+
+    val outputDir = """D:\数据核查\待遇核查回头看"""
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      val template = outputDir / "参保与持卡情况表" / "居保附表1汇总表模板.xlsx"
+
+      val destDir = outputDir / "参保与持卡情况表" / "未核实数据表"
+
+      println("生成参保和持卡情况未核实数据汇总表")
+      if (Files.exists(destDir)) {
+        Files.move(destDir, s"${destDir.toString}.orig")
+      }
+      Files.createDirectory(destDir)
+
+      val groups =
+        run(
+          table1VerifiedAllData
+            .filter(f => f.verified != "是" && f.resultDataType == "")
+            .groupBy(d => (d.reserve1))
+            .map { case (group, items) =>
+              (group, items.size)
+            }
+        )
+
+      var total: Long = 0
+      for ((dw, size) <- groups) {
+        Files.createDirectory(destDir / dw)
+        println(s"$dw: $size")
+        total += size
+        val items: List[LBTable1VerifiedAllData] = run {
+          quote(
+            infix"${table1VerifiedAllData.filter(f => f.verified != "是" && f.resultDataType == "" && f.reserve1 == lift(dw))} ORDER BY CONVERT( reserve2 USING gbk ), CONVERT( name USING gbk )"
+              .as[Query[LBTable1VerifiedAllData]]
+          )
+        }
+
+        Excel.exportWithTemplate[LBTable1VerifiedAllData](
+          items,
+          template.toString(),
+          1,
+          (destDir / dw / s"${dw}居保附表1未核实数据汇总表($size).xlsx").toString,
+          (index, row, item) => {
+            row("A").value = index
+            row("B").value = item.name
+            row("C").value = item.idCard
+            row("D").value = item.address
+            row("E").value = item.reserve1
+            row("F").value = item.reserve2
+            row("G").value = if (item.dataType == "居保") "是" else "否"
+            row("H").value = if (item.bankName != "") "国家社保卡" else ""
+            row("I").value = item.bankName
+            row("J").value = item.cardNumber
+            row("K").value = if (item.resultDataType != "") "已参保人员" else ""
+            row("L").value = if (item.resultDataType != "") {
+              s"${item.resultDataType},${item.resultType},${item.resultArea}"
+            } else ""
+          }
+        )
+      }
+      println(s"合计: $total")
+    }
+  }
+
+  val exportTable1ImportData = new Subcommand("exportTable1Import") {
+    descr("生成参保和持卡情况导库表")
+
+    val outputDir = """D:\数据核查\待遇核查回头看"""
+
+    val dwName = trailArg[String]("单位名称")
+    val operator = trailArg[String]("核实人姓名")
+    val phone = trailArg[String]("核实人联系电话")
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.Lookback2021._
+
+      val dw = dwName()
+
+      val template = outputDir / "附表1导库生成数据" / "居保附表1导库模板.xls"
+
+      val destDir = outputDir / "附表1导库生成数据" / "居保附表1导库文件" / dwName()
+
+      println("生成参保和持卡情况导库表")
+      if (Files.exists(destDir)) {
+        Files.move(destDir, s"${destDir.toString}.orig")
+      }
+      Files.createDirectory(destDir)
+
+      val items: List[LBTable1VerifiedAllData] = run {
+        quote(
+          infix"${table1VerifiedAllData.filter(f => f.verified != "是" && f.resultDataType != "" && f.reserve1 == lift(dw))} ORDER BY CONVERT( reserve2 USING gbk ), CONVERT( name USING gbk )"
+            .as[Query[LBTable1VerifiedAllData]]
+        )
+      }
+
+      Excel.exportWithTemplate[LBTable1VerifiedAllData](
+        items,
+        template.toString(),
+        1,
+        (destDir / s"${dw}居保附表1导库文件.xls").toString,
+        (index, row, item) => {
+          row("A").value = "430302"
+          row("B").value = item.name
+          row("C").value = item.idCard
+          row("D").value = item.address
+          row("E").value = "0"
+          row("F").value = ""
+          row("G").value = ""
+          row("H").value = ""
+          row("I").value = ""
+          row("J").value = ""
+          row("K").value = ""
+          row("L").value = ""
+          row("M").value = "1"
+          row("N").value = {
+            val area = if (item.resultArea.length > 14) {
+              item.resultArea.substring(0, 14)
+            } else {
+              item.resultArea
+            }
+            item.resultType match {
+              case "城镇企业职工基本养老保险" =>
+                s"职保参保($area)"
+              case "机关事业单位养老保险" =>
+                s"机保参保($area)"
+              case "城乡居民社会养老保险" | "新型农村社会养老保险" =>
+                s"异地居保($area)"
+              case _ => ""
+            }
+          }
+          
+          row("O").value = operator()
+          row("P").value = phone()
+        },
+        1000
+      )
     }
   }
 
@@ -1749,4 +1919,10 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
   addSubCommand(table41Classify)
   addSubCommand(table41Refund)
+
+  addSubCommand(loadTable1VerifiedData)
+
+  addSubCommand(exportTable1VerifiedAllData)
+
+  addSubCommand(exportTable1ImportData)
 }

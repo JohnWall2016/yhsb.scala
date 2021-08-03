@@ -200,6 +200,23 @@ trait VerifiedData { this: MysqlJdbcContext[_] =>
   }
 }
 
+trait Table1VerifiedData { this: MysqlJdbcContext[_] =>
+  val table1VerifiedData = quote {
+    querySchema[LBTable1](
+      "table1_verified_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.address -> "address",
+      _.bankName -> "bank_name",
+      _.cardNumber -> "card_number",
+      _.dataType -> "data_type",
+      _.reserve1 -> "reserve1",
+      _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
+    )
+  }
+}
+
 case class JbStopTable(
   idCard: String,
   name: String,
@@ -267,6 +284,24 @@ case class LBTable1CompareResult(
   resultMemo: String,
 )
 
+case class LBTable1VerifiedAllData(
+  idCard: String,
+  name: String,
+  address: String,
+  bankName: String,
+  cardNumber: String,
+  dataType: String,
+  reserve1: String,
+  reserve2: String,
+  reserve3: String,
+  resultDataType: String,
+  resultName: String,
+  resultArea: String, // 行政区划名称
+  resultType: String, // 养老保险类型
+  resultMemo: String,
+  verified: String,
+)
+
 trait Table1CompareData { this: MysqlJdbcContext[_] =>
   val table1CompareData = quote {
     querySchema[LBTable1CompareResult](
@@ -289,6 +324,29 @@ trait Table1CompareData { this: MysqlJdbcContext[_] =>
   }
 }
 
+trait Table1VerifiedAllData { this: MysqlJdbcContext[_] =>
+  val table1VerifiedAllData = quote {
+    querySchema[LBTable1VerifiedAllData](
+      "table1_all_verified_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.address -> "address",
+      _.bankName -> "bank_name",
+      _.cardNumber -> "card_number",
+      _.dataType -> "data_type",
+      _.reserve1 -> "reserve1",
+      _.reserve2 -> "reserve2",
+      _.reserve3 -> "reserve3",
+      _.resultDataType -> "result_data_type",
+      _.resultName -> "result_name",
+      _.resultArea -> "result_area",
+      _.resultType -> "result_type",
+      _.resultMemo -> "result_memo",
+      _.verified -> "verified",
+    )
+  }
+}
+
 object Lookback2021
   extends MysqlJdbcContext(LowerCase, "lookback2021")
      with CardsData
@@ -304,4 +362,6 @@ object Lookback2021
      with JbStopData
      with SSCompareData
      with Table1CompareData
+     with Table1VerifiedData
+     with Table1VerifiedAllData
      
