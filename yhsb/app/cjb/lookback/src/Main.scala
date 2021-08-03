@@ -43,6 +43,9 @@ import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.ss.usermodel.FormulaEvaluator
 import yhsb.cjb.db.LBTable1CompareResult
 import yhsb.cjb.net.protocol.PersonInfoQuery
+import yhsb.cjb.net.protocol.CBState
+import yhsb.cjb.net.protocol.PaymentTerminateQuery
+import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -1617,13 +1620,46 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     with InputFile
     with RowRange {
     def execute(): Unit = {
-      Session.use() { session =>
+      Session.use("004") { session =>
         def getRefundData(
             idCard: String,
-            deathTime: Option[String] = None
+            deathTime: String
         ): (String, Int) = {
-          session.request(PersonInfoQuery(idCard)).head
-          ???
+          val deathYearMonth = deathTime.toInt
+          val endYearMonth = Formatter.formatDate("yyyyMM").toInt
+          val item = session.request(PersonInfoQuery(idCard)).head
+          var (amount, months) = ("", 0)
+          amount = item.cbState match {
+            case CBState.Paused | CBState.Normal =>
+              session
+                .request(
+                  PaymentTerminateQuery(
+                    item,
+                    f"$deathYearMonth%06d",
+                    PayStopReason.Death
+                  )
+                )
+                .headOption.map(_.auditAmount).getOrElse("")
+            case _ => ""
+          }
+          var payAmount = BigDecimal(0)
+          var monthSet = mutable.TreeSet[Int]()
+          for (
+            item <- session.request(PersonInfoPaylistQuery(item))
+            if item.payYearMonth > deathYearMonth &&
+              item.payYearMonth <= endYearMonth &&
+              item.payItem.startsWith("基础养老金") &&
+              item.payState == "已支付"
+          ) {
+            payAmount += item.amount
+            monthSet.addOne(item.payYearMonth)
+          }
+          months = monthSet.size
+          println(s"$idCard $amount $payAmount $months")
+          (
+            if (amount != "") amount else payAmount.toString,
+            months
+          )
         }
 
         val workbook = Excel.load(inputFile())
@@ -1637,33 +1673,31 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             val name = row("F").value
             val kind = row("X").value
 
-            print(s"$index $idCard $name $kind ")
-
             val refund = kind match {
               case "健在非本人持卡" =>
-                val (refund, _) = getRefundData(idCard)
-                row("Y").value = refund
+                val (refund, _) = getRefundData(idCard, "201106")
+                row.getOrCreateCell("Y").value = refund
                 refund
-              case "亲属持卡冒领"  =>
+              case "亲属持卡冒领" =>
                 val deathTime = row("P").value
-                val (refund, months) = getRefundData(idCard, Some(deathTime))
-                row("Z").value = months
-                row("AA").value = refund
+                val (refund, months) = getRefundData(idCard, deathTime)
+                row.getOrCreateCell("Z").value = months
+                row.getOrCreateCell("AA").value = refund
                 refund
               case "非亲属持卡冒领" =>
                 val deathTime = row("P").value
-                val (refund, months) = getRefundData(idCard, Some(deathTime))
-                row("Z").value = months
-                row("AB").value = refund
+                val (refund, months) = getRefundData(idCard, deathTime)
+                row.getOrCreateCell("Z").value = months
+                row.getOrCreateCell("AB").value = refund
                 refund
               case "异常人员" =>
-                val (refund, _) = getRefundData(idCard)
-                row("AB").value = refund
+                val (refund, _) = getRefundData(idCard, "201106")
+                row.getOrCreateCell("AC").value = refund
                 refund
               case _ => ""
             }
-
-            println(refund)
+            
+            println(s"$index $idCard $name $kind $refund")
           }
         } finally {
           workbook.save(inputFile().insertBeforeLast(".up"))
@@ -1714,4 +1748,5 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(exportTable1DataByDw)
 
   addSubCommand(table41Classify)
+  addSubCommand(table41Refund)
 }
