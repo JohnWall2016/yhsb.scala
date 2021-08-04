@@ -33,4 +33,8 @@ class HttpHeader extends Iterable[(String, String)] {
   def remove(key: String) = header.remove(key.toLowerCase())
 
   def clear() = header.clear()
+
+  override def toString() = {
+    s"HttpHeader: $header"
+  }
 }

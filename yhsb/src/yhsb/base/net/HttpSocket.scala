@@ -131,7 +131,7 @@ class HttpSocket private (
         transferTo(out, len)
       }
     } else {
-      throw new NotImplementedError("unsupported transfer mode")
+      throw new NotImplementedError(s"unsupported transfer mode: $header")
     }
     out
   }

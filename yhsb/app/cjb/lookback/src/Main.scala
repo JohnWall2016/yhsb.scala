@@ -1,52 +1,48 @@
-import yhsb.base.command.Command
-import yhsb.base.command.Subcommand
-import yhsb.base.command.InputFile
-import yhsb.base.command.RowRange
-
-import yhsb.base.excel.Excel._
-import yhsb.base.io.Path._
-
-import yhsb.base.text.String._
-
-import yhsb.base.zip
-
-import yhsb.cjb.net.protocol.Division.GroupOps
-
-import java.nio.file.Files
-import java.nio.file.Paths
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
-
-import yhsb.base.datetime.Formatter
-import yhsb.base.command.InputDir
-import yhsb.cjb.db.Lookback2021
-
-import yhsb.base.db.Context.JdbcContextOps
-import scala.collection.mutable.ListBuffer
-import yhsb.cjb.net.protocol.Division
-import scala.util.matching.Regex
-import yhsb.cjb.db.LBTable1
-import io.getquill.Query
-import yhsb.cjb.net.Session
-import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
-import yhsb.cjb.net.protocol.PayStopReason
-import yhsb.cjb.net.protocol.RetiredPersonPauseQuery
-import yhsb.cjb.net.protocol.PauseReason
-import yhsb.cjb.db.RetiredTable
-import yhsb.base.datetime.YearMonth
-import yhsb.cjb.db.Table1Data
-import yhsb.cjb.db.JbStopTable
-import io.getquill.Ord
+import java.nio.file.Paths
 
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
+import scala.util.matching.Regex
+
+import io.getquill.Ord
+import io.getquill.Query
 import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.ss.usermodel.FormulaEvaluator
+import yhsb.base.command.Command
+import yhsb.base.command.InputDir
+import yhsb.base.command.InputFile
+import yhsb.base.command.RowRange
+import yhsb.base.command.Subcommand
+import yhsb.base.datetime.Formatter
+import yhsb.base.datetime.YearMonth
+import yhsb.base.db.Context.JdbcContextOps
+import yhsb.base.excel.Excel._
+import yhsb.base.io.Path._
+import yhsb.base.text.String._
+import yhsb.base.zip
+import yhsb.cjb.db.JbStopTable
+import yhsb.cjb.db.LBTable1
 import yhsb.cjb.db.LBTable1CompareResult
-import yhsb.cjb.net.protocol.PersonInfoQuery
+import yhsb.cjb.db.LBTable1VerifiedAllData
+import yhsb.cjb.db.Lookback2021
+import yhsb.cjb.db.RetiredTable
+import yhsb.cjb.db.Table1Data
+import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.CBState
+import yhsb.cjb.net.protocol.Division
+import yhsb.cjb.net.protocol.Division.GroupOps
+import yhsb.cjb.net.protocol.LookBackTable1Audit
+import yhsb.cjb.net.protocol.LookBackTable2Audit
+import yhsb.cjb.net.protocol.PauseReason
+import yhsb.cjb.net.protocol.PayStopReason
 import yhsb.cjb.net.protocol.PaymentTerminateQuery
 import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
-import yhsb.cjb.db.LBTable1VerifiedAllData
+import yhsb.cjb.net.protocol.PersonInfoQuery
+import yhsb.cjb.net.protocol.RetiredPersonPauseQuery
+import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -82,8 +78,10 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
     val template = outputDir / """待遇人员入户核查表.xlsx"""
 
+    val issueName = trailArg[String]("下发数据名称")
+
     def execute(): Unit = {
-      val destDir = outputDir / "待遇发放人员入户核查表"
+      val destDir = outputDir / "待遇发放人员入户核查表" / issueName()
 
       val workbook = Excel.load(inputFile())
       val sheet = workbook.getSheetAt(0)
@@ -1867,12 +1865,65 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
               case _ => ""
             }
           }
-          
+
           row("O").value = operator()
           row("P").value = phone()
         },
         1000
       )
+    }
+  }
+
+  val lookbackStatics = new Subcommand("lookbackStatics") {
+    descr("生成回头看核查统计数据")
+
+    val filePath = """D:\数据核查\待遇核查回头看\养老待遇核查“回头看”数据录入情况汇总表.xls"""
+
+    def execute(): Unit = {
+      val workbook = Excel.load(filePath)
+      val sheet = workbook.getSheetAt(0)
+      val mapSheet = workbook.getSheetAt(1)
+
+      def loadMap() = {
+        val map = mutable.LinkedHashMap[String, Seq[String]]()
+        for {
+          index <- 1 to 12
+          row = mapSheet.getRow(index)
+        } {
+          map(row("A").value) = Seq(row("B").value, row("C").value)
+        }
+        map
+      }
+      val map = loadMap()
+
+      var (table1Total, table2Total) = (0, 0)
+      Session.use() { session =>
+        for {
+          index <- 3 to 14
+          row = sheet.getRow(index)
+        } {
+          var (dwTable1Total, dwTable2Total) = (0, 0)
+          val dwName = row("A").value
+          for {
+            operator <- map(dwName)
+            if operator != ""
+          } {
+            dwTable1Total += session.request(LookBackTable1Audit(operator)).rowcount
+            dwTable2Total += session.request(LookBackTable2Audit(operator)).rowcount
+          }
+          println(s"$dwName $dwTable1Total $dwTable2Total")
+          row("E").value = dwTable1Total
+          row("I").value = dwTable2Total
+          row("J").setCellFormula(s"(G${index+1}+I${index+1})/(F${index+1}+H${index+1})")
+
+          table1Total += dwTable1Total
+          table2Total += dwTable2Total
+        }
+        sheet("E16").setCellFormula("SUM(E4:E15)")
+        sheet("I16").setCellFormula("SUM(I4:I15)")
+        println(s"合计 $table1Total $table2Total")
+      }
+      workbook.save(filePath.insertBeforeLast(s".${Formatter.formatDate()}"))
     }
   }
 
@@ -1925,4 +1976,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(exportTable1VerifiedAllData)
 
   addSubCommand(exportTable1ImportData)
+
+  addSubCommand(lookbackStatics)
 }
