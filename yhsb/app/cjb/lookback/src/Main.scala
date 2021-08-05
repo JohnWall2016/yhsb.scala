@@ -1533,6 +1533,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   val table41Classify = new Subcommand("table41Classify")
     with InputFile
     with RowRange {
+    descr("居保附表2分类程序")
+    
     def execute(): Unit = {
       val workbook = Excel.load(inputFile())
       val sheet = workbook.getSheetAt(0)
@@ -1618,6 +1620,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   val table41Refund = new Subcommand("table41Refund")
     with InputFile
     with RowRange {
+    descr("居保附表2涉及冒领金额测算")
+    
     def execute(): Unit = {
       Session.use("004") { session =>
         def getRefundData(
