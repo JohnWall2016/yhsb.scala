@@ -44,6 +44,7 @@ import yhsb.cjb.net.protocol.PersonInfoQuery
 import yhsb.cjb.net.protocol.RetiredPersonPauseQuery
 import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
 import yhsb.cjb.net.protocol.LookBackTable2Cancel
+import yhsb.cjb.net.protocol.RefundQuery
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -1535,7 +1536,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     with InputFile
     with RowRange {
     descr("居保附表2分类程序")
-    
+
     def execute(): Unit = {
       val workbook = Excel.load(inputFile())
       val sheet = workbook.getSheetAt(0)
@@ -1612,7 +1613,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
         println(kind)
 
-        row("X").value = kind
+        row.getOrCreateCell("X").value = kind
       }
       workbook.save(inputFile().insertBeforeLast(".up"))
     }
@@ -1622,7 +1623,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     with InputFile
     with RowRange {
     descr("居保附表2涉及冒领金额测算")
-    
+
     def execute(): Unit = {
       Session.use("004") { session =>
         def getRefundData(
@@ -1708,6 +1709,63 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
         } finally {
           workbook.save(inputFile().insertBeforeLast(".up"))
         }
+      }
+    }
+  }
+
+  val table41Refunded = new Subcommand("table41Refunded")
+    with InputFile
+    with RowRange {
+    descr("统计已稽核金额")
+
+    def execute(): Unit = {
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+
+      try {
+        Session.use("003") { session =>
+          for {
+            index <- (startRow() - 1) until endRow()
+            row = sheet.getRow(index)
+          } {
+            val name = row("F").value
+            val idCard = row("E").value
+            val kind = row("X").value
+
+            kind match {
+              case "亲属持卡冒领" | "非亲属持卡冒领" =>
+                val refund = session
+                    .request(RefundQuery(idCard))
+                    .filter { it =>
+                      it.state == "已到账"
+                    }
+                    .map(_.amount)
+                    .sum
+                if (refund > 0) {
+                  println(s"$index $idCard $name $kind $refund")
+                  row.getOrCreateCell("AD").value = refund
+                }
+              case "异常人员" =>
+                val state = row("K").value
+                if (state == "待遇终止") {
+                  val refund = session
+                    .request(RefundQuery(idCard))
+                    .filter { it =>
+                      it.state == "已到账"
+                    }
+                    .map(_.amount)
+                    .sum
+                  if (refund > 0) {
+                    println(s"$index $idCard $name $kind $refund")
+                    row.getOrCreateCell("AD").value = refund
+                  }
+                }
+              case _ =>
+            }
+          }
+        }
+      } finally {
+        workbook.save(inputFile().insertBeforeLast(".up"))
       }
     }
   }
@@ -1913,13 +1971,19 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             operator <- map(dwName)
             if operator != ""
           } {
-            dwTable1Total += session.request(LookBackTable1Audit(operator)).rowcount
-            dwTable2Total += session.request(LookBackTable2Audit(operator)).rowcount
+            dwTable1Total += session
+              .request(LookBackTable1Audit(operator))
+              .rowcount
+            dwTable2Total += session
+              .request(LookBackTable2Audit(operator))
+              .rowcount
           }
           println(s"$dwName $dwTable1Total $dwTable2Total")
           row("E").value = dwTable1Total
           row("I").value = dwTable2Total
-          row("J").setCellFormula(s"(G${index+1}+I${index+1})/(F${index+1}+H${index+1})")
+          row("J").setCellFormula(
+            s"(G${index + 1}+I${index + 1})/(F${index + 1}+H${index + 1})"
+          )
 
           table1Total += dwTable1Total
           table2Total += dwTable2Total
@@ -1936,7 +2000,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     with InputFile
     with RowRange {
     descr("居保附表2作废程序")
-    
+
     val operator = trailArg[String]("操作员")
     val nameCol = trailArg[String]("姓名列")
     val idCardCol = trailArg[String]("身份证列")
@@ -1957,13 +2021,13 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             "身份号码不能为空"
           } else {
             session
-            .request(LookBackTable2Audit(operator(), idCard))
-            .headOption match {
+              .request(LookBackTable2Audit(operator(), idCard))
+              .headOption match {
               case None => "系统中未查到该人核实信息"
               case Some(item) =>
                 println(item)
                 session.toService(LookBackTable2Cancel(item, memo()))
-                //session.request(LookBackTable2Cancel(Seq(item), memo())).message
+              //session.request(LookBackTable2Cancel(Seq(item), memo())).message
             }
           }
           println(s"$idCard $name $message")
@@ -2015,6 +2079,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
   addSubCommand(table41Classify)
   addSubCommand(table41Refund)
+  addSubCommand(table41Refunded)
 
   addSubCommand(loadTable1VerifiedData)
 
