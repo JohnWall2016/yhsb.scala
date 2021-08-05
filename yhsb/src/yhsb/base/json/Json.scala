@@ -7,6 +7,7 @@ import yhsb.base.struct.{ListField, MapField}
 
 import java.lang.reflect.{ParameterizedType, Type}
 import scala.reflect.{ClassTag, classTag}
+import yhsb.base.struct.NotNull
 
 trait JsonAdapter[T] extends JsonSerializer[T] with JsonDeserializer[T]
 
@@ -80,12 +81,21 @@ class ListFieldAdapter extends JsonAdapter[ListField[_]] {
   }
 }
 
+class NotNullAdapter extends JsonSerializer[NotNull] {
+  def serialize(
+      src: NotNull,
+      typeOfSrc: Type,
+      context: JsonSerializationContext
+  ): JsonElement = Json.toJsonElementNoNull(src)
+}
+
 object Json {
   private[json] lazy val gson = new GsonBuilder()
     .serializeNulls()
     .registerTypeHierarchyAdapter(classOf[BigDecimal], new BigDecimalAdapter)
     .registerTypeHierarchyAdapter(classOf[MapField], new MapFieldAdapter)
     .registerTypeHierarchyAdapter(classOf[ListField[_]], new ListFieldAdapter)
+    .registerTypeHierarchyAdapter(classOf[NotNull], new NotNullAdapter)
     .create()
 
   private[json] lazy val gsonNoNulls = new GsonBuilder()
@@ -104,6 +114,8 @@ object Json {
   def toJson[T](obj: T): String = gson.toJson(obj)
 
   def toJsonNoNulls[T](obj: T): String = gsonNoNulls.toJson(obj)
+
+  def toJsonElementNoNull[T](obj: T): JsonElement = gsonNoNulls.toJsonTree(obj)
 
   type JsonName = SerializedName @scala.annotation.meta.field
 }

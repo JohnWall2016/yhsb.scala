@@ -80,3 +80,5 @@ final class ListField[T] extends AbstractSeq[T] {
 object ListField {
   def apply[T](items: T*) = new ListField(items: _*)
 }
+
+abstract class NotNull

@@ -43,6 +43,7 @@ import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
 import yhsb.cjb.net.protocol.PersonInfoQuery
 import yhsb.cjb.net.protocol.RetiredPersonPauseQuery
 import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
+import yhsb.cjb.net.protocol.LookBackTable2Cancel
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -1931,6 +1932,46 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val table2Cancel = new Subcommand("table2Cancel")
+    with InputFile
+    with RowRange {
+    descr("居保附表2作废程序")
+    
+    val operator = trailArg[String]("操作员")
+    val nameCol = trailArg[String]("姓名列")
+    val idCardCol = trailArg[String]("身份证列")
+    val messageCol = trailArg[String]("反馈信息列")
+    val memo = trailArg[String]("作废原因")
+
+    def execute(): Unit = {
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+      Session.use() { session =>
+        for {
+          index <- (startRow() - 1) until endRow()
+          row = sheet.getRow(index)
+        } {
+          val name = row(nameCol()).value
+          val idCard = row(idCardCol()).value
+          val message = if (idCard == "") {
+            "身份号码不能为空"
+          } else {
+            session
+            .request(LookBackTable2Audit(operator(), idCard))
+            .headOption match {
+              case None => "系统中未查到该人核实信息"
+              case Some(item) =>
+                println(item)
+                session.toService(LookBackTable2Cancel(item, memo()))
+                //session.request(LookBackTable2Cancel(Seq(item), memo())).message
+            }
+          }
+          println(s"$idCard $name $message")
+        }
+      }
+    }
+  }
+
   addSubCommand(retiredTables)
 
   addSubCommand(zipSubDir)
@@ -1982,4 +2023,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(exportTable1ImportData)
 
   addSubCommand(lookbackStatics)
+
+  addSubCommand(table2Cancel)
 }
