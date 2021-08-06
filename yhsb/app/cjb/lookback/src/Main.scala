@@ -2025,9 +2025,9 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
               .headOption match {
               case None => "系统中未查到该人核实信息"
               case Some(item) =>
-                println(item)
-                session.toService(LookBackTable2Cancel(item, memo()))
-              //session.request(LookBackTable2Cancel(Seq(item), memo())).message
+                //println(item)
+                //session.toService(LookBackTable2Cancel(item, memo()))
+              session.request(LookBackTable2Cancel(item, memo())).message
             }
           }
           println(s"$idCard $name $message")
