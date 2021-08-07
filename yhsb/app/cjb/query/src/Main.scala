@@ -685,8 +685,8 @@ class Query(args: collection.Seq[String]) extends Command(args) {
           for {
             i <- (startRow() - 1) until endRow()
             row = sheet.getRow(i)
-            name = row("F").value.trim()
-            idCard = row("E").value.trim()
+            name = row("E").value.trim()
+            idCard = row("F").value.trim()
             division = row("D").value.trim()
           } {
             println(s"$i $idCard $name ")
