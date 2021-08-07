@@ -28,5 +28,7 @@ object RefundQuery {
     amount: BigDecimal,
     @JsonName("dzbz")
     state: String, // 已到账
+    @JsonName("aae036")
+    refundedTime: String,
   )
 }

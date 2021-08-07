@@ -1728,40 +1728,28 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             index <- (startRow() - 1) until endRow()
             row = sheet.getRow(index)
           } {
-            val name = row("F").value
-            val idCard = row("E").value
-            val kind = row("X").value
+            val name = row("B").value
+            val idCard = row("C").value
 
-            kind match {
-              case "亲属持卡冒领" | "非亲属持卡冒领" =>
-                val refund = session
-                    .request(RefundQuery(idCard))
-                    .filter { it =>
-                      it.state == "已到账"
-                    }
-                    .map(_.amount)
-                    .sum
-                if (refund > 0) {
-                  println(s"$index $idCard $name $kind $refund")
-                  row.getOrCreateCell("AD").value = refund
+            var total = BigDecimal(0)
+            var time = 0
+
+            for (item <- session.request(RefundQuery(idCard))) {
+              if (item.state == "已到账") {
+                total += item.amount
+                val rtime = item.refundedTime.split("-").take(2).mkString.toInt
+                if (rtime > time) {
+                  time = rtime
                 }
-              case "异常人员" =>
-                val state = row("K").value
-                if (state == "待遇终止") {
-                  val refund = session
-                    .request(RefundQuery(idCard))
-                    .filter { it =>
-                      it.state == "已到账"
-                    }
-                    .map(_.amount)
-                    .sum
-                  if (refund > 0) {
-                    println(s"$index $idCard $name $kind $refund")
-                    row.getOrCreateCell("AD").value = refund
-                  }
-                }
-              case _ =>
+              }
             }
+
+            if (total > 0) {
+              row.getOrCreateCell("P").value = total
+              row.getOrCreateCell("Q").value = time
+            }
+
+            println(s"$index $idCard $name $total $time")
           }
         }
       } finally {
