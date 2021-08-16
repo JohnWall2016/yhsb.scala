@@ -9,8 +9,8 @@ class HttpRequest(
     val method: String,
     val charset: String
 ) {
-  private val header = new HttpHeader()
-  private val body = new ByteArrayOutputStream(512)
+  val header = new HttpHeader()
+  val body = new ByteArrayOutputStream(512)
 
   def addHeader(header: HttpHeader) = this.header.addAll(header)
 

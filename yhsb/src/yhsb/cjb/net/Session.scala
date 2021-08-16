@@ -55,7 +55,8 @@ class Session(
     private val userID: String,
     private val password: String,
     private val cxcookie: String,
-    private val jsessionid_ylzcbp: String
+    private val jsessionid_ylzcbp: String,
+    private val verbose: Boolean = false
 ) extends HttpSocket(ip, port, "UTF-8") {
   private val cookies = {
     val sess = Config.getSession(userID)
@@ -103,6 +104,10 @@ class Session(
   def buildRequest(content: String): HttpRequest = {
     val request = createRequest
     request.addBody(content)
+    if (verbose) {
+      println(s"request(head): ${request.header}\r\n")
+      println(s"request(body): ${content}\r\n")
+    }
     request
   }
 
@@ -113,20 +118,35 @@ class Session(
 
   def toService(req: Request[_]): String = {
     val service = new JsonService(req, userID, password)
-    service.toString()
+    val result = service.toString()
+    result
+  }
+
+  def toService(req: Request[_], userID: String, password: String): String = {
+    val service = new JsonService(req, userID, password)
+    val result = service.toString()
+    result
   }
 
   def toService(id: String): String = toService(new Request(id))
+
+  def toService(id: String, userID: String, password: String): String = {
+    toService(new Request(id), userID, password)
+  }
 
   def sendService(req: Request[_]) = writeRequest(toService(req))
 
   def sendService(id: String) = writeRequest(toService(id))
 
+  def sendService(id: String, userID: String, password: String) = {
+    writeRequest(toService(id, userID, password))
+  }
+
   def fromJson[T: ClassTag](json: String): Result[T] =
     Result.fromJson(json)
 
   def getResult[T: ClassTag]: Result[T] = {
-    val result = readBody()
+    val result = readBody(verbose = verbose)
     // println(s"getResult: $result")
     Result.fromJson(result)
   }
@@ -146,7 +166,7 @@ class Session(
   }
 
   def login(): String = {
-    sendService("contentQuery")
+    sendService("contentQuery", null, null)
 
     val header = readHeader()
     if (header.contains("set-cookie")) {
@@ -163,15 +183,15 @@ class Session(
         cookies("jsessionid_ylzcbp")
       )
     }
-    readBody(header)
+    readBody(header, verbose = verbose)
 
     sendService(SysLogin(userID + "|@|1", password))
-    readBody()
+    readBody(verbose = verbose)
   }
 
   def logout(): String = {
     //sendService("syslogout")
-    //readBody()
+    //readBody(verbose = verbose)
     ""
   }
 
@@ -255,7 +275,7 @@ class Session(
 }
 
 object Session {
-  def use[T](user: String = "002", autoLogin: Boolean = true)(
+  def use[T](user: String = "002", autoLogin: Boolean = true, verbose: Boolean = true)(
       f: Session => T
   ): T = {
     val usr = Config.cjbSession.getConfig(s"users.$user")
@@ -266,7 +286,8 @@ object Session {
         usr.getString("id"),
         usr.getString("pwd"),
         usr.getString("cxcookie"),
-        usr.getString("jsessionid_ylzcbp")
+        usr.getString("jsessionid_ylzcbp"),
+        verbose
       )
     ) { sess =>
       if (autoLogin) sess.login()

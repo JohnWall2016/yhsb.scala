@@ -136,10 +136,13 @@ class HttpSocket private (
     out
   }
 
-  def readBody(header: HttpHeader = null): String = {
+  def readBody(header: HttpHeader = null, verbose: Boolean = false): String = {
     val header_ = if (header == null) readHeader() else header
+    if (verbose) {
+      println(s"readBody(header): $header_\r\n")
+    }
     use(readByteArrayOutputStream(header_)) { buf =>
-      if ("gzip" in header_.get("Content-Encoding")) {
+      val body = if ("gzip" in header_.get("Content-Encoding")) {
         Source
           .fromInputStream(
             new GZIPInputStream(
@@ -151,6 +154,10 @@ class HttpSocket private (
       } else {
         buf.toString(charset)
       }
+      if (verbose) {
+        println(s"readBody(body): $body\r\n")
+      }
+      body
     }
   }
 

@@ -112,7 +112,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
         val workbook = Excel.load(inputFile())
         val sheet = workbook.getSheetAt(0)
 
-        Session.use() { session =>
+        Session.use(verbose = false) { session =>
           for (i <- (startRow() - 1) until endRow()) {
             val row = sheet.getRow(i)
             val name = row.getCell(nameRow()).value.trim()
