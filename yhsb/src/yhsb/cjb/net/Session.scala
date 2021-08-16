@@ -2,16 +2,17 @@ package yhsb.cjb.net
 
 import java.net.URLEncoder
 
-import scala.collection.mutable
 import scala.collection.SeqMap
+import scala.collection.mutable
 import scala.reflect.ClassTag
 
 import yhsb.base.io.AutoClose
 import yhsb.base.json.Jsonable
+import yhsb.base.net.HttpHeader
 import yhsb.base.net.HttpRequest
 import yhsb.base.net.HttpSocket
-import yhsb.cjb.net.protocol._
 import yhsb.cjb.db.CjbSession
+import yhsb.cjb.net.protocol._
 
 object Config {
   val cjbSession = yhsb.base.util.Config.load("cjb.session")
@@ -105,8 +106,8 @@ class Session(
     val request = createRequest
     request.addBody(content)
     if (verbose) {
-      println(s"request(head): ${request.header}\r\n")
-      println(s"request(body): ${content}\r\n")
+      println(s"buildRequest(head): ${request.header}\r\n")
+      println(s"buildRequest(body): ${content}\r\n")
     }
     request
   }
@@ -145,8 +146,18 @@ class Session(
   def fromJson[T: ClassTag](json: String): Result[T] =
     Result.fromJson(json)
 
+  override def readBody(header: HttpHeader): String = {
+    val header_ = if (header == null) readHeader() else header
+    val body = extractBody(readByteArrayOutputStream(header_), header_)
+    if (verbose) {
+      println(s"readBody(head): ${header_}\r\n")
+      println(s"readBody(body): ${body}\r\n")
+    }
+    body
+  }
+
   def getResult[T: ClassTag]: Result[T] = {
-    val result = readBody(verbose = verbose)
+    val result = readBody()
     // println(s"getResult: $result")
     Result.fromJson(result)
   }
@@ -183,15 +194,15 @@ class Session(
         cookies("jsessionid_ylzcbp")
       )
     }
-    readBody(header, verbose = verbose)
+    readBody(header)
 
     sendService(SysLogin(userID + "|@|1", password))
-    readBody(verbose = verbose)
+    readBody()
   }
 
   def logout(): String = {
     //sendService("syslogout")
-    //readBody(verbose = verbose)
+    //readBody()
     ""
   }
 
