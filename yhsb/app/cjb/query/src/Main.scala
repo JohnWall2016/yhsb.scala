@@ -204,7 +204,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
 
       override def execute(): Unit = {
-        val (info, payInfoResult) = Session.use(verbose = false) { session =>
+        val (info, payInfoResult) = Session.use(verbose = true) { session =>
           val info =
             session
               .request(PersonInfoInProvinceQuery(idCard()))

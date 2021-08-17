@@ -67,7 +67,9 @@ class HttpSocket private (
     use(new ByteArrayOutputStream(512)) { buf =>
       var continue = true
       while (continue) {
-        input.read() match {
+        val ch = input.read()
+        //println(ch)
+        ch match {
           case -1 => continue = false
           case 0xd =>
             input.read() match {
@@ -91,7 +93,7 @@ class HttpSocket private (
     var continue = true
     while (continue) {
       val line = readLine()
-      // println(line)
+      //println(line)
       if (line == null || line.isEmpty) {
         continue = false
       } else {

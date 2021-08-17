@@ -81,18 +81,18 @@ class Session(
       .addHeader("Host", host)
       .addHeader("Connection", "keep-alive")
       .addHeader("Accept", "application/json, text/javascript, */*; q=0.01")
-      .addHeader("Origin", s"http://$host")
       .addHeader("X-Requested-With", "XMLHttpRequest")
       .addHeader(
         "User-Agent",
-        "Mozilla/5.0 (Windows NT 5.1) " +
+        "Mozilla/5.0 (Windows NT 6.1; Win64; x64) " +
           "AppleWebKit/537.36 (KHTML, like Gecko) " +
-          "Chrome/39.0.2171.95 Safari/537.36"
+          "Chrome/92.0.4515.131 Safari/537.36"
       )
       .addHeader("Content-Type", "multipart/form-data;charset=UTF-8")
+      .addHeader("Origin", s"http://$host")
       .addHeader("Referer", s"http://$host/hncjb/pages/html/index.html")
       .addHeader("Accept-Encoding", "gzip, deflate")
-      .addHeader("Accept-Language", "zh-CN,zh;q=0.8")
+      .addHeader("Accept-Language", "zh-CN,zh;q=0.9")
     if (cookies.nonEmpty) {
       request.addHeader(
         "Cookie",
@@ -241,9 +241,9 @@ class Session(
       .addHeader("Upgrade-Insecure-Requests", "1")
       .addHeader(
         "User-Agent",
-        "Mozilla/5.0 (Windows NT 5.1) " +
+        "Mozilla/5.0 (Windows NT 6.1; Win64; x64) " +
           "AppleWebKit/537.36 (KHTML, like Gecko) " +
-          "Chrome/39.0.2171.95 Safari/537.36"
+          "Chrome/92.0.4515.131 Safari/537.36"
       )
       .addHeader(
         "Accept",
@@ -253,7 +253,7 @@ class Session(
       )
       .addHeader("Referer", s"http://$host/hncjb/pages/html/index.html")
       .addHeader("Accept-Encoding", "gzip, deflate")
-      .addHeader("Accept-Language", "zh-CN,zh;q=0.8")
+      .addHeader("Accept-Language", "zh-CN,zh;q=0.9")
 
     if (cookies.nonEmpty) {
       request.addHeader(
