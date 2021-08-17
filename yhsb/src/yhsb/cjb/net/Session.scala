@@ -286,7 +286,7 @@ class Session(
 }
 
 object Session {
-  def use[T](user: String = "002", autoLogin: Boolean = true, verbose: Boolean = true)(
+  def use[T](user: String = "007", autoLogin: Boolean = true, verbose: Boolean = false)(
       f: Session => T
   ): T = {
     val usr = Config.cjbSession.getConfig(s"users.$user")
