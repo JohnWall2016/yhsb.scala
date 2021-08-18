@@ -26,7 +26,11 @@ class HttpSocket private (
     val charset: String
 ) extends Closeable {
 
-  def this(ip: String, port: Int, charset: String) =
+  def this(
+      ip: String,
+      port: Int,
+      charset: String
+  ) =
     this(ip, port, s"$ip:$port", charset)
 
   def this(url: URL, charset: String) = this(
@@ -58,6 +62,8 @@ class HttpSocket private (
     input.close()
     socket.close()
   }
+
+  def setTimeOut(timeOut: Int) = socket.setSoTimeout(timeOut)
 
   def write(bytes: Array[Byte]) = output.write(bytes)
 
@@ -113,7 +119,9 @@ class HttpSocket private (
     out.write(input.readNBytes(len))
   }
 
-  protected def readByteArrayOutputStream(header: HttpHeader): ByteArrayOutputStream = {
+  protected def readByteArrayOutputStream(
+      header: HttpHeader
+  ): ByteArrayOutputStream = {
     val out = new ByteArrayOutputStream(512)
     if ("chunked" in header.get("Transfer-Encoding")) {
       var continue = true
@@ -138,7 +146,10 @@ class HttpSocket private (
     out
   }
 
-  protected def extractBody(bytes: ByteArrayOutputStream, header: HttpHeader) = {
+  protected def extractBody(
+      bytes: ByteArrayOutputStream,
+      header: HttpHeader
+  ) = {
     use(bytes) { buf =>
       if ("gzip" in header.get("Content-Encoding")) {
         Source

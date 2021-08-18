@@ -286,26 +286,47 @@ class Session(
 }
 
 object Session {
-  def use[T](user: String = "007", autoLogin: Boolean = true, verbose: Boolean = false)(
+  def use[T](
+      user: String = "007",
+      autoLogin: Boolean = true,
+      verbose: Boolean = false,
+      loginTimeOut: Int = 15 * 1000,
+      loginRetries: Int = 3
+  )(
       f: Session => T
   ): T = {
-    val usr = Config.cjbSession.getConfig(s"users.$user")
-    AutoClose.use(
-      new Session(
-        Config.cjbSession.getString("host"),
-        Config.cjbSession.getInt("port"),
-        usr.getString("id"),
-        usr.getString("pwd"),
-        usr.getString("cxcookie"),
-        usr.getString("jsessionid_ylzcbp"),
-        verbose
-      )
-    ) { sess =>
-      if (autoLogin) sess.login()
-      try {
-        f(sess)
-      } finally {
-        if (autoLogin) sess.logout()
+    try {
+      val usr = Config.cjbSession.getConfig(s"users.$user")
+      AutoClose.use(
+        new Session(
+          Config.cjbSession.getString("host"),
+          Config.cjbSession.getInt("port"),
+          usr.getString("id"),
+          usr.getString("pwd"),
+          usr.getString("cxcookie"),
+          usr.getString("jsessionid_ylzcbp"),
+          verbose
+        )
+      ) { sess =>
+        if (autoLogin) {
+          sess.setTimeOut(loginTimeOut)
+          sess.login()
+          sess.setTimeOut(0)
+        }
+        try {
+          f(sess)
+        } finally {
+          if (autoLogin) sess.logout()
+        }
+      }
+    } catch {
+      case  ex: java.net.SocketTimeoutException => {
+        if (loginRetries > 0) {
+          println(s"Logining retries ...")
+          use(user, autoLogin, verbose, loginTimeOut, loginRetries - 1)(f)
+        } else {
+          throw ex
+        }
       }
     }
   }
