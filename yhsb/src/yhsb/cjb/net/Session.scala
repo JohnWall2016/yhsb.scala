@@ -309,9 +309,10 @@ object Session {
         )
       ) { sess =>
         if (autoLogin) {
+          val oldValue = sess.getTimeOut()
           sess.setTimeOut(loginTimeOut)
           sess.login()
-          sess.setTimeOut(0)
+          sess.setTimeOut(oldValue)
         }
         try {
           f(sess)

@@ -65,6 +65,8 @@ class HttpSocket private (
 
   def setTimeOut(timeOut: Int) = socket.setSoTimeout(timeOut)
 
+  def getTimeOut() = socket.getSoTimeout()
+
   def write(bytes: Array[Byte]) = output.write(bytes)
 
   def write(content: String): Unit = write(content.getBytes(charset))
