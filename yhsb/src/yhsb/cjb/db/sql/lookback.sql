@@ -205,7 +205,7 @@ create table table2_verified_data(
     phone varchar(32),
     alive varchar(8),
     keep_card_by_self varchar(8),
-    deathDate varchar(16),
+    death_date varchar(16),
     keep_card_by_relative varchar(8),
     abnormal_type varchar(32),
     abnormal_detail varchar(64),

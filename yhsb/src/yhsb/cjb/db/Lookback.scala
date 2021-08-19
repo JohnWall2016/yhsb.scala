@@ -393,7 +393,7 @@ trait Table2VerifiedData { this: MysqlJdbcContext[_] =>
       _.phone -> "phone",
       _.alive -> "alive",
       _.keepCardBySelf -> "keep_card_by_self",
-      _.deathDate -> "deathDate",
+      _.deathDate -> "death_date",
       _.abnormalType -> "abnormal_type",
       _.abnormalDetail -> "abnormal_detail",
       _.verifiedWay -> "verified_way",
@@ -411,7 +411,7 @@ trait OutsideDeathData { this: MysqlJdbcContext[_] =>
       _.idCard -> "idcard",
       _.name -> "name",
       _.dataType -> "data_type",
-      _.deathDate -> "death_data",
+      _.deathDate -> "death_date",
     )
   }
 }

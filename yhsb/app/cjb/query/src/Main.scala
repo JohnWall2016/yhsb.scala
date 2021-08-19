@@ -1470,7 +1470,9 @@ class Query(args: collection.Seq[String]) extends Command(args) {
 
                 import yhsb.cjb.db.lookback.Lookback2021._
                 val table2Data: List[Table2VerifiedResult] = run {
-                  table2VerifiedData.filter(_.idCard == lift(idCard))
+                  table2VerifiedData.filter{ f =>
+                    f.idCard == lift(idCard) && f.deathDate != ""
+                  }
                 }
                 table2Data.headOption match {
                   case None =>
