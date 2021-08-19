@@ -192,6 +192,36 @@ create table table1_verified_data(
     reserve3 varchar(32)
 );
 
+create table table2_verified_data(
+    village_name varchar(128),
+    idcard varchar(32) primary key,
+    name varchar(32),
+    verified varchar(32),
+    bank_account varchar(32),
+    bank_name varchar(32),
+    card_type varchar(32),
+    pay_state varchar(16),
+    stop_time varchar(16),
+    phone varchar(32),
+    alive varchar(8),
+    keep_card_by_self varchar(8),
+    deathDate varchar(16),
+    keep_card_by_relative varchar(8),
+    abnormal_type varchar(32),
+    abnormal_detail varchar(64),
+    verified_way varchar(32),
+    verified_phone varchar(32),
+    verifier varchar(32),
+    verifier_phone varchar(32)
+);
+
+create table outside_death_data(
+    idcard varchar(32),
+    name varchar(32),
+    data_type varchar(16),
+    death_date varchar(16)
+);
+
 insert into table1_data_with_compare_data 
     (select a.*, b.data_type, b.result_name, b.result_area, b.result_type, b.result_memo from table1_data as a, social_security_compare_result as b where a.idcard=b.idcard)
     on duplicate key update table1_data_with_compare_data.idcard=table1_data_with_compare_data.idcard;

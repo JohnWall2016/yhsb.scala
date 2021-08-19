@@ -290,8 +290,8 @@ object Session {
       user: String = "007",
       autoLogin: Boolean = true,
       verbose: Boolean = false,
-      loginTimeOut: Int = 15 * 1000,
-      loginRetries: Int = 3
+      loginTimeOut: Int = 6 * 1000,
+      loginRetries: Int = 6
   )(
       f: Session => T
   ): T = {

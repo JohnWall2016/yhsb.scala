@@ -57,6 +57,9 @@ import yhsb.cjb.net.protocol.DataCompareQuery
 import scala.collection.mutable.HashMap
 import yhsb.cjb.net.protocol.DivisionName
 import yhsb.cjb.net.protocol.Division
+import yhsb.cjb.db.lookback.Table2VerifiedResult
+import yhsb.cjb.db.lookback.OutsideDeathItem
+import io.getquill.Ord
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -1425,6 +1428,15 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                   row.getOrCreateCell("F").value = it.dwName
                   row.getOrCreateCell("G").value = it.jbState
 
+                  def monthsBefore(deathYearMonth: Int, pauseYearMonth: Int) = {
+                    val deathYear = deathYearMonth / 100
+                    val deathMonth = deathYearMonth % 100
+                    val pauseYear = pauseYearMonth / 100
+                    val pauseMonth = pauseYearMonth % 100
+
+                    (pauseYear - deathYear) * 12 + pauseMonth - deathMonth
+                  }
+
                   session
                     .request(RetiredPersonPauseAuditQuery(idCard, "1"))
                     .headOption match {
@@ -1433,14 +1445,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                       row.getOrCreateCell("H").value = "暂停"
                       val pauseYearMonth = it.pauseYearMonth
                       row.getOrCreateCell("I").value = pauseYearMonth
-                      row.getOrCreateCell("J").value = {
-                        val deathYear = deathYearMonth / 100
-                        val deathMonth = deathYearMonth % 100
-                        val pauseYear = pauseYearMonth / 100
-                        val pauseMonth = pauseYearMonth % 100
-
-                        (pauseYear - deathYear) * 12 + pauseMonth - deathMonth - 1
-                      }
+                      row.getOrCreateCell("J").value = monthsBefore(deathYearMonth, pauseYearMonth) - 1
                       row.getOrCreateCell("K").value = it.reason.toString
                       row.getOrCreateCell("L").value = it.memo
                   }
@@ -1450,15 +1455,9 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                     .headOption match {
                     case None =>
                     case Some(it) =>
-                      row.getOrCreateCell("M").value = it.deathDate
+                      row.getOrCreateCell("O").value = it.deathDate
                       val suspectedDeathYearMonth = it.deathDate / 100
-                      row.getOrCreateCell("N").value = {
-                        val deathYear = deathYearMonth / 100
-                        val deathMonth = deathYearMonth % 100
-                        val suspectedDeathYear = suspectedDeathYearMonth / 100
-                        val suspectedDeathMonth = suspectedDeathYearMonth % 100
-                        (deathYear - suspectedDeathYear) * 12 + deathMonth - suspectedDeathMonth
-                      }
+                      row.getOrCreateCell("P").value = monthsBefore(deathYearMonth, suspectedDeathYearMonth)
                   }
 
                   session
@@ -1466,8 +1465,34 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                     .headOption match {
                     case None =>
                     case Some(it) =>
-                      row.getOrCreateCell("O").value = it.zbState.toString()
-                      row.getOrCreateCell("P").value = it.pensionDate
+                      row.getOrCreateCell("T").value = it.zbState.toString()
+                      row.getOrCreateCell("U").value = it.pensionDate
+                  }
+
+                  import yhsb.cjb.db.lookback.Lookback2021._
+                  val table2Data: List[Table2VerifiedResult] = run {
+                    table2VerifiedData.filter(_.idCard == lift(idCard))
+                  }
+                  table2Data.headOption match {
+                    case None => 
+                    case Some(item) =>
+                      val table2DeathYearMonth = item.deathDate.toInt
+                      row.getOrCreateCell("M").value = table2DeathYearMonth
+                      row.getOrCreateCell("N").value = monthsBefore(deathYearMonth, table2DeathYearMonth)
+                  }
+
+                  val outsideData: List[OutsideDeathItem] = run {
+                    outsideDeathData
+                      .filter(_.idCard == lift(idCard))
+                      .sortBy(_.deathDate)(Ord.asc)
+                  }
+                  outsideData.headOption match {
+                    case None => 
+                    case Some(item) =>
+                      row.getOrCreateCell("Q").value = item.dataType
+                      val outsideDeathYearMonth = item.deathDate.toInt
+                      row.getOrCreateCell("R").value = outsideDeathYearMonth
+                      row.getOrCreateCell("S").value = monthsBefore(deathYearMonth, outsideDeathYearMonth)
                   }
               }
               println()

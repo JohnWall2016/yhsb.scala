@@ -1,8 +1,9 @@
 package yhsb.cjb.db
+package lookback
 
 import io.getquill._
 
-case class LBTable1(
+case class Table1(
   idCard: String,
   name: String,
   address: String,
@@ -16,7 +17,7 @@ case class LBTable1(
 
 trait CardsData { this: MysqlJdbcContext[_] =>
   val cardData = quote {
-    querySchema[LBTable1](
+    querySchema[Table1](
       "cards_data",
       _.idCard -> "idcard",
       _.name -> "name",
@@ -33,7 +34,7 @@ trait CardsData { this: MysqlJdbcContext[_] =>
 
 trait JbData { this: MysqlJdbcContext[_] =>
   val jbData = quote {
-    querySchema[LBTable1](
+    querySchema[Table1](
       "jb_data",
       _.idCard -> "idcard",
       _.name -> "name",
@@ -50,7 +51,7 @@ trait JbData { this: MysqlJdbcContext[_] =>
 
 trait QmcbData { this: MysqlJdbcContext[_] =>
   val qmcbData = quote {
-    querySchema[LBTable1](
+    querySchema[Table1](
       "qmcb_data",
       _.idCard -> "idcard",
       _.name -> "name",
@@ -67,7 +68,7 @@ trait QmcbData { this: MysqlJdbcContext[_] =>
 
 trait UnionData { this: MysqlJdbcContext[_] =>
   val unionData = quote {
-    querySchema[LBTable1](
+    querySchema[Table1](
       "union_data",
       _.idCard -> "idcard",
       _.name -> "name",
@@ -84,7 +85,7 @@ trait UnionData { this: MysqlJdbcContext[_] =>
 
 trait PoliceData { this: MysqlJdbcContext[_] =>
   val policeData = quote {
-    querySchema[LBTable1](
+    querySchema[Table1](
       "police_data",
       _.idCard -> "idcard",
       _.name -> "name",
@@ -101,7 +102,7 @@ trait PoliceData { this: MysqlJdbcContext[_] =>
 
 trait Table1Data { this: MysqlJdbcContext[_] =>
   val table1Data = quote {
-    querySchema[LBTable1](
+    querySchema[Table1](
       "table1_data",
       _.idCard -> "idcard",
       _.name -> "name",
@@ -202,7 +203,7 @@ trait VerifiedData { this: MysqlJdbcContext[_] =>
 
 trait Table1VerifiedData { this: MysqlJdbcContext[_] =>
   val table1VerifiedData = quote {
-    querySchema[LBTable1](
+    querySchema[Table1](
       "table1_verified_data",
       _.idCard -> "idcard",
       _.name -> "name",
@@ -267,7 +268,7 @@ trait SSCompareData { this: MysqlJdbcContext[_] =>
   }
 }
 
-case class LBTable1CompareResult(
+case class Table1CompareResult(
   idCard: String,
   name: String,
   address: String,
@@ -284,7 +285,7 @@ case class LBTable1CompareResult(
   resultMemo: String,
 )
 
-case class LBTable1VerifiedAllData(
+case class Table1VerifiedResult(
   idCard: String,
   name: String,
   address: String,
@@ -302,9 +303,38 @@ case class LBTable1VerifiedAllData(
   verified: String,
 )
 
+case class Table2VerifiedResult(
+  villageName: String,
+  idCard: String,
+  name: String,
+  verified: String,
+  bankAccount: String,
+  bankName: String,
+  cardType: String,
+  payState: String,
+  stopTime: String,
+  phone: String,
+  alive: String,
+  keepCardBySelf: String,
+  deathDate: String,
+  abnormalType: String,
+  abnormalDetail: String,
+  verifiedWay: String,
+  verifiedPhone: String,
+  verifier: String,
+  verifierPhone: String,
+)
+
+case class OutsideDeathItem(
+  idCard: String,
+  name: String,
+  dataType: String,
+  deathDate: String,
+)
+
 trait Table1CompareData { this: MysqlJdbcContext[_] =>
   val table1CompareData = quote {
-    querySchema[LBTable1CompareResult](
+    querySchema[Table1CompareResult](
       "table1_data_with_compare_data",
       _.idCard -> "idcard",
       _.name -> "name",
@@ -326,7 +356,7 @@ trait Table1CompareData { this: MysqlJdbcContext[_] =>
 
 trait Table1VerifiedAllData { this: MysqlJdbcContext[_] =>
   val table1VerifiedAllData = quote {
-    querySchema[LBTable1VerifiedAllData](
+    querySchema[Table1VerifiedResult](
       "table1_all_verified_data",
       _.idCard -> "idcard",
       _.name -> "name",
@@ -343,6 +373,45 @@ trait Table1VerifiedAllData { this: MysqlJdbcContext[_] =>
       _.resultType -> "result_type",
       _.resultMemo -> "result_memo",
       _.verified -> "verified",
+    )
+  }
+}
+
+trait Table2VerifiedData { this: MysqlJdbcContext[_] =>
+  val table2VerifiedData = quote {
+    querySchema[Table2VerifiedResult](
+      "table2_verified_data",
+      _.villageName -> "village_name",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.verified -> "verified",
+      _.bankAccount -> "bank_account",
+      _.bankName -> "bank_name",
+      _.cardType -> "card_type",
+      _.payState -> "pay_state",
+      _.stopTime -> "stop_time",
+      _.phone -> "phone",
+      _.alive -> "alive",
+      _.keepCardBySelf -> "keep_card_by_self",
+      _.deathDate -> "deathDate",
+      _.abnormalType -> "abnormal_type",
+      _.abnormalDetail -> "abnormal_detail",
+      _.verifiedWay -> "verified_way",
+      _.verifiedPhone -> "verified_phone",
+      _.verifier -> "verifier",
+      _.verifierPhone -> "verifier_phone",
+    )
+  }
+}
+
+trait OutsideDeathData { this: MysqlJdbcContext[_] =>
+  val outsideDeathData = quote {
+    querySchema[OutsideDeathItem](
+      "outside_death_data",
+      _.idCard -> "idcard",
+      _.name -> "name",
+      _.dataType -> "data_type",
+      _.deathDate -> "death_data",
     )
   }
 }
@@ -364,4 +433,6 @@ object Lookback2021
      with Table1CompareData
      with Table1VerifiedData
      with Table1VerifiedAllData
+     with Table2VerifiedData
+     with OutsideDeathData
      

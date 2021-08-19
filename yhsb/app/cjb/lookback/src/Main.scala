@@ -23,28 +23,22 @@ import yhsb.base.excel.Excel._
 import yhsb.base.io.Path._
 import yhsb.base.text.String._
 import yhsb.base.zip
-import yhsb.cjb.db.JbStopTable
-import yhsb.cjb.db.LBTable1
-import yhsb.cjb.db.LBTable1CompareResult
-import yhsb.cjb.db.LBTable1VerifiedAllData
-import yhsb.cjb.db.Lookback2021
-import yhsb.cjb.db.RetiredTable
-import yhsb.cjb.db.Table1Data
+import yhsb.cjb.db.lookback._
 import yhsb.cjb.net.Session
 import yhsb.cjb.net.protocol.CBState
 import yhsb.cjb.net.protocol.Division
 import yhsb.cjb.net.protocol.Division.GroupOps
 import yhsb.cjb.net.protocol.LookBackTable1Audit
 import yhsb.cjb.net.protocol.LookBackTable2Audit
+import yhsb.cjb.net.protocol.LookBackTable2Cancel
 import yhsb.cjb.net.protocol.PauseReason
 import yhsb.cjb.net.protocol.PayStopReason
 import yhsb.cjb.net.protocol.PaymentTerminateQuery
 import yhsb.cjb.net.protocol.PersonInfoPaylistQuery
 import yhsb.cjb.net.protocol.PersonInfoQuery
+import yhsb.cjb.net.protocol.RefundQuery
 import yhsb.cjb.net.protocol.RetiredPersonPauseQuery
 import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
-import yhsb.cjb.net.protocol.LookBackTable2Cancel
-import yhsb.cjb.net.protocol.RefundQuery
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -152,7 +146,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val reserve1 = opt[String](descr = "reserve1字段设置内容", default = Some(""))
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       if (clear()) {
         println("开始清除数据")
@@ -178,7 +172,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       if (clear()) {
         println("开始清除数据")
@@ -212,7 +206,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       if (clear()) {
         println("开始清除数据")
@@ -244,7 +238,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       if (clear()) {
         println("开始清除数据")
@@ -268,7 +262,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       if (clear()) {
         println("开始清除数据")
@@ -300,7 +294,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
       import scala.jdk.CollectionConverters._
 
       if (clear()) {
@@ -329,18 +323,18 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val condition = trailArg[String](descr = "查询条件")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
       import scala.jdk.CollectionConverters._
 
-      val items: List[LBTable1] = run {
+      val items: List[Table1] = run {
         quote {
-          infix"$policeData #${condition()}".as[Query[LBTable1]]
+          infix"$policeData #${condition()}".as[Query[Table1]]
         }
       }
 
       println(items.size)
 
-      Excel.export[LBTable1](
+      Excel.export[Table1](
         items,
         inputFile(),
         (index, row, item) => {
@@ -364,7 +358,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     descr("删除合并数据中的待遇人员")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
       val unionTable = unionData.quoted.name
       val retiredTable = retiredData.quoted.name
       Lookback2021.execute(
@@ -428,7 +422,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       val list = loadXzqhTable()
 
@@ -453,7 +447,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val template = outputDir / """参保与持卡情况表.xlsx"""
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       val destDir = outputDir / "参保与持卡情况表" / "第一批"
 
@@ -487,10 +481,10 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
         println(s"  $cs: $size")
         Files.createDirectory(destDir / dw / cs)
 
-        val items: List[LBTable1] = run {
+        val items: List[Table1] = run {
           quote(
             infix"${unionData.filter(d => d.reserve1 == lift(dw) && d.reserve2 == lift(cs))} ORDER BY CONVERT( name USING gbk )"
-              .as[Query[LBTable1]]
+              .as[Query[Table1]]
           )
         }
 
@@ -697,7 +691,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       if (clear()) {
         println("开始清除数据")
@@ -755,7 +749,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       val list = loadAddressTable()
 
@@ -778,18 +772,18 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val condition = trailArg[String](descr = "查询条件")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
       import scala.jdk.CollectionConverters._
 
-      val items: List[LBTable1] = run {
+      val items: List[Table1] = run {
         quote {
-          infix"$table1Data #${condition()}".as[Query[LBTable1]]
+          infix"$table1Data #${condition()}".as[Query[Table1]]
         }
       }
 
       println(items.size)
 
-      Excel.export[LBTable1](
+      Excel.export[Table1](
         items,
         inputFile(),
         (index, row, item) => {
@@ -821,7 +815,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val batch = trailArg[String](descr = "注明批次")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       transaction {
         val workbook = Excel.load(inputFile())
@@ -831,7 +825,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           val Seq(name, idCard, address, countryName, villageName) =
             row.getValues("A", "B", "C", "E", "F")
           println(s"${index + 1} $idCard $name")
-          val data: List[LBTable1] =
+          val data: List[Table1] =
             run(table1Data.filter(_.idCard == lift(idCard)))
           if (data.isEmpty) {
             run {
@@ -856,7 +850,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val batch = opt[String](descr = "更新批次信息")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       val file = new File(inputFile())
 
@@ -919,7 +913,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val batch = trailArg[String](descr = "对应批次信息")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       val destDir = outputDir / "参保与持卡情况表" / batch()
 
@@ -962,11 +956,11 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           println(s"  $dir: $size")
           Files.createDirectory(destDir / dw / dir)
 
-          val items: List[LBTable1] =
+          val items: List[Table1] =
             run {
               quote(
                 infix"${table1Data.filter(d => d.reserve1 == lift(dw) && d.reserve2 == lift(cs) && d.reserve3 == lift(batch()))} ORDER BY CONVERT( name USING gbk )"
-                  .as[Query[LBTable1]]
+                  .as[Query[Table1]]
               )
             }
 
@@ -1083,7 +1077,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     descr("审核附件2健在人员数据")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       val workbook = Excel.load(inputFile())
       val sheet = workbook.getSheetAt(0)
@@ -1203,7 +1197,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val resultRow = trailArg[String]("结果输出列")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       val workbook = Excel.load(inputFile())
       val sheet = workbook.getSheetAt(0)
@@ -1269,7 +1263,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     descr("审核附件2异常数据")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
       val workbook = Excel.load(inputFile())
       val sheet = workbook.getSheetAt(0)
       try {
@@ -1336,7 +1330,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val collegeStudent = """D:\数据核查\待遇核查回头看\参保与持卡情况表\之前已核实的数据\大学生.xls"""
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
       import scala.jdk.CollectionConverters._
 
       if (clear()) {
@@ -1384,7 +1378,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
       import scala.jdk.CollectionConverters._
 
       if (clear()) {
@@ -1409,7 +1403,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
       import scala.jdk.CollectionConverters._
 
       if (clear()) {
@@ -1436,7 +1430,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val loadType = trailArg[String]("导入数据类型： 待遇人员、缴费人员")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
       import scala.jdk.CollectionConverters._
 
       val ltype = loadType()
@@ -1472,7 +1466,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val outputDir = """D:\数据核查\待遇核查回头看"""
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       val template = outputDir / "参保与持卡情况表" / "居保附表1汇总表模板.xlsx"
 
@@ -1498,14 +1492,14 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
         Files.createDirectory(destDir / dw)
         println(s"$dw: $size")
         total += size
-        val items: List[LBTable1CompareResult] = run {
+        val items: List[Table1CompareResult] = run {
           quote(
             infix"${table1CompareData.filter(_.reserve1 == lift(dw))} ORDER BY CONVERT( reserve2 USING gbk ), CONVERT( name USING gbk )"
-              .as[Query[LBTable1CompareResult]]
+              .as[Query[Table1CompareResult]]
           )
         }
 
-        Excel.exportWithTemplate[LBTable1CompareResult](
+        Excel.exportWithTemplate[Table1CompareResult](
           items,
           template.toString(),
           1,
@@ -1765,7 +1759,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       if (clear()) {
         println("开始清除数据")
@@ -1789,7 +1783,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val outputDir = """D:\数据核查\待遇核查回头看"""
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       val template = outputDir / "参保与持卡情况表" / "居保附表1汇总表模板.xlsx"
 
@@ -1816,14 +1810,14 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
         Files.createDirectory(destDir / dw)
         println(s"$dw: $size")
         total += size
-        val items: List[LBTable1VerifiedAllData] = run {
+        val items: List[Table1VerifiedResult] = run {
           quote(
             infix"${table1VerifiedAllData.filter(f => f.verified != "是" && f.resultDataType == "" && f.reserve1 == lift(dw))} ORDER BY CONVERT( reserve2 USING gbk ), CONVERT( name USING gbk )"
-              .as[Query[LBTable1VerifiedAllData]]
+              .as[Query[Table1VerifiedResult]]
           )
         }
 
-        Excel.exportWithTemplate[LBTable1VerifiedAllData](
+        Excel.exportWithTemplate[Table1VerifiedResult](
           items,
           template.toString(),
           1,
@@ -1860,7 +1854,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     val phone = trailArg[String]("核实人联系电话")
 
     def execute(): Unit = {
-      import yhsb.cjb.db.Lookback2021._
+      import yhsb.cjb.db.lookback.Lookback2021._
 
       val dw = dwName()
 
@@ -1874,14 +1868,14 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
       }
       Files.createDirectory(destDir)
 
-      val items: List[LBTable1VerifiedAllData] = run {
+      val items: List[Table1VerifiedResult] = run {
         quote(
           infix"${table1VerifiedAllData.filter(f => f.verified != "是" && f.resultDataType != "" && f.reserve1 == lift(dw))} ORDER BY CONVERT( reserve2 USING gbk ), CONVERT( name USING gbk )"
-            .as[Query[LBTable1VerifiedAllData]]
+            .as[Query[Table1VerifiedResult]]
         )
       }
 
-      Excel.exportWithTemplate[LBTable1VerifiedAllData](
+      Excel.exportWithTemplate[Table1VerifiedResult](
         items,
         template.toString(),
         1,
@@ -2024,6 +2018,56 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val loadTable2VerifiedData = new Subcommand("loadTable2Verified")
+    with InputFile {
+    descr("导入附表2已核实数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.lookback.Lookback2021._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(table2VerifiedData.delete)
+        println("结束清除数据")
+      }
+
+      println(s"导入 ${inputFile()}")
+      Lookback2021.loadExcel(
+        table2VerifiedData.quoted,
+        inputFile(),
+        2,
+        fields = ('A' to 'T').map(c => s"$c")
+      )
+    }
+  }
+
+  val loadOutsideDeathData = new Subcommand("loadOutsideDeathData")
+    with InputFile {
+    descr("导入外部死亡数据")
+
+    val clear = opt[Boolean](descr = "是否清除已有数据", default = Some(false))
+
+    def execute(): Unit = {
+      import yhsb.cjb.db.lookback.Lookback2021._
+
+      if (clear()) {
+        println("开始清除数据")
+        run(outsideDeathData.delete)
+        println("结束清除数据")
+      }
+
+      println(s"导入 ${inputFile()}")
+      Lookback2021.loadExcel(
+        outsideDeathData.quoted,
+        inputFile(),
+        2,
+        fields = Seq("E", "F", "L", "G")
+      )
+    }
+  }
+
   addSubCommand(retiredTables)
 
   addSubCommand(zipSubDir)
@@ -2078,4 +2122,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(lookbackStatics)
 
   addSubCommand(table2Cancel)
+
+  addSubCommand(loadTable2VerifiedData)
+  addSubCommand(loadOutsideDeathData)
 }
