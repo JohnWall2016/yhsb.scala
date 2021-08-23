@@ -375,14 +375,18 @@ object PayState extends MapField.Val[PayState] {
 /** 认证方式  */
 class CertType extends MapField {
   override def valueMap = {
+    case "01" => "经办机构"
     case "02" => "手机"
     case "04" => "自助终端"
+    case "05" => "其他"
   }
 }
 
 object CertType extends MapField.Val[CertType] {
+  val Agency = Val("01") 
   val Phone = Val("02")
   val AutoTerm = Val("04")
+  val Other = Val("05")
 }
 
 /** 认证标志  */

@@ -70,7 +70,10 @@ object CertedPersonQuery {
       certFlag: CertFlag,
       /** 认证方式 */
       @JsonName("aac098")
-      certType: CertType
+      certType: CertType,
+      /** 待遇状态 */
+      @JsonName("aae116")
+      treatmentState: String,
   ) extends DivisionName
 
   val columnMap = SeqMap(

@@ -147,6 +147,51 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  
+  val upCert =
+    new Subcommand("upCert") with InputFile with RowRange {
+      descr("更新认证信息")
+
+      val nameRow = trailArg[String](descr = "姓名列名称")
+      val idCardRow = trailArg[String](descr = "身份证列名称")
+      val certTypeRow = trailArg[String](descr = "更新认证方式列名称")
+      val certTimeRow = trailArg[String](descr = "更新认证时间列名称")
+      val treatmentStateRow = trailArg[String](descr = "更新待遇状态列名称")
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        Session.use(verbose = false) { session =>
+          for (i <- (startRow() - 1) until endRow()) {
+            val row = sheet.getRow(i)
+            val name = row.getCell(nameRow()).value.trim()
+            val idCard = row.getCell(idCardRow()).value.trim().toUpperCase()
+
+            print(s"$i $idCard $name ")
+
+            if (idCard != "") {
+              val result = session.request(CertedPersonQuery(idCard))
+              result.map(item => {
+                print(s"${item.certType} ${item.certedDate} ${item.treatmentState}")
+                row
+                  .getOrCreateCell(certTypeRow())
+                  .setCellValue(item.certType.toString())
+                row
+                  .getOrCreateCell(certTimeRow())
+                  .setCellValue(item.certedDate)
+                row
+                  .getOrCreateCell(treatmentStateRow())
+                  .setCellValue(item.treatmentState)
+              })
+            }
+            println()
+          }
+        }
+        workbook.save(inputFile().insertBeforeLast(".upd"))
+      }
+    }
+
   val payInfo =
     new Subcommand("pay") with Export {
       descr("缴费信息查询")
@@ -1568,6 +1613,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
 
   addSubCommand(doc)
   addSubCommand(up)
+  addSubCommand(upCert)
   addSubCommand(payInfo)
   addSubCommand(paySpan)
   addSubCommand(refund)
