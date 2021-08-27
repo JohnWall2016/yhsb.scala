@@ -147,7 +147,6 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
-  
   val upCert =
     new Subcommand("upCert") with InputFile with RowRange {
       descr("更新认证信息")
@@ -173,7 +172,9 @@ class Query(args: collection.Seq[String]) extends Command(args) {
             if (idCard != "") {
               val result = session.request(CertedPersonQuery(idCard))
               result.map(item => {
-                print(s"${item.certType} ${item.certedDate} ${item.treatmentState}")
+                print(
+                  s"${item.certType} ${item.certedDate} ${item.treatmentState}"
+                )
                 row
                   .getOrCreateCell(certTypeRow())
                   .setCellValue(item.certType.toString())
@@ -1442,6 +1443,57 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val cert2 =
+    new Subcommand("cert2") with InputFile with RowRange {
+      descr("查询认证情况")
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        try {
+          Session.use() { session =>
+            for {
+              i <- (startRow() - 1) until endRow()
+              row = sheet.getRow(i)
+              name = row("C").value.trim()
+              idCard = row("D").value.trim()
+            } {
+              print(s"$i $idCard $name")
+
+              session
+                .request(PersonInfoQuery(idCard))
+                .headOption match {
+                case None =>
+                case Some(it) =>
+                  print(s" ${it.jbState}")
+                  row.getOrCreateCell("B").value = it.czName
+                  row.getOrCreateCell("G").value = it.jbState
+
+                  session
+                    .request(CertedPersonQuery(idCard))
+                    .headOption match {
+                    case None =>
+                    case Some(it) =>
+                      print(
+                        s" ${it.certType} ${it.certedDate} ${it.certedOpTime}"
+                      )
+                      row.getOrCreateCell("O").value = it.dwName
+                      row.getOrCreateCell("P").value = it.csName
+                      row.getOrCreateCell("Q").value = it.certType.toString()
+                      row.getOrCreateCell("R").value = it.certedDate
+                  }
+
+              }
+              println()
+            }
+          }
+        } finally {
+          workbook.save(inputFile().insertBeforeLast(".upd"))
+        }
+      }
+    }
+
   var inherit = new Subcommand("inherit") with InputFile with RowRange {
     descr("死亡继承数据比对")
 
@@ -1515,7 +1567,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
 
                 import yhsb.cjb.db.lookback.Lookback2021._
                 val table2Data: List[Table2VerifiedResult] = run {
-                  table2VerifiedData.filter{ f =>
+                  table2VerifiedData.filter { f =>
                     f.idCard == lift(idCard) && f.deathDate != ""
                   }
                 }
@@ -1627,6 +1679,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(paySum)
   addSubCommand(payAvg)
   addSubCommand(cert)
+  addSubCommand(cert2)
   addSubCommand(inherit)
   addSubCommand(outside)
 }
