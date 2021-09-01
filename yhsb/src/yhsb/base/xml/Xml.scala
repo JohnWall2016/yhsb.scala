@@ -213,7 +213,7 @@ object Extension {
           info.method(field)
         } else if (paramType <:< typeOf[String]) {
           info.method(value)
-        } else if (value != null) {
+        } else if (value != null && value != "") {
           if (paramType <:< typeOf[Int] || paramType <:< typeOf[Integer]) {
             info.method(value.toInt)
           } else if (paramType <:< typeOf[Double]) {

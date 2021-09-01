@@ -21,7 +21,8 @@ class Session(
     private val userID: String,
     private val password: String,
     private val agencyCode: String,
-    private val agencyName: String
+    private val agencyName: String,
+    private val verbose: Boolean = false
 ) extends HttpSocket(ip, port, "GBK") {
   private val cookies = mutable.Map[String, String]()
 
@@ -72,7 +73,9 @@ class Session(
 
   def getResult[T: TypeTag: ClassTag]: OutBusiness[T] = {
     val result = readBody()
-    //println(s"getResult: $result")
+    if (verbose) {
+      println(s"getResult: $result\r\n")
+    }
     val outEnv = result.toElement.toObject[OutEnvelope[T]]
     //println(s"getResult2: $outEnv")
     outEnv.body.result
@@ -103,7 +106,11 @@ class Session(
 }
 
 object Session {
-  def use[T](user: String = "sqb", autoLogin: Boolean = true)(
+  def use[T](
+      user: String = "sqb",
+      autoLogin: Boolean = true,
+      verbose: Boolean = false
+  )(
       f: Session => T
   ): T = {
     val usr = Config.qbSession.getConfig(s"users.$user")
@@ -114,7 +121,8 @@ object Session {
         usr.getString("id"),
         usr.getString("pwd"),
         usr.getString("agencyCode"),
-        usr.getString("agencyName")
+        usr.getString("agencyName"),
+        verbose
       )
     ) { sess =>
       if (autoLogin) sess.login()
