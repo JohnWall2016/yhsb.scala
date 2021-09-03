@@ -735,15 +735,15 @@ class Query(args: collection.Seq[String]) extends Command(args) {
             i <- (startRow() - 1) until endRow()
             row = sheet.getRow(i)
             name = row("E").value.trim()
-            idCard = row("F").value.trim()
-            division = row("D").value.trim()
+            idCard = row("D").value.trim()
+            division = row("C").value.trim()
           } {
             println(s"$i $idCard $name ")
 
             val (dw, cs) = Division.getDwAndCsName(division).get
 
-            row.getOrCreateCell("B").value = dw
-            row.getOrCreateCell("C").value = cs
+            row.getOrCreateCell("A").value = dw
+            row.getOrCreateCell("B").value = cs
           }
         } finally {
           workbook.save(inputFile().insertBeforeLast(".upd"))

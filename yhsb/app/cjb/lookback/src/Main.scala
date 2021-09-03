@@ -138,6 +138,96 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val retiredTables2 = new Subcommand("dyhcb2") with InputFile with RowRange {
+    descr("生成待遇人员核查表")
+
+    val outputDir = """D:\数据核查\回头看数据复核"""
+
+    val template = outputDir / """待遇人员入户核查表.xlsx"""
+
+    def execute(): Unit = {
+      val destDir = outputDir / "异常情况待遇人员入户核查表"
+
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+
+      println("生成分组映射表")
+      val map = mutable.LinkedHashMap[String, mutable.ListBuffer[Int]]()
+      for (index <- (startRow() - 1) until endRow()) {
+        val list = map.getOrElseUpdate(
+          sheet.getRow(index)("A").value,
+          mutable.ListBuffer()
+        )
+        list.addOne(index)
+      }
+
+      println("生成待遇发放人员入户核查表")
+      if (Files.exists(destDir)) {
+        Files.move(destDir, s"${destDir.toString}.orig")
+      }
+      Files.createDirectory(destDir)
+
+      var total = 0
+      for ((dw, indexes) <- map) {
+        val subTotal = indexes.size
+        total += subTotal
+        println(s"\r\n$dw: ${subTotal}")
+
+        val outWorkbook = Excel.load(template)
+        val outSheet = outWorkbook.getSheetAt(0)
+        val startRow = 7
+        var currentRow = startRow
+
+        indexes.foreach { rowIndex =>
+          val index = currentRow - startRow + 1
+          val inRow = sheet.getRow(rowIndex)
+
+          //println(s"    $index ${inRow("C").value} ${inRow("D").value}")
+
+          val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+          currentRow += 1
+          outRow("A").value = index
+          //outRow("B").value = inRow("B").value
+          outRow("C").value = inRow("E").value
+          outRow("D").value = inRow("D").value
+          outRow("E").value = inRow("C").value
+          outRow("F").value = "城乡居保"
+          outRow("G").value = inRow("V").value
+          outRow("H").value = inRow("W").value
+          outRow("I").value = inRow("G").value
+          outRow("J").value = inRow("I").value
+          outRow("K").value = inRow("H").value
+          val phones = inRow("S").value.split(",").foldLeft("") { (s, p) =>
+            if (p != "") {
+              if (s != "") s + "," + p
+              else p
+            } else {
+              ""
+            }
+          }
+          val deathTime = {
+            val kind = inRow("T").value
+            if (kind != "") s"$kind(${inRow("U").value})"
+            else ""
+          }
+          outRow("X").value = {
+            var r = ""
+            if (phones != "") r = s"联系方式:$phones"
+            if (deathTime != "") {
+              if (r != "") r += "\n"
+              r += s"疑似死亡:$deathTime"
+            }
+            r
+          }
+        }
+
+        outWorkbook.save(destDir / s"${dw}异常情况待遇人员入户核查表.xlsx")
+      }
+
+      println(s"\r\n共计: ${total}")
+    }
+  }
+
   val loadCardsData = new Subcommand("ldcards") with InputDir {
     descr("导入社保卡数据")
 
@@ -2005,11 +2095,11 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             session
               .request(LookBackTable2Audit(operator(), idCard))
               .headOption match {
-              case None => "系统中未查到该人核实信息"
+              case None       => "系统中未查到该人核实信息"
               case Some(item) =>
                 //println(item)
                 //session.toService(LookBackTable2Cancel(item, memo()))
-              session.request(LookBackTable2Cancel(item, memo())).message
+                session.request(LookBackTable2Cancel(item, memo())).message
             }
           }
           println(s"$idCard $name $message")
@@ -2125,4 +2215,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
   addSubCommand(loadTable2VerifiedData)
   addSubCommand(loadOutsideDeathData)
+
+  addSubCommand(retiredTables2)
 }
