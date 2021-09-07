@@ -21,6 +21,7 @@ import yhsb.base.datetime.YearMonth
 import yhsb.base.db.Context.JdbcContextOps
 import yhsb.base.excel.Excel._
 import yhsb.base.io.Path._
+import yhsb.base.io.File.listFiles
 import yhsb.base.text.String._
 import yhsb.base.zip
 import yhsb.cjb.db.lookback._
@@ -2158,6 +2159,104 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  def checkTable2Template(
+      name: String,
+      idCard: String,
+      alive: String,
+      keepCardBySelf: String,
+      deathDate: String,
+      keepCardByRelative: String,
+      abnormalType: String,
+      abnormalDetail: String,
+  ) = {
+    import yhsb.cjb.db.lookback.Lookback2021._
+
+    val items: List[Table2VerifiedResult] =
+      run(table2VerifiedData.filter(_.idCard == lift(idCard)))
+
+    val kindOld = items.headOption match {
+      case None => "错误:身份证号码有误"
+      case Some(value) => {
+        value.alive match {
+          case "是" => "健在"
+          case "否" => "死亡"
+          case ""  => "异常情况"
+          case _   => "错误:未知类型"
+        }
+      }
+    }
+
+    val kindNew = if (alive == "1") {
+      if (deathDate != "") {
+        "错误:健在人员死亡日期必为空"
+      } else if (abnormalType != "0") {
+        "错误:健在人员异常情况必填0(无异常)"
+      } else {
+        "健在人员"
+      }
+    } else if (alive == "0") {
+      if (deathDate == "") {
+        if (abnormalType == "0") {
+          "错误:异常人员异常情况必不为0(无异常)"
+        } else if (abnormalType == "4" && abnormalDetail.trim() == "") {
+          "错误:其他异常情况人员核查结果备注必填"
+        } else {
+          "异常情况人员"
+        }
+      } else {
+        if (abnormalType != "0") {
+          "错误:死亡人员异常情况必为0(无异常)"
+        } else {
+          if (!"""\d\d\d\d\d\d""".r.matches(deathDate)) {
+            "错误:死亡日期有误"
+          } else {
+            "死亡人员"
+          }
+        }
+      }
+    } else if (alive == "") {
+      if (deathDate != "") {
+        "错误:异常情况人员死亡时间必为空"
+      } else if (abnormalType == "0") {
+        "错误:异常人员异常情况必不为0(无异常)"
+      } else if (abnormalType == "4" && abnormalDetail.trim() == "") {
+        "错误:其他异常情况人员核查结果备注必填"
+      } else {
+        "异常情况人员"
+      }
+    } else {
+      "错误:是否健在填写有误"
+    }
+
+    var checkResult = ""
+    if (
+      kindNew == "死亡人员" && items.nonEmpty &&
+      """\d\d\d\d\d\d""".r.matches(
+        deathDate
+      )
+    ) {
+      val item = items.head
+      item.payState match {
+        case "正常待遇" =>
+          checkResult = "死亡人员仍正常发放"
+        case "待遇暂停" =>
+          val stopTime = YearMonth.from(item.stopTime.toInt)
+          val deathTime = YearMonth.from(deathDate.toInt)
+          if (deathTime < stopTime.offset(-1)) {
+            checkResult = "死亡时间早于暂停时间前一个月"
+          }
+        case "待遇终止" =>
+          val stopTime = YearMonth.from(item.stopTime.toInt)
+          val deathTime = YearMonth.from(deathDate.toInt)
+          if (deathTime < stopTime) {
+            checkResult = "死亡时间早于终止时间"
+          }
+      }
+    }
+
+    (kindOld, kindNew, checkResult)
+  }
+
   val checkRevisionData = new Subcommand("checkRevisionData")
     with InputFile
     with RowRange {
@@ -2174,97 +2273,93 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
         val name = row("A").value
         val idCard = row("B").value
 
-        import yhsb.cjb.db.lookback.Lookback2021._
-
-        val items: List[Table2VerifiedResult] =
-          run(table2VerifiedData.filter(_.idCard == lift(idCard)))
-
-        val kindOld = items.headOption match {
-          case None => "错误:身份证号码有误"
-          case Some(value) => {
-            value.alive match {
-              case "是" => "健在"
-              case "否" => "死亡"
-              case ""  => "异常情况"
-              case _   => "错误:未知类型"
-            }
-          }
-        }
-        row.getOrCreateCell("M").value = kindOld
-
         val alive = row("C").value
         val keepCardBySelf = row("D").value
         val deathDate = row("E").value.trim()
         val keepCardByRelative = row("F").value
         val abnormalType = row("G").value
+        val abnormalDetail = row("H").value
 
-        val kindNew = if (alive == "1") {
-          if (deathDate != "") {
-            "错误:健在人员死亡日期必为空"
-          } else if (abnormalType != "0") {
-            "错误:健在人员异常情况必填0(无异常)"
-          } else {
-            "健在人员"
-          }
-        } else if (alive == "0") {
-          if (deathDate == "") {
-            if (abnormalType == "0") {
-              "错误:异常人员异常情况必不为0(无异常)"
-            } else {
-              "异常情况人员"
-            }
-          } else {
-            if (abnormalType != "0") {
-              "错误:死亡人员异常情况必为0(无异常)"
-            } else {
-              if (!"""\d\d\d\d\d\d""".r.matches(deathDate)) {
-                "错误:死亡日期有误"
-              } else {
-                "死亡人员"
-              }
-            }
-          }
-        } else if (alive == "") {
-          if (abnormalType == "0") {
-            "错误:异常人员异常情况必不为0(无异常)"
-          } else {
-            "异常情况人员"
-          }
-        } else {
-          "错误:是否健在填写有误"
-        }
+        val (kindOld, kindNew, checkResult) = checkTable2Template(
+          name,
+          idCard,
+          alive,
+          keepCardBySelf,
+          deathDate,
+          keepCardByRelative,
+          abnormalType,
+          abnormalDetail
+        )
+        row.getOrCreateCell("M").value = kindOld
         row.getOrCreateCell("N").value = kindNew
-
-        if (
-          kindNew == "死亡人员" &&
-          items.nonEmpty &&
-          """\d\d\d\d\d\d""".r.matches(
-            deathDate
-          )
-        ) {
-          val item = items.head
-          var checkResult = ""
-          item.payState match {
-            case "正常待遇" =>
-              checkResult = "死亡人员仍正常发放"
-            case "待遇暂停" =>
-              val stopTime = YearMonth.from(item.stopTime.toInt)
-              val deathTime = YearMonth.from(deathDate.toInt)
-              if (deathTime < stopTime.offset(-1)) {
-                checkResult = "死亡时间早于暂停时间前一个月"
-              }
-            case "待遇终止" =>
-              val stopTime = YearMonth.from(item.stopTime.toInt)
-              val deathTime = YearMonth.from(deathDate.toInt)
-              if (deathTime < stopTime) {
-                checkResult = "死亡时间早于终止时间"
-              }
-          }
-          row.getOrCreateCell("O").value = checkResult
-        }
+        row.getOrCreateCell("O").value = checkResult
       }
 
       workbook.save(inputFile().insertBeforeLast(".up"))
+    }
+  }
+
+  val mergeTable2Templates = new Subcommand("mergeTable2Templates")
+    with InputDir
+    with InputFile {
+
+    val outputDir = """D:\数据核查\回头看数据复核\上报数据"""
+    val template = outputDir / "合并数据模板.xls"
+
+    def execute(): Unit = {
+      val inputFiles = listFiles(new File(inputDir()), """.*\.xls""")
+
+      val outWorkbook = Excel.load(template)
+      var outSheet = outWorkbook.getSheetAt(0)
+
+      val fields = ('A' to 'L').map(c => s"$c")
+      var startRow, currentRow = 1
+
+      for (file <- inputFiles) {
+        var name = file.getName()
+        name = name.substring(0, name.length - 4)
+
+        println(s"合并 $name")
+
+        val workbook = Excel.load(file)
+        val sheet = workbook.getSheetAt(0)
+
+        for (index <- 1 to sheet.getLastRowNum) {
+          val row = sheet.getRow(index)
+          val name = row("A").value.trim()
+          val idCard = row("B").value.trim()
+
+          if (name != "" && idCard != "") {
+            val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+            currentRow += 1
+            outRow.getOrCreateCell("M").value = name
+            row.copyTo(outRow, fields: _*)
+
+            val alive = row("C").value
+            val keepCardBySelf = row("D").value
+            val deathDate = row("E").value.trim()
+            val keepCardByRelative = row("F").value
+            val abnormalType = row("G").value
+            val abnormalDetail = row("H").value
+
+            val (kindOld, kindNew, checkResult) = checkTable2Template(
+              name,
+              idCard,
+              alive,
+              keepCardBySelf,
+              deathDate,
+              keepCardByRelative,
+              abnormalType,
+              abnormalDetail
+            )
+
+            outRow.getOrCreateCell("N").value = kindOld
+            outRow.getOrCreateCell("O").value = kindNew
+            outRow.getOrCreateCell("P").value = checkResult
+          }
+        }
+      }
+      outWorkbook.save(inputFile())
     }
   }
 
