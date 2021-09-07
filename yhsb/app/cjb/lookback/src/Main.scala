@@ -2316,10 +2316,10 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
       var startRow, currentRow = 1
 
       for (file <- inputFiles) {
-        var name = file.getName()
-        name = name.substring(0, name.length - 4)
+        var dwName = file.getName()
+        dwName = dwName.substring(0, dwName.length - 4)
 
-        println(s"合并 $name")
+        println(s"合并 $dwName")
 
         val workbook = Excel.load(file)
         val sheet = workbook.getSheetAt(0)
@@ -2332,7 +2332,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           if (name != "" && idCard != "") {
             val outRow = outSheet.getOrCopyRow(currentRow, startRow)
             currentRow += 1
-            outRow.getOrCreateCell("M").value = name
+            outRow.getOrCreateCell("M").value = dwName
             row.copyTo(outRow, fields: _*)
 
             val alive = row("C").value
