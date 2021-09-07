@@ -2158,6 +2158,84 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val checkRevisionData = new Subcommand("checkRevisionData")
+    with InputFile
+    with RowRange {
+    descr("检查复核和修正数据")
+
+    def execute(): Unit = {
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+
+      for {
+        index <- (startRow() - 1) until endRow()
+        row = sheet.getRow(index)
+      } {
+        val name = row("A").value
+        val idCard = row("B").value
+
+        import yhsb.cjb.db.lookback.Lookback2021._
+
+        val item: List[Table2VerifiedResult] =
+          run(table2VerifiedData.filter(_.idCard == lift(idCard)))
+
+        val kindOld = item.headOption match {
+          case None => "错误:身份证号码有误"
+          case Some(value) => {
+            value.alive match {
+              case "是" => "健在"
+              case "否" => "死亡"
+              case "" => "异常情况"
+              case _ => "错误:未知类型"
+            }
+          }
+        }
+        row.getOrCreateCell("M").value = kindOld
+
+        val alive = row("C").value
+        val keepCardBySelf = row("D").value
+        val deathDate = row("E").value
+        val keepCardByRelative = row("F").value
+        val abnormalType = row("G").value
+
+        val kindNew = if (alive == "1") {
+          if (deathDate != "") {
+            "错误:健在人员死亡日期必为空"
+          } else if (abnormalType != "0") {
+            "错误:健在人员异常情况必填0(无异常)"
+          } else {
+            "健在人员"
+          }
+        } else if (alive == "0") {
+          if (deathDate == "") {
+            if (abnormalType == "0") {
+              "错误:异常人员异常情况必不为0(无异常)"
+            } else {
+              "异常情况人员"
+            }
+          } else {
+            if (abnormalType != "0") {
+              "错误:死亡人员异常情况必为0(无异常)"
+            } else {
+              "死亡人员"
+            }
+          }
+        } else if (alive == "") {
+          if (abnormalType == "0") {
+              "错误:异常人员异常情况必不为0(无异常)"
+          } else {
+              "异常情况人员"
+          }
+        } else {
+          "错误:是否健在填写有误"
+        }
+        row.getOrCreateCell("N").value = kindNew
+      }
+
+      workbook.save(inputFile().insertBeforeLast(".up"))
+    }
+  }
+
   addSubCommand(retiredTables)
 
   addSubCommand(zipSubDir)
@@ -2217,4 +2295,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(loadOutsideDeathData)
 
   addSubCommand(retiredTables2)
+
+  addSubCommand(checkRevisionData)
 }
