@@ -2176,17 +2176,17 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
         import yhsb.cjb.db.lookback.Lookback2021._
 
-        val item: List[Table2VerifiedResult] =
+        val items: List[Table2VerifiedResult] =
           run(table2VerifiedData.filter(_.idCard == lift(idCard)))
 
-        val kindOld = item.headOption match {
+        val kindOld = items.headOption match {
           case None => "错误:身份证号码有误"
           case Some(value) => {
             value.alive match {
               case "是" => "健在"
               case "否" => "死亡"
-              case "" => "异常情况"
-              case _ => "错误:未知类型"
+              case ""  => "异常情况"
+              case _   => "错误:未知类型"
             }
           }
         }
@@ -2194,7 +2194,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
         val alive = row("C").value
         val keepCardBySelf = row("D").value
-        val deathDate = row("E").value
+        val deathDate = row("E").value.trim()
         val keepCardByRelative = row("F").value
         val abnormalType = row("G").value
 
@@ -2217,19 +2217,51 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             if (abnormalType != "0") {
               "错误:死亡人员异常情况必为0(无异常)"
             } else {
-              "死亡人员"
+              if (!"""\d\d\d\d\d\d""".r.matches(deathDate)) {
+                "错误:死亡日期有误"
+              } else {
+                "死亡人员"
+              }
             }
           }
         } else if (alive == "") {
           if (abnormalType == "0") {
-              "错误:异常人员异常情况必不为0(无异常)"
+            "错误:异常人员异常情况必不为0(无异常)"
           } else {
-              "异常情况人员"
+            "异常情况人员"
           }
         } else {
           "错误:是否健在填写有误"
         }
         row.getOrCreateCell("N").value = kindNew
+
+        if (
+          kindNew == "死亡人员" &&
+          items.nonEmpty &&
+          """\d\d\d\d\d\d""".r.matches(
+            deathDate
+          )
+        ) {
+          val item = items.head
+          var checkResult = ""
+          item.payState match {
+            case "正常待遇" =>
+              checkResult = "死亡人员仍正常发放"
+            case "待遇暂停" =>
+              val stopTime = YearMonth.from(item.stopTime.toInt)
+              val deathTime = YearMonth.from(deathDate.toInt)
+              if (deathTime < stopTime.offset(-1)) {
+                checkResult = "死亡时间早于暂停时间前一个月"
+              }
+            case "待遇终止" =>
+              val stopTime = YearMonth.from(item.stopTime.toInt)
+              val deathTime = YearMonth.from(row("F").value.trim().toInt)
+              if (deathTime < stopTime) {
+                checkResult = "死亡时间早于终止时间"
+              }
+          }
+          row.getOrCreateCell("O").value = checkResult
+        }
       }
 
       workbook.save(inputFile().insertBeforeLast(".up"))
