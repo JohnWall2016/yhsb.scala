@@ -58,7 +58,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       val idCard = trailArg[String](descr = "身份证号码")
 
       def execute() = {
-        Session.use(verbose = true) { session =>
+        Session.use(verbose = false) { session =>
           val result = session.request(AgencyCodeQuery())
 
           def getAgencyCode(name: String) =
