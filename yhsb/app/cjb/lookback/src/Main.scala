@@ -40,6 +40,7 @@ import yhsb.cjb.net.protocol.PersonInfoQuery
 import yhsb.cjb.net.protocol.RefundQuery
 import yhsb.cjb.net.protocol.RetiredPersonPauseQuery
 import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
+import yhsb.base.command.OutputDir
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -2167,7 +2168,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
       deathDate: String,
       keepCardByRelative: String,
       abnormalType: String,
-      abnormalDetail: String,
+      abnormalDetail: String
   ) = {
     import yhsb.cjb.db.lookback.Lookback2021._
 
@@ -2229,6 +2230,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
 
     var checkResult = ""
+    var sysStopTime = ""
+    var sysPauseTime = ""
     if (
       kindNew == "死亡人员" && items.nonEmpty &&
       """\d\d\d\d\d\d""".r.matches(
@@ -2244,17 +2247,19 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           val deathTime = YearMonth.from(deathDate.toInt)
           if (deathTime < stopTime.offset(-1)) {
             checkResult = "死亡时间早于暂停时间前一个月"
+            sysPauseTime = stopTime.toString
           }
         case "待遇终止" =>
           val stopTime = YearMonth.from(item.stopTime.toInt)
           val deathTime = YearMonth.from(deathDate.toInt)
           if (deathTime < stopTime) {
             checkResult = "死亡时间早于终止时间"
+            sysStopTime = stopTime.toString
           }
       }
     }
 
-    (kindOld, kindNew, checkResult)
+    (kindOld, kindNew, checkResult, sysStopTime, sysPauseTime)
   }
 
   val checkRevisionData = new Subcommand("checkRevisionData")
@@ -2280,7 +2285,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
         val abnormalType = row("G").value
         val abnormalDetail = row("H").value
 
-        val (kindOld, kindNew, checkResult) = checkTable2Template(
+        val (kindOld, kindNew, checkResult, _, _) = checkTable2Template(
           name,
           idCard,
           alive,
@@ -2315,51 +2320,133 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
       val fields = ('A' to 'L').map(c => s"$c")
       var startRow, currentRow = 1
 
-      for (file <- inputFiles) {
-        var dwName = file.getName()
-        dwName = dwName.substring(0, dwName.length - 4)
+      Session.use("003") { session =>
+        for (file <- inputFiles) {
+          var dwName = file.getName()
+          dwName = dwName.substring(0, dwName.length - 4)
 
-        println(s"合并 $dwName")
+          println(s"合并 $dwName")
 
-        val workbook = Excel.load(file)
-        val sheet = workbook.getSheetAt(0)
+          val workbook = Excel.load(file)
+          val sheet = workbook.getSheetAt(0)
 
-        for (index <- 1 to sheet.getLastRowNum) {
-          val row = sheet.getRow(index)
-          val name = row("A").value.trim()
-          val idCard = row("B").value.trim()
+          for (index <- 1 to sheet.getLastRowNum) {
+            val row = sheet.getRow(index)
+            val name = row("A").value.trim()
+            val idCard = row("B").value.trim()
 
-          if (name != "" && idCard != "") {
-            val outRow = outSheet.getOrCopyRow(currentRow, startRow)
-            currentRow += 1
-            outRow.getOrCreateCell("M").value = dwName
-            row.copyTo(outRow, fields: _*)
+            if (name != "" && idCard != "") {
+              val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+              currentRow += 1
+              outRow.getOrCreateCell("M").value = dwName
+              row.copyTo(outRow, fields: _*)
 
-            val alive = row("C").value
-            val keepCardBySelf = row("D").value
-            val deathDate = row("E").value.trim()
-            val keepCardByRelative = row("F").value
-            val abnormalType = row("G").value
-            val abnormalDetail = row("H").value
+              val alive = row("C").value
+              val keepCardBySelf = row("D").value
+              val deathDate = row("E").value.trim()
+              val keepCardByRelative = row("F").value
+              val abnormalType = row("G").value
+              val abnormalDetail = row("H").value
 
-            val (kindOld, kindNew, checkResult) = checkTable2Template(
-              name,
-              idCard,
-              alive,
-              keepCardBySelf,
-              deathDate,
-              keepCardByRelative,
-              abnormalType,
-              abnormalDetail
-            )
+              val (kindOld, kindNew, checkResult, stopTime, pauseTime) =
+                checkTable2Template(
+                  name,
+                  idCard,
+                  alive,
+                  keepCardBySelf,
+                  deathDate,
+                  keepCardByRelative,
+                  abnormalType,
+                  abnormalDetail
+                )
 
-            outRow.getOrCreateCell("N").value = kindOld
-            outRow.getOrCreateCell("O").value = kindNew
-            outRow.getOrCreateCell("P").value = checkResult
+              outRow.getOrCreateCell("N").value = kindOld
+              outRow.getOrCreateCell("O").value = kindNew
+              outRow.getOrCreateCell("P").value = checkResult
+              outRow.getOrCreateCell("Q").value = stopTime
+              outRow.getOrCreateCell("R").value = pauseTime
+
+              if (stopTime != "" || pauseTime != "") {
+                var total = BigDecimal(0)
+                var time = 0
+
+                for (item <- session.request(RefundQuery(idCard))) {
+                  if (item.state == "已到账") {
+                    total += item.amount
+                    val rtime =
+                      item.refundedTime.split("-").take(2).mkString.toInt
+                    if (rtime > time) {
+                      time = rtime
+                    }
+                  }
+                }
+
+                if (total > 0) {
+                  outRow.getOrCreateCell("S").value = total
+                  outRow.getOrCreateCell("T").value = time
+                }
+              }
+            }
           }
         }
       }
       outWorkbook.save(inputFile())
+    }
+  }
+
+  val unmergeTable2Templates = new Subcommand("unmergeTable2Templates")
+    with InputFile
+    with OutputDir {
+
+    val rootDir = """D:\数据核查\回头看数据复核\上报数据\"""
+    val template = rootDir / "分解数据模板.xls"
+
+    def execute(): Unit = {
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+
+      println("生成分组映射表")
+      val map = mutable.LinkedHashMap[String, mutable.ListBuffer[Int]]()
+      for (index <- 1 to sheet.getLastRowNum()) {
+        val list = map.getOrElseUpdate(
+          sheet.getRow(index)("M").value,
+          mutable.ListBuffer()
+        )
+        list.addOne(index)
+      }
+
+      println("分解已修改数据")
+      if (Files.exists(outputDir())) {
+        Files.move(outputDir(), s"${outputDir()}.orig")
+      }
+      Files.createDirectory(outputDir())
+
+      val fields = ('A' to 'L').map(c => s"$c")
+
+      var total = 0
+      for ((dw, indexes) <- map) {
+        val subTotal = indexes.size
+        total += subTotal
+        println(s"\r\n$dw: ${subTotal}")
+
+        val outWorkbook = Excel.load(template)
+        val outSheet = outWorkbook.getSheetAt(0)
+        val startRow = 1
+        var currentRow = startRow
+
+        indexes.foreach { rowIndex =>
+          val index = currentRow - startRow + 1
+          val inRow = sheet.getRow(rowIndex)
+
+          val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+          currentRow += 1
+          inRow.copyTo(outRow, fields: _*)
+        }
+
+        outWorkbook.save(outputDir() / s"${dw}.xls")
+      }
+
+      println(s"\r\n共计: ${total}")
     }
   }
 
@@ -2424,4 +2511,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(retiredTables2)
 
   addSubCommand(checkRevisionData)
+  addSubCommand(mergeTable2Templates)
+
+  addSubCommand(unmergeTable2Templates)
 }

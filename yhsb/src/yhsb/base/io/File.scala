@@ -12,17 +12,21 @@ object File {
     }
   }
 
-  def listFiles(dir: JFile, filter: String = ".*"): List[JFile] = {
+  def listFiles(
+      dir: JFile,
+      filter: String = ".*",
+      recursive: Boolean = false
+  ): List[JFile] = {
     val result = collection.mutable.ListBuffer[JFile]()
 
     val files = dir.listFiles()
 
     for (f <- files) {
-      if (f.isDirectory)
+      if (recursive && f.isDirectory) {
         result.appendAll(
-          listFiles(f, filter)
+          listFiles(f, filter, recursive)
         )
-      else {
+      } else {
         if (f.getName.matches(filter))
           result.append(f)
       }

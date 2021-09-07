@@ -71,6 +71,10 @@ case class YearMonth(year: Int, month: Int) {
   def toYearMonth = year * 100 + month
 
   override def toString = f"$year%04d$month%02d"
+
+  def monthsBefore(other: YearMonth) = {
+    (other.year - year) * 12 + other.month - month
+  }
 }
 
 object YearMonth extends Ordering[YearMonth] {
