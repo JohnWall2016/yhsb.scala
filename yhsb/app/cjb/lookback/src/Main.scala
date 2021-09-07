@@ -2255,7 +2255,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
               }
             case "待遇终止" =>
               val stopTime = YearMonth.from(item.stopTime.toInt)
-              val deathTime = YearMonth.from(row("F").value.trim().toInt)
+              val deathTime = YearMonth.from(deathDate.toInt)
               if (deathTime < stopTime) {
                 checkResult = "死亡时间早于终止时间"
               }
