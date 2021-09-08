@@ -208,31 +208,7 @@ class Session(
 
   private def urlEncode(s: String) = URLEncoder.encode(s, charset)
 
-  def exportTo(
-      req: PageRequest[_],
-      columnHeaders: SeqMap[String, String]
-  )(
-      filePath: String
-  ) = {
-    val args = mutable.LinkedHashMap[String, String]()
-    args("serviceid") = "exportexecl"
-    args("queryserviceid") = req.id
-    args("params") = urlEncode(req.toJsonNoNulls)
-    args("columns") = urlEncode(
-      columnHeaders
-        .map { case (key, value) =>
-          s"""{"dataKey":"$key","headerText":"$value"}"""
-        }
-        .toSeq
-        .mkString("[", ",", "]")
-    )
-
-    val url = "/hncjb/reports/crud?" + args
-      .map { case (key, value) =>
-        s"$key=$value"
-      }
-      .mkString("&")
-
+  private def httpRequest(url: String) = {
     val request =
       new HttpRequest(url, "GET", charset)
     request
@@ -261,8 +237,42 @@ class Session(
         cookies.map(e => s"${e._1}=${e._2}").mkString("; ")
       )
     }
-    write(request.getBytes)
+
+    request
+  }
+
+  def exportTo(
+      req: PageRequest[_],
+      columnHeaders: SeqMap[String, String]
+  )(
+      filePath: String
+  ) = {
+    val args = mutable.LinkedHashMap[String, String]()
+    args("serviceid") = "exportexecl"
+    args("queryserviceid") = req.id
+    args("params") = urlEncode(req.toJsonNoNulls)
+    args("columns") = urlEncode(
+      columnHeaders
+        .map { case (key, value) =>
+          s"""{"dataKey":"$key","headerText":"$value"}"""
+        }
+        .toSeq
+        .mkString("[", ",", "]")
+    )
+
+    val url = "/hncjb/reports/crud?" + args
+      .map { case (key, value) =>
+        s"$key=$value"
+      }
+      .mkString("&")
+    
+    write(httpRequest(url).getBytes)
     exportToFile(filePath)
+  }
+
+  def readHttp(url: String) = {
+    write(httpRequest(url).getBytes)
+    readBody()
   }
 
   def exportAllTo(

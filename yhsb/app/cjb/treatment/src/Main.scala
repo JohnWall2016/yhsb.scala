@@ -182,7 +182,7 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
     if (result.nonEmpty) {
       while (!success && times < retry) {
         times += 1
-        result.head.getTreatmentInfoMatch() match {
+        result.head.getTreatmentInfoMatch(session) match {
           case None =>
           case Some(m) =>
             success = true

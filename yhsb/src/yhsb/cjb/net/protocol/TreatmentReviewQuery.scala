@@ -6,6 +6,7 @@ import yhsb.base.net.HttpSocket
 import yhsb.base.io.AutoClose.use
 import yhsb.base.util.Config
 import yhsb.cjb.net
+import yhsb.cjb.net.Session
 
 /** 到龄待遇审核 查询 */
 class TreatmentReviewQuery(
@@ -107,14 +108,11 @@ object TreatmentReviewQuery {
 
     def escape(o: Any) = URLEncoder.encode(o.toString, "UTF-8")
 
-    def getTreatmentInfoMatch() = {
-      val config = net.Config.cjbSession
-      use(
-        new HttpSocket(config.getString("host"), config.getInt("port"), "UTF-8")
-      ) { it =>
-        val content = it.getHttp(treatmentInfoUrl).replace("""[\r\n\t]""".r, "")
-        Item.rePaymentInfo.findFirstMatchIn(content)
-      }
+    def getTreatmentInfoMatch(session: Session) = {
+      // println(treatmentInfoUrl)
+      val content =
+        session.readHttp(treatmentInfoUrl).replace("""[\r\n\t]""".r, "")
+      Item.rePaymentInfo.findFirstMatchIn(content)
     }
   }
 
