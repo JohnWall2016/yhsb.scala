@@ -1831,8 +1831,8 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
             }
 
             if (total > 0) {
-              row.getOrCreateCell("P").value = total
-              row.getOrCreateCell("Q").value = time
+              row.getOrCreateCell("O").value = total
+              row.getOrCreateCell("P").value = time
             }
 
             println(s"$index $idCard $name $total $time")
