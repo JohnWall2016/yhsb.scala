@@ -72,6 +72,8 @@ class ListFieldAdapter extends JsonAdapter[ListField[_]] {
             } catch {
               case e: JsonSyntaxException => field.addUnknownOne(obj)
             }
+          case pri: JsonPrimitive if argClass == classOf[String] =>
+            field.items.addOne(Json.fromJsonAsString(pri, argClass))
           case _ =>
         }
       case _ =>
@@ -110,6 +112,8 @@ object Json {
   def fromJson[T](json: String, typeOfT: Type): T = gson.fromJson(json, typeOfT)
 
   def fromJson[T](elem: JsonElement, typeOfT: Type): T = gson.fromJson(elem, typeOfT)
+
+  def fromJsonAsString[T](prim: JsonPrimitive, typeOfT: Type): T = prim.getAsString().asInstanceOf[T]
 
   def toJson[T](obj: T): String = gson.toJson(obj)
 

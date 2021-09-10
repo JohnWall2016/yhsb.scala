@@ -15,6 +15,10 @@ object SessionTest extends TestSuite {
         println(sess.logout())
       }
     }
+    test("loginSSCard") {
+      Session.use("002", verbose = true, useSSCard = true) { sess =>
+      }
+    }
     test("cbxx") {
       Session.use() { sess =>
         sess.sendService(PersonInfoInProvinceQuery("430311194511291027"))

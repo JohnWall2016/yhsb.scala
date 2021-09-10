@@ -13,6 +13,11 @@ import yhsb.base.net.HttpRequest
 import yhsb.base.net.HttpSocket
 import yhsb.cjb.db.CjbSession
 import yhsb.cjb.net.protocol._
+import org.apache.axis.encoding.Base64
+import java.nio.file.Files
+import yhsb.base.run.process
+import java.io.OutputStream
+import yhsb.base.json.Json
 
 object Config {
   val cjbSession = yhsb.base.util.Config.load("cjb.session")
@@ -53,8 +58,8 @@ object Config {
 class Session(
     ip: String,
     port: Int,
-    private val userID: String,
-    private val password: String,
+    private var userID: String,
+    private var password: String,
     private val cxcookie: String,
     private val jsessionid_ylzcbp: String,
     private val verbose: Boolean = false
@@ -137,6 +142,9 @@ class Session(
 
   def sendService(req: Request[_]) = writeRequest(toService(req))
 
+  def sendService(req: Request[_], userID: String, password: String) =
+    writeRequest(toService(req, userID, password))
+
   def sendService(id: String) = writeRequest(toService(id))
 
   def sendService(id: String, userID: String, password: String) = {
@@ -162,8 +170,23 @@ class Session(
     Result.fromJson(result)
   }
 
+  def getResult[T: ClassTag](header: HttpHeader): Result[T] = {
+    val result = readBody(header)
+    // println(s"getResult: $result")
+    Result.fromJson(result)
+  }
+
   def request[T: ClassTag](reqWithTag: Request[T]): Result[T] = {
     sendService(reqWithTag)
+    getResult[T]
+  }
+
+  def request[T: ClassTag](
+      reqWithTag: Request[T],
+      userID: String,
+      password: String
+  ): Result[T] = {
+    sendService(reqWithTag, userID, password)
     getResult[T]
   }
 
@@ -176,10 +199,7 @@ class Session(
     }
   }
 
-  def login(): String = {
-    sendService("contentQuery", null, null)
-
-    val header = readHeader()
+  private def setCookies(header: HttpHeader) = {
     if (header.contains("set-cookie")) {
       println(s"${cookies("cxcookie")}|${cookies("jsessionid_ylzcbp")}")
       val re = "([^=]+?)=(.+?);".r
@@ -194,10 +214,74 @@ class Session(
         cookies("jsessionid_ylzcbp")
       )
     }
+  }
+
+  def login(): String = {
+    sendService("contentQuery", null, null)
+
+    val header = readHeader()
+    setCookies(header)
     readBody(header)
 
     sendService(SysLogin(userID + "|@|1", password))
     readBody()
+  }
+
+  def loginSSCard(checkTimes: Int = 6, delay: Long = 6 * 1000): String = {
+    sendService("getQrCode", null, null)
+    val header = readHeader()
+    setCookies(header)
+
+    val qrCodeResult = getResult[String](header)
+    println(qrCodeResult)
+
+    if (qrCodeResult.size < 3) {
+      throw new Exception("get QrCode error")
+    }
+
+    Session.openBase64Jpg(qrCodeResult(0))
+
+    var succeed = false
+    var times = 1
+    var result = ""
+    while (times <= checkTimes && succeed == false) {
+      val checkResult =
+        request(CheckQrCode(qrCodeResult(1), qrCodeResult(2)), null, null)
+
+      if (checkResult.typeOf == "info" && checkResult.size > 0) {
+        val userName = checkResult(0)
+        println(s"sscard authorized: $userName")
+
+        sendService(
+          SysLogin(userName + "|@|0", Config.cjbSession.getString("sscard.pwd"))
+        )
+
+        val result = readBody()
+
+        val loginResult = Result.fromJson[SysLogin.Item](result)
+
+        if (loginResult.typeOf == "data" && loginResult.size > 0) {
+          val userName = loginResult(0).userName
+          val userPass = loginResult(0).password
+          if (userName != null && userPass != null) {
+            userID = userName
+            password = userPass
+            succeed = true
+          }
+        }
+        if (!succeed) {
+          println(s"error: ${loginResult.message}")
+        }
+      } else {
+        println(s"error: ${checkResult.message}")
+      }
+      times += 1
+      if (!succeed && times <= checkTimes) {
+        Thread.sleep(delay)
+      }
+    }
+
+    result
   }
 
   def logout(): String = {
@@ -265,7 +349,7 @@ class Session(
         s"$key=$value"
       }
       .mkString("&")
-    
+
     write(httpRequest(url).getBytes)
     exportToFile(filePath)
   }
@@ -297,11 +381,12 @@ class Session(
 
 object Session {
   def use[T](
-      user: String = "007",
+      user: String = "002",
       autoLogin: Boolean = true,
       verbose: Boolean = false,
       loginTimeOut: Int = 6 * 1000,
-      loginRetries: Int = 6
+      loginRetries: Int = 6,
+      useSSCard: Boolean = true
   )(
       f: Session => T
   ): T = {
@@ -321,7 +406,11 @@ object Session {
         if (autoLogin) {
           val oldValue = sess.getTimeOut()
           sess.setTimeOut(loginTimeOut)
-          sess.login()
+          if (!useSSCard) {
+            sess.login()
+          } else {
+            sess.loginSSCard()
+          }
           sess.setTimeOut(oldValue)
         }
         try {
@@ -331,7 +420,7 @@ object Session {
         }
       }
     } catch {
-      case  ex: java.net.SocketTimeoutException => {
+      case ex: java.net.SocketTimeoutException => {
         if (loginRetries > 0) {
           println(s"Logining retries ...")
           use(user, autoLogin, verbose, loginTimeOut, loginRetries - 1)(f)
@@ -340,5 +429,22 @@ object Session {
         }
       }
     }
+  }
+
+  def openBase64Jpg(base64String: String) = {
+    val imgBytes = Base64.decode(base64String.replace("\\n", ""))
+
+    val file = Files.createTempFile("yhsb_login", ".jpg")
+    Files.write(file, imgBytes)
+
+    val cmd =
+      s"""${yhsb.base.util.Config.load("cmd").getString("open.img")} $file"""
+
+    println(cmd)
+    process.execute(
+      cmd,
+      OutputStream.nullOutputStream(),
+      OutputStream.nullOutputStream()
+    )
   }
 }
