@@ -423,7 +423,7 @@ object Session {
       case ex: java.net.SocketTimeoutException => {
         if (loginRetries > 0) {
           println(s"Logining retries ...")
-          use(user, autoLogin, verbose, loginTimeOut, loginRetries - 1)(f)
+          use(user, autoLogin, verbose, loginTimeOut, loginRetries - 1, useSSCard)(f)
         } else {
           throw ex
         }
