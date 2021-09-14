@@ -23,7 +23,7 @@ object Repl {
     try {
       var args: Seq[String] = null
 
-      val parser = new DefaultParser()
+      val parser = new DefaultParser
       parser.setEscapeChars(null)
 
       val terminal = TerminalBuilder
@@ -31,11 +31,13 @@ object Repl {
         .system(true)
         .build()
 
+      val history = new DefaultHistory
+
       val reader = LineReaderBuilder
         .builder()
         .terminal(terminal)
         .parser(parser)
-        .history(new DefaultHistory)
+        .history(history)
         .variable(
           LineReader.HISTORY_FILE,
           Paths.get(System.getProperty("user.home"), ".yhsb_history")
@@ -55,7 +57,9 @@ object Repl {
           }
         }
       } catch {
-        case _: EndOfFileException => println("Byte!")
+        case _: EndOfFileException =>
+          history.save()
+          println("Byte!")
       }
     } finally {
       finalize
