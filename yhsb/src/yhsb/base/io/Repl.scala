@@ -11,7 +11,7 @@ import org.jline.terminal.TerminalBuilder
 import yhsb.base.text.Parser
 
 object Repl {
-  def runLoop(action: Seq[String] => Boolean) {
+  def runLoop(action: Seq[String] => Boolean) = {
     var args: Seq[String] = null
 
     val parser = new DefaultParser()
