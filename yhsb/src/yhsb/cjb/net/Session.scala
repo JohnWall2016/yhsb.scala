@@ -381,12 +381,12 @@ class Session(
 
 object Session {
   def use[T](
-      user: String = "002",
+      user: String = "007",
       autoLogin: Boolean = true,
       verbose: Boolean = false,
       loginTimeOut: Int = 6 * 1000,
       loginRetries: Int = 6,
-      useSSCard: Boolean = true
+      useSSCard: Boolean = false
   )(
       f: Session => T
   ): T = {

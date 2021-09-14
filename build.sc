@@ -37,6 +37,7 @@ object yhsb extends CustomModule {
       ivy"org.scala-lang:scala-compiler:2.13.3",
       ivy"org.zeroturnaround:zt-zip:1.14",
       ivy"axis:axis:1.4",
+      ivy"org.jline:jline:3.1.3",
     )
     
   trait YhsbModule extends CustomModule {
