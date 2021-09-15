@@ -18,10 +18,9 @@ import yhsb.base.text.Parser
 object Repl {
   def runLoop(
       action: Seq[String] => Boolean,
-      initialize: => Unit = {},
+      initialize: LineReaderBuilder => Unit = { b => },
       finalize: => Unit = {}
   ) = {
-    initialize
     try {
       var args: Seq[String] = null
 
@@ -35,8 +34,9 @@ object Repl {
 
       val history = new DefaultHistory
 
-      val reader = LineReaderBuilder
-        .builder()
+      val readerBuilder = LineReaderBuilder.builder()
+
+      readerBuilder
         .terminal(terminal)
         .parser(parser)
         .history(history)
@@ -44,7 +44,10 @@ object Repl {
           LineReader.HISTORY_FILE,
           Paths.get(System.getProperty("user.home"), ".yhsb_history")
         )
-        .build()
+
+      initialize(readerBuilder)
+
+      val reader = readerBuilder.build()
 
       try {
         var continue = true

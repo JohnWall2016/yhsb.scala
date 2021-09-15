@@ -1,7 +1,7 @@
 package yhsb.base.collection
 
 class BiMap[K, V](entries: (K, V)*) extends collection.immutable.Map[K, V] {
-  private val map = Map(entries: _*)
+  private val map = collection.immutable.ListMap(entries: _*)
 
   override def iterator: Iterator[(K, V)] = map.iterator
 

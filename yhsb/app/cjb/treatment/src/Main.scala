@@ -27,7 +27,7 @@ object Main {
 }
 
 class Treatment(args: collection.Seq[String]) extends Command(args) {
-  banner("信息核对报告表、养老金计算表生成、待遇认证表格、待遇人员公示表格等相关程序")
+  banner("待遇人员表格、报表生成程序")
   addSubCommand(new Download)
   addSubCommand(new Split)
 
