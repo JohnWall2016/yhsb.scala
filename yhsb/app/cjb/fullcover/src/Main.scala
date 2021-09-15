@@ -1,3 +1,5 @@
+package yhsb.app.cjb
+
 import org.rogach.scallop._
 
 import yhsb.base.io.Path._

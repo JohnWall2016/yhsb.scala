@@ -37,15 +37,33 @@ object yhsb extends CustomModule {
       ivy"org.scala-lang:scala-compiler:2.13.3",
       ivy"org.zeroturnaround:zt-zip:1.14",
       ivy"axis:axis:1.4",
-      ivy"org.jline:jline:3.1.3",
+      ivy"org.jline:jline:3.1.3"
     )
-    
+
   trait YhsbModule extends CustomModule {
     override def moduleDeps = Seq(yhsb)
   }
 
+  trait CjbAppModule extends CustomModule {
+    override def moduleDeps = Seq(
+      yhsb,
+      app.cjb.fullcover,
+      app.cjb.audit,
+      app.cjb.query,
+      app.cjb.dataverify,
+      app.cjb.cert,
+      app.cjb.payment,
+      app.cjb.delegate,
+      app.cjb.treatment,
+      app.cjb.auth,
+      app.cjb.compare,
+      app.cjb.lookback
+    )
+  }
+
   object app extends CustomModule {
     object cjb extends CustomModule {
+      object all extends CjbAppModule
       object fullcover extends YhsbModule
       object audit extends YhsbModule
       object query extends YhsbModule

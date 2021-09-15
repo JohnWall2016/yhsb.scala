@@ -1,3 +1,5 @@
+package yhsb.app.cjb
+
 import io.getquill.Query
 
 import java.nio.file.Files

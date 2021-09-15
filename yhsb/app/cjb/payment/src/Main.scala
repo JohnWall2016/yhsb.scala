@@ -1,3 +1,5 @@
+package yhsb.app.cjb
+
 import yhsb.base.command.Command
 import yhsb.base.excel.Excel._
 import yhsb.base.datetime.Formatter

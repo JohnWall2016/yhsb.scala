@@ -13,6 +13,8 @@ import org.jline.terminal.TerminalBuilder
 
 import yhsb.base.text.Parser
 
+//Windows: Console Emulator
+
 object Repl {
   def runLoop(
       action: Seq[String] => Boolean,

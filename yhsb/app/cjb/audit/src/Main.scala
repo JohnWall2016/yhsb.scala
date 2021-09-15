@@ -1,3 +1,5 @@
+package yhsb.app.cjb
+
 import yhsb.base.command._
 import yhsb.base.datetime.Formatter.toDashedDate
 import yhsb.base.excel.Excel._

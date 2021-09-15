@@ -1,3 +1,5 @@
+package yhsb.app.cjb
+
 import java.io.OutputStream
 import java.nio.file.Files
 
@@ -82,7 +84,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
             val result = session.request(PersonInfoInProvinceQuery(idCard))
             if (result.isEmpty || result(0).idCard == null) {
               System.err.println(s"Error: ${i + 1} $idCard")
-              System.exit(-1)
+              Command.exit(-1)
             } else {
               val info = result(0)
               println(s"${i + 1} ${info.name}")

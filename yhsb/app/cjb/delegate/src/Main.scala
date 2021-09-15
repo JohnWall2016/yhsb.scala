@@ -1,3 +1,5 @@
+package yhsb.app.cjb
+
 import yhsb.base.command.Command
 import yhsb.base.command.Subcommand
 import yhsb.base.excel.Excel._
