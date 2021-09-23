@@ -224,7 +224,14 @@ class Session(
     readBody(header)
 
     sendService(SysLogin(userID + "|@|1", password))
-    readBody()
+    val result = readBody()
+    val loginResult = Result.fromJson[Any](result)
+
+    if (loginResult.typeOf == "error") {
+      throw new Exception(s"error: ${loginResult.message}")
+    }
+
+    result
   }
 
   def loginSSCard(checkTimes: Int = 6, delay: Long = 6 * 1000): String = {
@@ -270,10 +277,18 @@ class Session(
           }
         }
         if (!succeed) {
-          println(s"error: ${loginResult.message}")
+          if (times < checkTimes) {
+            println(s"error: ${loginResult.message}")
+          } else {
+            throw new Exception(s"error: ${loginResult.message}")
+          }
         }
       } else {
-        println(s"error: ${checkResult.message}")
+        if (times < checkTimes) {
+          println(s"error: ${checkResult.message}")
+        } else {
+          throw new Exception(s"error: ${checkResult.message}")
+        }
       }
       times += 1
       if (!succeed && times <= checkTimes) {
