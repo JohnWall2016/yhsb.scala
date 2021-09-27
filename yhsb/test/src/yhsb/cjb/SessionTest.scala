@@ -8,11 +8,7 @@ import scala.collection.mutable.LinkedHashMap
 object SessionTest extends TestSuite {
   def tests = Tests {
     test("login") {
-      Session.use(autoLogin = false) { sess =>
-        println("=" * 50)
-        println(sess.login())
-        println("=" * 50)
-        println(sess.logout())
+      Session.use() { sess =>
       }
     }
     test("loginSSCard") {

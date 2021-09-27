@@ -2,17 +2,18 @@ package yhsb.app.cjb
 
 import scala.collection.mutable.LinkedHashMap
 
+import org.jline.reader.impl.completer.AggregateCompleter
+import org.jline.reader.impl.completer.ArgumentCompleter
+import org.jline.reader.impl.completer.NullCompleter
+import org.jline.reader.impl.completer.StringsCompleter
 import yhsb.base.collection.BiMap
 import yhsb.base.command.Command
 import yhsb.base.command.ExitException
+import yhsb.base.command.Subcommand
 import yhsb.base.io.Repl
 import yhsb.base.reflect.UnsafeAllocator
 import yhsb.base.text.String._
-import org.jline.reader.impl.completer.ArgumentCompleter
-import org.jline.reader.impl.completer.StringsCompleter
-import org.jline.reader.impl.completer.NullCompleter
-import org.jline.reader.impl.completer.AggregateCompleter
-import yhsb.base.command.Subcommand
+import yhsb.cjb.net.Session
 
 object Main {
   implicit class CommandClass(cmdClass: Class[_ <: Command]) {
@@ -43,7 +44,7 @@ object Main {
 
   def main(args: Array[String]) = {
     Command.setExitMode(Command.ExitMode.throwException)
-    Repl.runLoop(
+    Repl(
       { args =>
         if (args.length == 1 && args(0) == ":help") {
           allApps.foreach { case (name, cmdClass) =>
@@ -65,7 +66,7 @@ object Main {
         println()
         true
       },
-      { builder =>
+      { self =>
         val completers = allApps.map { case (name, cmdClass) =>
           new AggregateCompleter(
             new ArgumentCompleter(
@@ -90,9 +91,16 @@ object Main {
             NullCompleter.INSTANCE
           )
         )
-        builder.completer(new AggregateCompleter(completers: _*))
+        self.readerBuilder.completer(new AggregateCompleter(completers: _*))
+
+        self.prompt =
+          Session.setGlobalSession(Some(Session.getLoginedSession()))
+
+      },
+      { self =>
+        Session.setGlobalSession(None)
       }
-    )
+    ).runLoop()
   }
 }
 

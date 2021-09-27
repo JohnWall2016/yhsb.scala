@@ -7,10 +7,10 @@ object JLineTest extends TestSuite {
   def tests =
     Tests {
       test("run") {
-        Repl.runLoop { args =>
+        Repl({ args =>
           println(args)
           true
-        }
+        }).runLoop()
       }
     }
 }

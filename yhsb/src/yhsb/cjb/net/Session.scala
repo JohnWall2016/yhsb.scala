@@ -395,9 +395,62 @@ class Session(
 }
 
 object Session {
+
+  def getLoginedSession(
+      user: String = "007",
+      verbose: Boolean = false,
+      loginTimeOut: Int = 6 * 1000,
+      loginRetries: Int = 6,
+      useSSCard: Boolean = false
+  ): Session = {
+    var session: Session = null
+    try {
+      val usr = Config.cjbSession.getConfig(s"users.$user")
+      session = new Session(
+        Config.cjbSession.getString("host"),
+        Config.cjbSession.getInt("port"),
+        usr.getString("id"),
+        usr.getString("pwd"),
+        usr.getString("cxcookie"),
+        usr.getString("jsessionid_ylzcbp"),
+        verbose
+      )
+      val oldValue = session.getTimeOut()
+      session.setTimeOut(loginTimeOut)
+      if (!useSSCard) {
+        session.login()
+      } else {
+        session.loginSSCard()
+      }
+      session.setTimeOut(oldValue)
+      
+      val result = session
+      session = null
+      result
+    } catch {
+      case ex: java.net.SocketTimeoutException => {
+        if (loginRetries > 0) {
+          println(s"Logining retries ...")
+          getLoginedSession(
+            user,
+            verbose,
+            loginTimeOut,
+            loginRetries - 1,
+            useSSCard
+          )
+        } else {
+          throw ex
+        }
+      }
+    } finally {
+      if (session != null) {
+        session.close()
+      }
+    }
+  }
+
   def use[T](
       user: String = "007",
-      autoLogin: Boolean = true,
       verbose: Boolean = false,
       loginTimeOut: Int = 6 * 1000,
       loginRetries: Int = 6,
@@ -405,45 +458,44 @@ object Session {
   )(
       f: Session => T
   ): T = {
-    try {
-      val usr = Config.cjbSession.getConfig(s"users.$user")
+    if (globalSession.isDefined) {
+      f(globalSession.get)
+    } else {
       AutoClose.use(
-        new Session(
-          Config.cjbSession.getString("host"),
-          Config.cjbSession.getInt("port"),
-          usr.getString("id"),
-          usr.getString("pwd"),
-          usr.getString("cxcookie"),
-          usr.getString("jsessionid_ylzcbp"),
-          verbose
+        getLoginedSession(
+          user,
+          verbose,
+          loginTimeOut,
+          loginRetries,
+          useSSCard
         )
       ) { sess =>
-        if (autoLogin) {
-          val oldValue = sess.getTimeOut()
-          sess.setTimeOut(loginTimeOut)
-          if (!useSSCard) {
-            sess.login()
-          } else {
-            sess.loginSSCard()
-          }
-          sess.setTimeOut(oldValue)
-        }
         try {
           f(sess)
         } finally {
-          if (autoLogin) sess.logout()
-        }
-      }
-    } catch {
-      case ex: java.net.SocketTimeoutException => {
-        if (loginRetries > 0) {
-          println(s"Logining retries ...")
-          use(user, autoLogin, verbose, loginTimeOut, loginRetries - 1, useSSCard)(f)
-        } else {
-          throw ex
+          sess.logout()
         }
       }
     }
+  }
+
+  var globalSession: Option[Session] = None
+
+  def setGlobalSession(session: Option[Session]): String = {
+    if (globalSession.isDefined) {
+      println(s"Close global sesion: ${globalSession.get.userID}")
+      globalSession.get.logout()
+      globalSession.get.close()
+      globalSession = None
+    }
+
+    globalSession = session
+
+    if (session.isDefined) {
+      val user = session.get.userID
+      println(s"Set global sesion: $user")
+      user
+    } else ""
   }
 
   def openBase64Jpg(base64String: String) = {

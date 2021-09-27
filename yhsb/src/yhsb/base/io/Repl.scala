@@ -10,51 +10,53 @@ import org.jline.reader.UserInterruptException
 import org.jline.reader.impl.DefaultParser
 import org.jline.reader.impl.history.DefaultHistory
 import org.jline.terminal.TerminalBuilder
-
 import yhsb.base.text.Parser
 
 //Windows: Console Emulator
 
-object Repl {
-  def runLoop(
-      action: Seq[String] => Boolean,
-      initialize: LineReaderBuilder => Unit = { b => },
-      finalize: => Unit = {}
-  ) = {
+case class Repl(
+    action: Seq[String] => Boolean,
+    initialize: Repl => Unit = { _ => },
+    finalize_ : Repl => Unit = { _ => }
+) {
+  var prompt: String = ""
+
+  val parser = {
+    val p = new DefaultParser
+    p.setEscapeChars(null)
+    p
+  }
+
+  val terminal = TerminalBuilder
+    .builder()
+    .system(true)
+    .build()
+
+  val history = new DefaultHistory
+
+  val readerBuilder = {
+    val rb = LineReaderBuilder.builder()
+    rb
+      .terminal(terminal)
+      .parser(parser)
+      .history(history)
+      .variable(
+        LineReader.HISTORY_FILE,
+        Paths.get(System.getProperty("user.home"), ".yhsb_history")
+      )
+    rb
+  }
+
+  def runLoop() = {
     try {
-      var args: Seq[String] = null
-
-      val parser = new DefaultParser
-      parser.setEscapeChars(null)
-
-      val terminal = TerminalBuilder
-        .builder()
-        .system(true)
-        .build()
-
-      val history = new DefaultHistory
-
-      val readerBuilder = LineReaderBuilder.builder()
-
-      readerBuilder
-        .terminal(terminal)
-        .parser(parser)
-        .history(history)
-        .variable(
-          LineReader.HISTORY_FILE,
-          Paths.get(System.getProperty("user.home"), ".yhsb_history")
-        )
-
-      initialize(readerBuilder)
-
+      initialize(this)
       val reader = readerBuilder.build()
-
       try {
         var continue = true
         while (continue) {
           try {
-            val line = reader.readLine("> ")
-            args = Parser.parseLine(line)
+            val line = reader.readLine(s"${prompt}> ")
+            val args = Parser.parseLine(line)
             continue = action(args) &&
               !(args.length == 1 && (args(0) == ":q" || args(0) == ":quit"))
           } catch {
@@ -67,7 +69,7 @@ object Repl {
           println("Byte!")
       }
     } finally {
-      finalize
+      finalize_(this)
     }
   }
 }
