@@ -18,6 +18,7 @@ import yhsb.base.io.AutoClose.use
 import yhsb.base.net.HttpHeader
 import yhsb.base.net.HttpRequest
 import yhsb.base.util._
+import java.net.InetSocketAddress
 
 class HttpSocket private (
     val ip: String,
@@ -66,6 +67,14 @@ class HttpSocket private (
   def setTimeOut(timeOut: Int) = socket.setSoTimeout(timeOut)
 
   def getTimeOut() = socket.getSoTimeout()
+
+  def setKeepAlive(on: Boolean) = socket.setKeepAlive(on)
+
+  def getKeepAlive() = socket.getKeepAlive()
+
+  def isClosed() = socket.isClosed()
+
+  def reconnect() = socket.connect(new InetSocketAddress(ip, port))
 
   def write(bytes: Array[Byte]) = output.write(bytes)
 

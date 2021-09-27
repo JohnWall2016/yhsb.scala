@@ -17,8 +17,7 @@ object SessionTest extends TestSuite {
     }
     test("cbxx") {
       Session.use() { sess =>
-        sess.sendService(PersonInfoInProvinceQuery("430311194511291027"))
-        val result = sess.getResult[PersonInfoInProvinceQuery.Item]
+        val result = sess.request(PersonInfoInProvinceQuery("430311194511291027"))
         println(result)
         result.foreach { cbxx =>
           println(cbxx)
@@ -32,8 +31,7 @@ object SessionTest extends TestSuite {
     }
     test("cbsh") {
       Session.use() { sess =>
-        sess.sendService(JoinAuditQuery("2020-07-20"))
-        val result = sess.getResult[JoinAuditQuery.Item]
+        val result = sess.request(JoinAuditQuery("2020-07-20"))
         result.foreach { cbsh =>
           println(cbsh)
         }
@@ -41,9 +39,8 @@ object SessionTest extends TestSuite {
     }
     test("jfcx") {
       Session.use() { sess =>
-        sess.sendService(PayingInfoInProvinceQuery("430302197604224525"))
         //sess.sendService(PayingInfoInProvinceQuery("110108196511289010"))
-        val result = sess.getResult[PayingInfoInProvinceQuery.Item]
+        val result = sess.request(PayingInfoInProvinceQuery("430302197604224525"))
         result.foreach(println(_))
       }
     }
@@ -51,8 +48,7 @@ object SessionTest extends TestSuite {
       Session.use() { sess =>
         val result = sess.request(JoinAuditQuery())
         println(result)
-        sess.sendService(JoinAuditQuery())
-        val result2 = sess.getResult[JoinAuditQuery.Item]
+        val result2 = sess.request(JoinAuditQuery())
         println(result2)
         println(result2(0).dwName)
       }

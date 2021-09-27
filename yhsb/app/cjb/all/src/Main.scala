@@ -92,14 +92,9 @@ object Main {
           )
         )
         self.readerBuilder.completer(new AggregateCompleter(completers: _*))
-
-        self.prompt =
-          Session.setGlobalSession(Some(Session.getLoginedSession()))
-
+        Session.addUserChangedHooks(self.prompt = _)
       },
-      { self =>
-        Session.setGlobalSession(None)
-      }
+      { self => }
     ).runLoop()
   }
 }
