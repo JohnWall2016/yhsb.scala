@@ -192,12 +192,11 @@ class Session(
 
     val file = os.Path(filePath)
     if (os.exists(file)) {
-      os.remove(file)
+      os.write.over(file, getRequest(url, readTimeOut = 0, connectTimeOut = 0))
+    } else {
+      os.write(file, getRequest(url, readTimeOut = 0, connectTimeOut = 0))
     }
-    os.write(
-      file,
-      getRequest(url, readTimeOut = 0, connectTimeOut = 0)
-    )
+    println(file)
   }
 
   def readHttp(url: String) = {

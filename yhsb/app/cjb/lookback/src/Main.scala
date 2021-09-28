@@ -43,6 +43,7 @@ import yhsb.cjb.net.protocol.RefundQuery
 import yhsb.cjb.net.protocol.RetiredPersonPauseQuery
 import yhsb.cjb.net.protocol.RetiredPersonStopAuditQuery
 import yhsb.base.command.OutputDir
+import yhsb.cjb.net.protocol.LookBackTable1Query
 
 object Main {
   def main(args: Array[String]) = new Lookback(args).runCommand()
@@ -2452,6 +2453,41 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val exportTable1Result = new Subcommand("exportTable1Result") {
+    descr("下载回头看附表1结果数据")
+
+    val outputDir = """D:\数据核查\回头看数据核查\导出附表1结果"""
+
+    override def execute(): Unit = {
+      for ((code, name) <- Division.validCodeMap) {
+        println(s"开始导出 $name 附表1结果")
+
+        val exportFile = Files.createTempFile("yhsb", ".xls").toString
+        Session.use() {
+          _.exportAllTo(
+            LookBackTable1Query(code),
+            LookBackTable1Query.columnMap
+          )(
+            exportFile
+          )
+        }
+
+        val workbook = Excel.load(exportFile)
+        val sheet = workbook.getSheetAt(0)
+        sheet.setColumnWidth(1, 35 * 256)
+        sheet.setColumnWidth(3, 19 * 256)
+
+        workbook.saveAfter(
+          outputDir / s"${name}附表1结果${Formatter.formatDate()}.xls"
+        ) { path =>
+          println(s"保存: $path")
+        }
+      }
+
+      println("结束数据导出")
+    }
+  }
+
   addSubCommand(retiredTables)
 
   addSubCommand(zipSubDir)
@@ -2516,4 +2552,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(mergeTable2Templates)
 
   addSubCommand(unmergeTable2Templates)
+
+  addSubCommand(exportTable1Result)
 }
