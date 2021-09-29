@@ -62,6 +62,7 @@ import yhsb.cjb.net.protocol.Division
 import yhsb.cjb.db.lookback.Table2VerifiedResult
 import yhsb.cjb.db.lookback.OutsideDeathItem
 import io.getquill.Ord
+import yhsb.cjb.net.protocol.BankAccountQuery
 
 class Query(args: collection.Seq[String]) extends Command(args) {
 
@@ -1665,6 +1666,40 @@ class Query(args: collection.Seq[String]) extends Command(args) {
     }
   }
 
+  val bankAccount =
+    new Subcommand("bankAccount") with InputFile with RowRange {
+      descr("更新银行账户信息")
+
+      val nameRow = trailArg[String](descr = "姓名列名称")
+      val idCardRow = trailArg[String](descr = "身份证列名称")
+      val updateRow = trailArg[String](descr = "更新列名称")
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        Session.use(verbose = false) { session =>
+          for (i <- (startRow() - 1) until endRow()) {
+            val row = sheet.getRow(i)
+            val name = row.getCell(nameRow()).value.trim()
+            val idCard = row.getCell(idCardRow()).value.trim().toUpperCase()
+
+            println(idCard)
+
+            if (idCard != "") {
+              val result = session.request(BankAccountQuery(idCard))
+              result.map(item => {
+                row
+                  .getOrCreateCell(updateRow())
+                  .setCellValue(item.ssCardFlag)
+              })
+            }
+          }
+        }
+        workbook.save(inputFile().insertBeforeLast(".upd"))
+      }
+    }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(upCert)
@@ -1684,6 +1719,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(cert2)
   addSubCommand(inherit)
   addSubCommand(outside)
+  addSubCommand(bankAccount)
 }
 
 object Main {
