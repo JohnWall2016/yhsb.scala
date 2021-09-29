@@ -196,7 +196,7 @@ class Session(
     } else {
       os.write(file, getRequest(url, readTimeOut = 0, connectTimeOut = 0))
     }
-    println(file)
+    // println(file)
   }
 
   def readHttp(url: String) = {
