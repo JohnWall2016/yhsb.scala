@@ -203,6 +203,10 @@ class Session(
     getRequest(url).text()
   }
 
+  def readHttpPart(part: String) = {
+    getRequest(s"http://$host$part").text()
+  }
+
   def exportAllTo(
       req: PageRequest[_],
       columnHeaders: SeqMap[String, String]

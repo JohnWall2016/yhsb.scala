@@ -111,7 +111,7 @@ object TreatmentReviewQuery {
     def getTreatmentInfoMatch(session: Session) = {
       // println(treatmentInfoUrl)
       val content =
-        session.readHttp(treatmentInfoUrl).replace("""[\r\n\t]""".r, "")
+        session.readHttpPart(treatmentInfoUrl).replace("""[\r\n\t]""".r, "")
       Item.rePaymentInfo.findFirstMatchIn(content)
     }
   }
