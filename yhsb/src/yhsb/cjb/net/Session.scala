@@ -231,7 +231,7 @@ object Session {
   private val sessions: mutable.Map[String, Session] = mutable.Map()
 
   def use[T](
-      user: String = "007",
+      user: String = "002",
       verbose: Boolean = false,
       loginTimeOut: Int = 6 * 1000,
       loginRetries: Int = 6,
