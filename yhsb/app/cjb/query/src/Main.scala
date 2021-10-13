@@ -1700,6 +1700,64 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val refundDetail =
+    new Subcommand("refundDetail") with InputFile with RowRange {
+      descr("稽核登记明细查询")
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        val colMap = Map(
+          "基础养老金-中央补助" -> "P",
+          "基础养老金-省补助" -> "Q",
+          "基础养老金-市补助" -> "R",
+          "基础养老金-县补助" -> "S",
+          "个人账户-省财政补贴" -> "T",
+          "个人账户-县财政补贴" -> "U",
+          "个人账户-个人缴费" -> "V",
+        )
+
+        Session.use(verbose = false) { session =>
+          for {
+            i <- (startRow() - 1) until endRow()
+            row = sheet.getRow(i)
+            idCard = row("F").value.trim()
+            deathTime = row("L").value.trim().toInt
+          } {
+            val pInfo = session.request(PersonInfoQuery(idCard)).headOption
+            if (pInfo.isDefined) {
+              val map = HashMap[String, BigDecimal]()
+              for (
+                item <- session.request(PersonInfoPaylistQuery(pInfo.get))
+                if item.payYearMonth > deathTime &&
+                  item.payState == "已支付"
+              ) {
+                if (map.contains(item.payItem)) {
+                  map(item.payItem) += item.amount
+                } else {
+                  map(item.payItem) = item.amount
+                }
+              }
+              var total = BigDecimal(0)
+              for ((name, col) <- colMap) {
+                val amount = map.getOrElse(name, null)
+                if (amount != null) {
+                  row.getOrCreateCell(col).value = amount
+                  total += amount
+                }
+              }
+              if (total > 0) {
+                row.getOrCreateCell("W").value = total
+              }
+            }
+          }
+        }
+
+        workbook.save(inputFile().insertBeforeLast(".upd"))
+      }
+    }
+
   addSubCommand(doc)
   addSubCommand(up)
   addSubCommand(upCert)
@@ -1720,6 +1778,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(inherit)
   addSubCommand(outside)
   addSubCommand(bankAccount)
+  addSubCommand(refundDetail)
 }
 
 object Main {
