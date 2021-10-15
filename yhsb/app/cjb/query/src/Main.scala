@@ -754,6 +754,34 @@ class Query(args: collection.Seq[String]) extends Command(args) {
       }
     }
 
+  val divideCS =
+    new Subcommand("divideCS") with InputFile with RowRange {
+      descr("更新村社区名称")
+
+      def execute(): Unit = {
+        val workbook = Excel.load(inputFile())
+        val sheet = workbook.getSheetAt(0)
+
+        try {
+          for {
+            i <- (startRow() - 1) until endRow()
+            row = sheet.getRow(i)
+            name = row("E").value.trim()
+            idCard = row("F").value.trim()
+            division = row("D").value.trim()
+          } {
+            println(s"$i $idCard $name ")
+
+            val (dw, cs) = Division.getDwAndCsName(division).get
+
+            row.getOrCreateCell("C").value = cs
+          }
+        } finally {
+          workbook.save(inputFile().insertBeforeLast(".upd"))
+        }
+      }
+    }
+
   val delayPay =
     new Subcommand("delayPay") with InputFile with RowRange {
       descr("查询补发基础养老金情况")
@@ -1767,6 +1795,7 @@ class Query(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(audit)
   addSubCommand(division)
   addSubCommand(divide)
+  addSubCommand(divideCS)
   addSubCommand(payment)
   addSubCommand(delayPay)
   addSubCommand(statics)

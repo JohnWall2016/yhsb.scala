@@ -2535,7 +2535,7 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
 
     def execute(): Unit = {
       import yhsb.cjb.db.lookback.Lookback2021._
-      
+
       val workbook = Excel.load(inputFile())
       val sheet = workbook.getSheetAt(0)
 
@@ -2551,15 +2551,94 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
           row.getOrCreateCell("P").value = card.name
           row.getOrCreateCell("Q").value = card.bankName
           row.getOrCreateCell("R").value = card.cardNumber
-          row.getOrCreateCell("S").value = if (row("G").value == card.cardNumber) {
-            "是"
-          } else {
-            "否"
-          }
+          row.getOrCreateCell("S").value =
+            if (row("G").value == card.cardNumber) {
+              "是"
+            } else {
+              "否"
+            }
         }
       }
 
       workbook.save(inputFile().insertBeforeLast(".upd"))
+    }
+  }
+
+  val swydkTables = new Subcommand("swydk") with InputFile with RowRange {
+    descr("死亡待遇人员疑点卡核查明细表")
+
+    val outputDir = """D:\数据核查\回头看数据核查\深化整改核实"""
+
+    val template = outputDir / """死亡待遇人员疑点卡核查明细表模板.xls"""
+
+    def execute(): Unit = {
+      val destDir = outputDir / "死亡待遇人员疑点卡"
+
+      println("生成死亡待遇人员疑点卡核查明细表")
+      if (Files.exists(destDir)) {
+        Files.move(destDir, s"${destDir.toString}.orig")
+      }
+      Files.createDirectory(destDir)
+
+      val workbook = Excel.load(inputFile())
+      val sheet = workbook.getSheetAt(0)
+
+      val map = mutable
+        .LinkedHashMap[String, mutable.Map[String, mutable.ListBuffer[Int]]]()
+
+      for (index <- (startRow() - 1) until endRow()) {
+        val row = sheet.getRow(index)
+        val countryName = row("B").value.trim()
+        var villageName = row("C").value.trim()
+        val subMap = map.getOrElseUpdate(countryName, mutable.LinkedHashMap())
+        val list = subMap.getOrElseUpdate(villageName, mutable.ListBuffer())
+        list.addOne(index)
+      }
+
+      def createTable(savePath: Path, list: Iterable[Int]) = {
+        val outWorkbook = Excel.load(template)
+        val outSheet = outWorkbook.getSheetAt(0)
+
+        val startRow = 3
+        var currentRow = startRow
+
+        list.foreach { rowIndex =>
+          val index = currentRow - startRow + 1
+          val sourceRow = sheet.getRow(rowIndex)
+          val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+          currentRow += 1
+          outRow("A").value = index
+          outRow("B").value = sourceRow("B").value
+          outRow("C").value = sourceRow("C").value
+          outRow("D").value = sourceRow("D").value
+          outRow("E").value = sourceRow("E").value
+          outRow("F").value = sourceRow("F").value
+          outRow("G").value = sourceRow("G").value
+          outRow("H").value = sourceRow("H").value
+          outRow("I").value = sourceRow("I").value
+          outRow("J").value = sourceRow("J").value
+        }
+        outWorkbook.save(savePath)
+      }
+
+      var total = 0
+      for ((dw, subMap) <- map) {
+        Files.createDirectory(destDir / dw)
+        
+        val list = subMap.values.flatMap(_.toIterable)
+        val subTotal = list.size
+        createTable(destDir / dw / s"${dw}死亡待遇人员疑点卡核查明细表.xls", list)
+        
+        total += subTotal
+        println(s"\r\n$dw: $subTotal")
+
+        for ((cs, list) <- subMap) {
+          println(s"  $cs: ${list.size}")
+          Files.createDirectory(destDir / dw / cs)
+          createTable(destDir / dw / cs / s"${cs}死亡待遇人员疑点卡核查明细表.xlsx", list)
+        }
+      }
+      println(s"\r\n共计: ${total}")
     }
   }
 
@@ -2632,4 +2711,6 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(exportTable2Result)
 
   addSubCommand(checkCardsData)
+
+  addSubCommand(swydkTables)
 }
