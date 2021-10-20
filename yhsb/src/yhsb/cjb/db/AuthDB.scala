@@ -108,11 +108,6 @@ trait AuthItem {
     }
 
     item.personType match {
-      case Some("贫困人口") =>
-        setDestitute(poverty) { it =>
-          poverty = it.detail
-          povertyDate = it.date
-        }
       case Some("特困人员") =>
         setDestitute(veryPoor) { it =>
           veryPoor = it.detail
@@ -137,6 +132,11 @@ trait AuthItem {
         setDestitute(secondaryDisability) { it =>
           secondaryDisability = it.detail
           secondaryDisabilityDate = it.date
+        }
+      case Some("精准扶贫") =>
+        setDestitute(poverty) { it =>
+          poverty = it.detail
+          povertyDate = it.date
         }
       case Some(_) =>
       case None => 

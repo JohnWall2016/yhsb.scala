@@ -36,6 +36,7 @@ class Auth(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(new ImportCityAllowance)
   addSubCommand(new ImportCountryAllowance)
   addSubCommand(new ImportDisability)
+  addSubCommand(new ImportOutOfPoverty)
   addSubCommand(new MergeHistory)
   addSubCommand(new GenerateBook)
   addSubCommand(new Authenticate)
@@ -153,10 +154,7 @@ object Auth {
       data.foreach { item =>
         var jbKind: String = null
         var isDestitute: String = null
-        if (item.poverty.getOrElse("").nonEmpty) {
-          jbKind = "贫困人口一级"
-          isDestitute = "贫困人口"
-        } else if (item.veryPoor.getOrElse("").nonEmpty) {
+        if (item.veryPoor.getOrElse("").nonEmpty) {
           jbKind = "特困一级"
           isDestitute = "特困人员"
         } else if (item.fullAllowance.getOrElse("").nonEmpty) {
@@ -169,6 +167,8 @@ object Auth {
           isDestitute = "低保对象"
         } else if (item.secondaryDisability.getOrElse("").nonEmpty) {
           jbKind = "残二级"
+        } else if (item.poverty.getOrElse("").nonEmpty) {
+          jbKind = "贫困人口一级"
         }
 
         var update = false
@@ -279,18 +279,18 @@ object Auth {
       row("F").value = item.name
       row("G").value = item.idCard
       row("H").value = item.birthDay
-      row("I").value = item.poverty
-      row("J").value = item.povertyDate
-      row("K").value = item.veryPoor
-      row("L").value = item.veryPoorDate
-      row("M").value = item.fullAllowance
-      row("N").value = item.fullAllowanceDate
-      row("O").value = item.shortAllowance
-      row("P").value = item.shortAllowanceDate
-      row("Q").value = item.primaryDisability
-      row("R").value = item.primaryDisabilityDate
-      row("S").value = item.secondaryDisability
-      row("T").value = item.secondaryDisabilityDate
+      row("I").value = item.veryPoor
+      row("J").value = item.veryPoorDate
+      row("K").value = item.fullAllowance
+      row("L").value = item.fullAllowanceDate
+      row("M").value = item.shortAllowance
+      row("N").value = item.shortAllowanceDate
+      row("O").value = item.primaryDisability
+      row("P").value = item.primaryDisabilityDate
+      row("Q").value = item.secondaryDisability
+      row("R").value = item.secondaryDisabilityDate
+      row("S").value = item.poverty
+      row("T").value = item.povertyDate
       row("U").value = item.isDestitute
       row("V").value = item.jbKind
       row("W").value = item.jbKindFirstDate
@@ -512,7 +512,7 @@ class ImportDisability extends Subcommand("cjry") with ImportCommand {
       neighborhood = "E",
       community = "F",
       address = Some("G"),
-      personType = Some("K")
+      personType = Some("M")
     ) { item =>
       item.detail = item.personType
       item.personType = item.personType match {
@@ -520,6 +520,31 @@ class ImportDisability extends Subcommand("cjry") with ImportCommand {
         case Some("三级") | Some("四级") => Some("三四级残疾人员")
         case other                   => throw new Exception(s"未知残疾类型: $other")
       }
+    }
+}
+
+class ImportOutOfPoverty extends Subcommand("jzfp") with ImportCommand {
+  descr("导入精准扶贫数据")
+
+  override def clearData(): Unit = {
+    import AuthData2021._
+    run(
+      rawData
+        .filter(it =>
+          it.date == Option(lift(date())) && it.personType == Some("精准扶贫")
+        )
+        .delete
+    )
+  }
+
+  override val fieldColumns: FieldColumns =
+    FieldColumns(
+      nameAndIdCards = Seq("G" -> "H"),
+      neighborhood = "C",
+      community = "D",
+    ) { item =>
+      item.personType = Some("精准扶贫")
+      item.detail = Some("脱贫户")
     }
 }
 
