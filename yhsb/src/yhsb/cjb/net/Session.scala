@@ -11,6 +11,11 @@ import yhsb.cjb.db.CjbSession
 import java.net.URLEncoder
 import yhsb.cjb.net.protocol.PageRequest
 import scala.collection.SeqMap
+import org.apache.axis.encoding.Base64
+import java.nio.file.Files
+import yhsb.base.run.process
+import java.io.OutputStream
+import yhsb.cjb.net.protocol.CheckQrCode
 
 class Session(
     ip: String,
@@ -83,12 +88,21 @@ class Session(
 
   def sendService(req: Request[_]) = postRequest(toService(req))
 
+  def sendService(req: Request[_], userID: String, password: String) = {
+    postRequest(toService(req, userID, password))
+  }
+
   def sendService(id: String, userID: String, password: String) = {
     postRequest(toService(id, userID, password))
   }
 
   def request[T: ClassTag](reqWithTag: Request[T]): Result[T] = {
     val resp = sendService(reqWithTag)
+    Result.fromJson(resp.text())
+  }
+
+  def request[T: ClassTag](reqWithTag: Request[T], userID: String, password: String): Result[T] = {
+    val resp = sendService(reqWithTag, userID, password)
     Result.fromJson(resp.text())
   }
 
@@ -129,6 +143,71 @@ class Session(
     if (loginResult.typeOf == "error") {
       throw new Exception(s"error: ${loginResult.message}")
     }
+    result
+  }
+
+  def loginSSCard(checkTimes: Int = 6, delay: Long = 6 * 1000): String = {
+    var resp = sendService("getQrCode", null, null)
+    setCookies(resp.headers)
+
+    var result = resp.text()
+    val qrCodeResult = Result.fromJson[String](result)
+    println(qrCodeResult)
+
+    if (qrCodeResult.size < 3) {
+      throw new Exception("get QrCode error")
+    }
+
+    Session.openBase64Jpg(qrCodeResult(0))
+
+    var succeed = false
+    var times = 1
+    result = ""
+    while (times <= checkTimes && succeed == false) {
+      val checkResult =
+        request(CheckQrCode(qrCodeResult(1), qrCodeResult(2)), null, null)
+
+      if (checkResult.typeOf == "info" && checkResult.size > 0) {
+        val userName = checkResult(0)
+        println(s"sscard authorized: $userName")
+
+        resp = sendService(
+          SysLogin(userName + "|@|0", Config.cjbSession.getString("sscard.pwd"))
+        )
+
+        val result = resp.text()
+
+        val loginResult = Result.fromJson[SysLogin.Item](result)
+
+        if (loginResult.typeOf == "data" && loginResult.size > 0) {
+          val userName = loginResult(0).userName
+          val userPass = loginResult(0).password
+          if (userName != null && userPass != null) {
+            userID = userName
+            password = userPass
+            succeed = true
+          }
+        }
+        if (!succeed) {
+          if (times < checkTimes) {
+            println(s"error: ${loginResult.message}")
+          } else {
+            throw new Exception(s"error: ${loginResult.message}")
+          }
+        }
+      } else {
+        if (times < checkTimes) {
+          println(s"error: ${checkResult.message}")
+        } else {
+          throw new Exception(s"error: ${checkResult.message}")
+        }
+      }
+      times += 1
+      if (!succeed && times <= checkTimes) {
+        Thread.sleep(delay)
+      }
+    }
+
     result
   }
 
@@ -235,7 +314,7 @@ object Session {
       verbose: Boolean = false,
       loginTimeOut: Int = 6 * 1000,
       loginRetries: Int = 6,
-      useSSCard: Boolean = false
+      useSSCard: Boolean = true
   )(
       f: Session => T
   ): T = {
@@ -251,7 +330,11 @@ object Session {
           usr.getString("jsessionid_ylzcbp"),
           verbose
         )
-        s.login()
+        if (useSSCard) {
+          s.loginSSCard()
+        } else {
+          s.login()
+        }
         s
       }
     )
@@ -263,6 +346,23 @@ object Session {
 
   def addUserChangedHooks(hook: String => Unit) = {
     hooks.addOne(hook)
+  }
+
+  def openBase64Jpg(base64String: String) = {
+    val imgBytes = Base64.decode(base64String.replace("\\n", ""))
+
+    val file = Files.createTempFile("yhsb_login", ".jpg")
+    Files.write(file, imgBytes)
+
+    val cmd =
+      s"""${yhsb.base.util.Config.load("cmd").getString("open.img")} $file"""
+
+    println(cmd)
+    process.execute(
+      cmd,
+      OutputStream.nullOutputStream(),
+      OutputStream.nullOutputStream()
+    )
   }
 }
 

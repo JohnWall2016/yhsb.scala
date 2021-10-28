@@ -2548,11 +2548,11 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
         val cards: List[Table1] = run(cardData.filter(_.idCard == lift(idCard)))
         if (cards.nonEmpty) {
           val card = cards.head
-          row.getOrCreateCell("P").value = card.name
-          row.getOrCreateCell("Q").value = card.bankName
-          row.getOrCreateCell("R").value = card.cardNumber
-          row.getOrCreateCell("S").value =
-            if (row("G").value == card.cardNumber) {
+          row.getOrCreateCell("M").value = card.name
+          row.getOrCreateCell("N").value = card.bankName
+          row.getOrCreateCell("O").value = card.cardNumber
+          row.getOrCreateCell("P").value =
+            if (row("H").value == card.cardNumber) {
               "是"
             } else {
               "否"
