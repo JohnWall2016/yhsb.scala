@@ -1700,7 +1700,9 @@ class Query(args: collection.Seq[String]) extends Command(args) {
 
       val nameRow = trailArg[String](descr = "姓名列名称")
       val idCardRow = trailArg[String](descr = "身份证列名称")
-      val updateRow = trailArg[String](descr = "更新列名称")
+      val update1Row = trailArg[String](descr = "更新列1名称")
+      val update2Row = trailArg[String](descr = "更新列2名称")
+      val update3Row = trailArg[String](descr = "更新列3名称")
 
       def execute(): Unit = {
         val workbook = Excel.load(inputFile())
@@ -1718,8 +1720,14 @@ class Query(args: collection.Seq[String]) extends Command(args) {
               val result = session.request(BankAccountQuery(idCard))
               result.map(item => {
                 row
-                  .getOrCreateCell(updateRow())
+                  .getOrCreateCell(update1Row())
                   .setCellValue(item.ssCardFlag)
+                row
+                  .getOrCreateCell(update2Row())
+                  .setCellValue(item.bankName)
+                row
+                  .getOrCreateCell(update3Row())
+                  .setCellValue(item.bankAccount)
               })
             }
           }

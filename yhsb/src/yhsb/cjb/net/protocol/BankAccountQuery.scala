@@ -26,5 +26,24 @@ object BankAccountQuery {
       /** 社保卡标志 */
       @JsonName("aae617")
       ssCardFlag: String,
+
+      @JsonName("aaz065")
+      bankName: String,
+
+      @JsonName("aae010")
+      bankAccount: String,
+
+      @JsonName("aac002") 
+      idCard: String,
+
+      @JsonName("aae009") 
+      name: String,
+
+      /** 开户时间 */
+      @JsonName("imptime")
+      openTime: String,
+
+      @JsonName("aae036")
+      opTime: String,
   )
 }
