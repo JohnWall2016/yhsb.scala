@@ -86,6 +86,9 @@ object yhsb extends CustomModule {
     object jgb extends CustomModule {
       object clearpilot extends YhsbModule
     }
+    object tool extends CustomModule {
+      object excelsplitter extends YhsbModule
+    }
   }
 
   object test extends Tests {
