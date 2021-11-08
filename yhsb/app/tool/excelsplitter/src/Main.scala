@@ -46,17 +46,16 @@ class ExcelSplitter(args: collection.Seq[String]) extends Command(args) {
         .addOne(index)
     }
 
-    println(s"生成excel文件")
+    println(s"生成excel文件\n")
     for ((name, indexes) <- map) {
       println(s"$name: ${indexes.size}")
 
       val outWorkbook = Excel.load(templateFile())
       val outSheet = outWorkbook.getSheetAt(0)
-      var currentIndex, fromIndex = startIndex()
-
-      val fromColNames = fromCols().split(""".*,.*""")
+      var currentIndex, fromIndex = startIndex() - 1
+      val fromColNames = fromCols().split(""" *, *""")
       val (indexColNames, toColNames) =
-        toCols().split(""".*,.*""").partition(_.startsWith("@"))
+        toCols().split(""" *, *""").partition(_.startsWith("@"))
       val indexColName = indexColNames.headOption.map(_.drop(1))
       val colCount = math.min(fromColNames.size, toColNames.size)
 
@@ -65,11 +64,11 @@ class ExcelSplitter(args: collection.Seq[String]) extends Command(args) {
         val outRow = outSheet.getOrCopyRow(currentIndex, fromIndex)
 
         if (indexColName.isDefined) {
-          outRow.getCell(indexColName.get).value = currentIndex - fromIndex + 1
+          outRow.getOrCreateCell(indexColName.get).value = currentIndex - fromIndex + 1
         }
 
         (0 until colCount).foreach { i =>
-          outRow.getCell(toColNames(i)).value =
+          outRow.getOrCreateCell(toColNames(i)).value =
             inRow.getCell(fromColNames(i)).value
         }
 
