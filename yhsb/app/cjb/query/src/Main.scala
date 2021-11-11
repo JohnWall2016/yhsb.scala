@@ -687,8 +687,8 @@ class Query(args: collection.Seq[String]) extends Command(args) {
             for {
               i <- (startRow() - 1) until endRow()
               row = sheet.getRow(i)
-              name = row("F").value.trim()
-              idCard_ = row("E").value.trim()
+              name = row("E").value.trim()
+              idCard_ = row("D").value.trim()
             } {
               print(s"$i $idCard_ $name ")
 
@@ -707,12 +707,10 @@ class Query(args: collection.Seq[String]) extends Command(args) {
                     println(
                       s"${it.dwName.getOrElse("")} ${it.csName.getOrElse("")}"
                     )
-                    /*if (name == "") {
-                      row.getOrCreateCell("C").value = it.name
-                    }*/
                     row.getOrCreateCell("B").value = it.dwName
-                    row.getOrCreateCell("C").value = it.csName
-                    row.getOrCreateCell("D").value = it.czName
+                    /*row.getOrCreateCell("C").value = it.csName
+                    row.getOrCreateCell("D").value = it.czName*/
+                    row.getOrCreateCell("C").value = it.czName
                 }
               } else {
                 println("身份证号码有误")

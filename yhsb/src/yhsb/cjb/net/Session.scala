@@ -318,9 +318,14 @@ object Session {
   )(
       f: Session => T
   ): T = {
+    val user_ = if (useSSCard) {
+      "002"
+    } else {
+      user
+    }
     val sess = sessions.getOrElseUpdate(
-      user, {
-        val usr = Config.cjbSession.getConfig(s"users.$user")
+      user_, {
+        val usr = Config.cjbSession.getConfig(s"users.$user_")
         val s = new Session(
           Config.cjbSession.getString("host"),
           Config.cjbSession.getInt("port"),
@@ -338,7 +343,7 @@ object Session {
         s
       }
     )
-    hooks.foreach(_(user))
+    hooks.foreach(_(user_))
     f(sess)
   }
 

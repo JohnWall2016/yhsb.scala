@@ -2542,17 +2542,16 @@ class Lookback(args: collection.Seq[String]) extends Command(args) {
       for {
         index <- (startRow() - 1) until endRow()
         row = sheet.getRow(index)
-        idCard = row("E").value
+        idCard = row("D").value
       } {
         println(s"$idCard")
         val cards: List[Table1] = run(cardData.filter(_.idCard == lift(idCard)))
         if (cards.nonEmpty) {
           val card = cards.head
-          row.getOrCreateCell("P").value = card.name
-          row.getOrCreateCell("Q").value = card.bankName
-          row.getOrCreateCell("R").value = card.cardNumber
-          row.getOrCreateCell("S").value =
-            if (row("O").value == card.cardNumber) {
+          row.getOrCreateCell("N").value = card.bankName
+          row.getOrCreateCell("O").value = card.cardNumber
+          row.getOrCreateCell("P").value =
+            if (row("M").value == card.cardNumber) {
               "是"
             } else {
               "否"

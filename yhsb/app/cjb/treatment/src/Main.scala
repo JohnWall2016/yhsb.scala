@@ -32,7 +32,7 @@ class Treatment(args: collection.Seq[String]) extends Command(args) {
   addSubCommand(new Split)
 
   addSubCommand(new PayFailedList)
-  
+
   // addSubCommand(new UncertPauseList)
   // addSubCommand(new UncertList)
 
@@ -94,6 +94,9 @@ class Download extends Subcommand("download") with ReportDate {
 class Split extends Subcommand("split") with ReportDate with RowRange {
   descr("对下载的信息表分组并生成养老金计算表")
 
+  val onlyDownload =
+    opt[Boolean]("only-download", 'd', "只下载养老金计算表", default = Some(false))
+
   val outputDir = """D:\待遇核定"""
 
   val template = "养老金计算表模板.xlsx"
@@ -115,37 +118,59 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
       }).groupByDwAndCsName()
 
     println("生成分组目录并分别生成信息核对报告表")
-    if (Files.exists(destDir)) {
-      Files.move(destDir, s"${destDir.toString}.orig")
+    if (!onlyDownload()) {
+      if (Files.exists(destDir)) {
+        Files.move(destDir, s"${destDir.toString}.orig")
+      }
     }
-    Files.createDirectory(destDir)
+    if (Files.notExists(destDir)) {
+      Files.createDirectory(destDir)
+    }
 
     for ((dw, csMap) <- map) {
       println(s"$dw:")
-      Files.createDirectory(destDir / dw)
+      if (Files.notExists(destDir / dw)) {
+        Files.createDirectory(destDir / dw)
+      }
 
       for ((cs, indexes) <- csMap) {
         println(s"  $cs: ${indexes.mkString(",")}")
-        Files.createDirectory(destDir / dw / cs)
-
-        val outWorkbook = Excel.load(infoExcel)
-        val outSheet = outWorkbook.getSheetAt(0)
-        val startRow = 3
-        var currentRow = startRow
-
-        indexes.foreach { rowIndex =>
-          val index = currentRow - startRow + 1
-          val inRow = sheet.getRow(rowIndex)
-
-          println(s"    $index ${inRow("C").value} ${inRow("B").value}")
-
-          val outRow = outSheet.getOrCopyRow(currentRow, startRow)
-          currentRow += 1
-          outRow("A").value = index
-          inRow.copyTo(outRow, "B", "C", "D", "E", "F", "G", "H", "I", "J", "L")
+        if (Files.notExists(destDir / dw / cs)) {
+          Files.createDirectory(destDir / dw / cs)
         }
 
-        outWorkbook.save(destDir / dw / cs / s"${cs}信息核对报告表.xlsx")
+        if (!onlyDownload()) {
+          val outWorkbook = Excel.load(infoExcel)
+          val outSheet = outWorkbook.getSheetAt(0)
+          val startRow = 3
+          var currentRow = startRow
+
+          indexes.foreach { rowIndex =>
+            val index = currentRow - startRow + 1
+            val inRow = sheet.getRow(rowIndex)
+
+            println(s"    $index ${inRow("C").value} ${inRow("B").value}")
+
+            val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+            currentRow += 1
+            outRow("A").value = index
+            inRow.copyTo(
+              outRow,
+              "B",
+              "C",
+              "D",
+              "E",
+              "F",
+              "G",
+              "H",
+              "I",
+              "J",
+              "L"
+            )
+          }
+
+          outWorkbook.save(destDir / dw / cs / s"${cs}信息核对报告表.xlsx")
+        }
       }
     }
 
@@ -158,13 +183,17 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
             val name = row("B").value
             val idCard = row("C").value
             println(s"  $idCard $name")
-            
-            downloadPaymentInfoReport(
-              session,
-              name,
-              idCard,
-              destDir / dw / cs
-            )
+
+            val filePath = destDir / dw / cs / s"${name}[$idCard]养老金计算表.xlsx"
+
+            if (Files.notExists(filePath)) {
+              downloadPaymentInfoReport(
+                session,
+                name,
+                idCard,
+                filePath
+              )
+            }
           }
         }
       }
@@ -175,7 +204,7 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
       session: Session,
       name: String,
       idCard: String,
-      outDir: Path,
+      filePath: Path,
       retry: Int = 3
   ) = {
     var times = 0; var success = false
@@ -184,68 +213,72 @@ class Split extends Subcommand("split") with ReportDate with RowRange {
     if (result.nonEmpty) {
       while (!success && times < retry) {
         times += 1
-        result.head.getTreatmentInfoMatch(session) match {
-          case None =>
-          case Some(m) =>
-            success = true
-            val workbook = Excel.load(outputDir / template)
-            val sheet = workbook.getSheetAt(0)
-            sheet("A5").value = m.group(1)
-            sheet("B5").value = m.group(2)
-            sheet("C5").value = m.group(3)
-            sheet("F5").value = m.group(4)
-            sheet("I5").value = m.group(5)
-            sheet("L5").value = m.group(6)
-            sheet("A8").value = m.group(7)
-            sheet("B8").value = m.group(8)
-            sheet("C8").value = m.group(9)
-            sheet("E8").value = m.group(10)
-            sheet("F8").value = m.group(11)
-            sheet("G8").value = m.group(12)
-            sheet("H8").value = m.group(13)
-            sheet("I8").value = m.group(14)
-            sheet("J8").value = m.group(15)
-            sheet("K8").value = m.group(16)
-            sheet("L8").value = m.group(17)
-            sheet("M8").value = m.group(18)
-            sheet("N8").value = m.group(19)
-            sheet("A11").value = m.group(20)
-            sheet("B11").value = m.group(21)
-            sheet("C11").value = m.group(22)
-            sheet("D11").value = m.group(23)
-            sheet("E11").value = m.group(24)
-            sheet("F11").value = m.group(25)
-            sheet("G11").value = m.group(26)
-            sheet("H11").value = m.group(27)
-            sheet("I11").value = m.group(28)
-            sheet("J11").value = m.group(29)
-            sheet("K11").value = m.group(30)
-            sheet("L11").value = m.group(31)
-            sheet("M11").value = m.group(32)
-            sheet("N11").value = m.group(33)
-            sheet("I12").value = Formatter.formatDate("yyyy-MM-dd HH:mm:ss")
+        try {
+          result.head.getTreatmentInfoMatch(session) match {
+            case None =>
+            case Some(m) =>
+              success = true
+              val workbook = Excel.load(outputDir / template)
+              val sheet = workbook.getSheetAt(0)
+              sheet("A5").value = m.group(1)
+              sheet("B5").value = m.group(2)
+              sheet("C5").value = m.group(3)
+              sheet("F5").value = m.group(4)
+              sheet("I5").value = m.group(5)
+              sheet("L5").value = m.group(6)
+              sheet("A8").value = m.group(7)
+              sheet("B8").value = m.group(8)
+              sheet("C8").value = m.group(9)
+              sheet("E8").value = m.group(10)
+              sheet("F8").value = m.group(11)
+              sheet("G8").value = m.group(12)
+              sheet("H8").value = m.group(13)
+              sheet("I8").value = m.group(14)
+              sheet("J8").value = m.group(15)
+              sheet("K8").value = m.group(16)
+              sheet("L8").value = m.group(17)
+              sheet("M8").value = m.group(18)
+              sheet("N8").value = m.group(19)
+              sheet("A11").value = m.group(20)
+              sheet("B11").value = m.group(21)
+              sheet("C11").value = m.group(22)
+              sheet("D11").value = m.group(23)
+              sheet("E11").value = m.group(24)
+              sheet("F11").value = m.group(25)
+              sheet("G11").value = m.group(26)
+              sheet("H11").value = m.group(27)
+              sheet("I11").value = m.group(28)
+              sheet("J11").value = m.group(29)
+              sheet("K11").value = m.group(30)
+              sheet("L11").value = m.group(31)
+              sheet("M11").value = m.group(32)
+              sheet("N11").value = m.group(33)
+              sheet("I12").value = Formatter.formatDate("yyyy-MM-dd HH:mm:ss")
 
-            if (bankResult.nonEmpty) {
-              bankResult.head.let { it =>
-                sheet("B15").value = it.countName
-                sheet("F15").value = it.bankType.toString()
+              if (bankResult.nonEmpty) {
+                bankResult.head.let { it =>
+                  sheet("B15").value = it.countName
+                  sheet("F15").value = it.bankType.toString()
 
-                var card = it.cardNumber
-                val len = card.length
-                if (len > 7) {
-                  card =
-                    card.substring(0, 3) + "*".times(len - 7) + card.substring(
-                      len - 4
-                    )
-                } else if (len > 4) {
-                  card = "*".times(len - 4) + card.substring(len - 4)
+                  var card = it.cardNumber
+                  val len = card.length
+                  if (len > 7) {
+                    card = card.substring(0, 3) + "*".times(len - 7) + card
+                      .substring(
+                        len - 4
+                      )
+                  } else if (len > 4) {
+                    card = "*".times(len - 4) + card.substring(len - 4)
+                  }
+                  sheet("J15").value = card
                 }
-                sheet("J15").value = card
+              } else {
+                sheet("B15").value = "未绑定银行账户"
               }
-            } else {
-              sheet("B15").value = "未绑定银行账户"
-            }
-            workbook.save(outDir / s"${name}[$idCard]养老金计算表.xlsx")
+              workbook.save(filePath)
+          }
+        } catch {
+          case ex: Exception => println(s"下载失败: $ex")
         }
       }
     }
@@ -349,7 +382,7 @@ class UncertPauseList extends Subcommand("pauseList") {
     println("结束导出数据")
   }
 }
-*/
+ */
 
 /*
 class UncertList extends Subcommand("uncertList") {
@@ -397,7 +430,7 @@ class UncertList extends Subcommand("uncertList") {
     println("结束导出数据")
   }
 }
-*/
+ */
 
 class UncertRetiringList extends Subcommand("uncertRList") {
   descr("从业务系统下载需认证的新增待遇人员名单")
@@ -418,7 +451,7 @@ class UncertRetiringList extends Subcommand("uncertRList") {
           retireDate = Formatter.toDashedDate(retireDate()),
           inArrear = "2",
           cbState = "1",
-          lifeCert = "2",
+          lifeCert = "2"
         ),
         RetiringPersonQuery.columnMap
       )(
@@ -461,7 +494,7 @@ class ArrearList extends Subcommand("arrearList") {
         RetiringPersonQuery(
           retireDate = Formatter.toDashedDate(retireDate()),
           inArrear = "1",
-          cbState = "1",
+          cbState = "1"
         ),
         RetiringPersonQuery.columnMap
       )(
@@ -504,7 +537,8 @@ class PaymentDownload extends Subcommand("payDownload") {
     println("开始导出数据")
 
     val startYearMonth_ = startYearMonth()
-    val endYearMonth_ = if (endYearMonth.isDefined) endYearMonth() else startYearMonth()
+    val endYearMonth_ =
+      if (endYearMonth.isDefined) endYearMonth() else startYearMonth()
 
     val exportFile = Files.createTempFile("yhsb", ".xls").toString
     Session.use() {
@@ -525,7 +559,7 @@ class PaymentDownload extends Subcommand("payDownload") {
     sheet.setColumnWidth(1, 20 * 256)
     sheet.setColumnWidth(2, 8 * 256)
 
-    workbook.saveAfter{
+    workbook.saveAfter {
       val dateRange = Formatter.normalizeSpan(startYearMonth_, endYearMonth_)
       outputDir / s"${dateRange}待遇发放人员名单${Formatter.formatDate()}.xls"
     } { path =>
@@ -599,38 +633,41 @@ class PaymentSplit extends Subcommand("paySplit") with InputFile with RowRange {
 
           val collator = Collator.getInstance(Locale.CHINESE)
 
-          indexes.map { index =>
-            val inRow = sheet.getRow(index)
-            (
-              inRow("A").value,
-              inRow("C").value,
-              (if (inRow("D").value == "1") "男" else "女"),
-              inRow("B").value.substring(6, 14),
-              inRow("F").value,
-            )
-          }.sortWith { (e1, e2) =>
-            collator.compare(e1._1, e2._1) match {
-              case i if i == 0 =>
-                collator.compare(e1._2, e2._2) < 0
-              case i => i < 0
+          indexes
+            .map { index =>
+              val inRow = sheet.getRow(index)
+              (
+                inRow("A").value,
+                inRow("C").value,
+                (if (inRow("D").value == "1") "男" else "女"),
+                inRow("B").value.substring(6, 14),
+                inRow("F").value
+              )
             }
-          }.foreach { it =>
-            val index = currentRow - startRow + 1
+            .sortWith { (e1, e2) =>
+              collator.compare(e1._1, e2._1) match {
+                case i if i == 0 =>
+                  collator.compare(e1._2, e2._2) < 0
+                case i => i < 0
+              }
+            }
+            .foreach { it =>
+              val index = currentRow - startRow + 1
 
-            //println(s"    $index ${it._2} ${it._1}")
+              //println(s"    $index ${it._2} ${it._1}")
 
-            val outRow = outSheet.getOrCopyRow(currentRow, startRow)
-            outRow.setCellValues(
-              "A" -> index,
-              "B" -> it._1,
-              "C" -> it._2,
-              "D" -> it._3,
-              "E" -> it._4,
-              "F" -> it._5,
-            )
+              val outRow = outSheet.getOrCopyRow(currentRow, startRow)
+              outRow.setCellValues(
+                "A" -> index,
+                "B" -> it._1,
+                "C" -> it._2,
+                "D" -> it._3,
+                "E" -> it._4,
+                "F" -> it._5
+              )
 
-            currentRow += 1
-          }
+              currentRow += 1
+            }
 
           outWorkbook.save(destDir / dw / s"${cs}待遇发放人员公示表$date.xlsx")
         }
